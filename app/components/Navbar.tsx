@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const sections = ["model", "paketler", "iletisim"];
+const sections = ["sistemimiz", "paketler", "İletişim"];
 
 export default function Navbar() {
   const [active, setActive] = useState("");
@@ -35,8 +35,13 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
 
         {/* Logo */}
-        <div className="text-lg font-semibold tracking-tight">
-          Öğrenci Koçu Adana
+        <div className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+          <img
+            src="/logo.png"
+            alt="Öğrenci Koçu Adana Logo"
+            className="h-8 w-auto"
+          />
+          <span>Öğrenci Koçu Adana</span>
         </div>
 
         {/* Menü */}
@@ -64,7 +69,7 @@ export default function Navbar() {
 
         {/* CTA */}
         <a
-          href="#iletisim"
+          href="#İletişim"
           className="hidden md:inline-block px-5 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition"
         >
           Randevu Al
