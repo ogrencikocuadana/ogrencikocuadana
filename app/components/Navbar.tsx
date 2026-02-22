@@ -35,14 +35,17 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
 
         {/* Logo */}
-        <div className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+        <div
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="flex items-center gap-2 text-lg font-semibold tracking-tight cursor-pointer"
+        >
           <img
             src="/logo.png"
             alt="Öğrenci Koçu Adana Logo"
             className="h-8 w-auto"
           />
           <span>Öğrenci Koçu Adana</span>
-        </div>
+      </div>
 
         {/* Menü */}
         <nav className="hidden md:flex items-center gap-10 text-sm font-medium relative">
