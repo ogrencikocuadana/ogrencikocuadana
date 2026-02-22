@@ -242,13 +242,46 @@ function AppointmentModal({ onClose }: { onClose: () => void }) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
-  const handleSubmit = (e: FormEvent) => { e.preventDefault(); setSubmitted(true); };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    // 1) Formspree'ye gönder
+    await fetch("https://formspree.io/f/xjgeanor", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        "Veli Adı":      form.parentName,
+        "Öğrenci Adı":  form.studentName,
+        "Telefon":       form.phone,
+        "E-posta":       form.email,
+        "Sınıf":         form.grade,
+        "Mesaj":         form.message,
+      }),
+    });
+
+    // 2) Teşekkür ekranını göster
+    setSubmitted(true);
+
+    // 3) WhatsApp'ı otomatik aç (kısa gecikmeyle)
+    const whatsappText = encodeURIComponent(
+      `Merhaba! Ön görüşme talebinde bulunmak istiyorum.\n\n` +
+      `👤 Veli: ${form.parentName}\n` +
+      `🎓 Öğrenci: ${form.studentName}\n` +
+      `📱 Telefon: ${form.phone}\n` +
+      `📚 Sınıf: ${form.grade}. Sınıf\n` +
+      (form.message ? `💬 Mesaj: ${form.message}` : "")
+    );
+    setTimeout(() => {
+      window.open(`https://wa.me/905473803801?text=${whatsappText}`, "_blank");
+    }, 800);
+  };
 
   const inp: CSSProperties = {
     width: "100%", paddingLeft: 44, paddingRight: 16, paddingTop: 12, paddingBottom: 12,
     border: "2px solid #e5e7eb", borderRadius: 8, fontSize: "0.95rem",
     outline: "none", fontFamily: "inherit", background: "white",
-    transition: "border-color 0.2s, box-shadow 0.2s", appearance: "none" as const,
+    transition: "border-color 0.2s, box-shadow 0.2s", appearance: "none" as const, color: "#111827",
   };
   const lbl: CSSProperties = { display: "block", fontSize: "0.875rem", fontWeight: 600, color: "#374151", marginBottom: 8 };
   const iconPos: CSSProperties = { position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af", pointerEvents: "none" };
@@ -258,6 +291,9 @@ function AppointmentModal({ onClose }: { onClose: () => void }) {
       <style>{`
         @keyframes modal-bg-in  { from { opacity: 0 } to { opacity: 1 } }
         @keyframes modal-box-in { from { opacity: 0; transform: translateY(28px) scale(0.97) } to { opacity: 1; transform: translateY(0) scale(1) } }
+        .modal-inp { color: #111827 !important; -webkit-text-fill-color: #111827 !important; }
+        .modal-inp::placeholder { color: #9ca3af !important; opacity: 1; }
+        .modal-inp:-webkit-autofill { -webkit-text-fill-color: #111827 !important; -webkit-box-shadow: 0 0 0 100px white inset !important; }
         .modal-inp:focus { border-color: #1e40af !important; box-shadow: 0 0 0 3px rgba(30,64,175,0.12) !important; }
         .modal-close-btn:hover { background: rgba(255,255,255,0.28) !important; }
         .modal-submit:hover { box-shadow: 0 10px 32px rgba(30,58,138,0.5) !important; filter: brightness(1.06); }
@@ -291,8 +327,12 @@ function AppointmentModal({ onClose }: { onClose: () => void }) {
                 <svg width="38" height="38" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg>
               </div>
               <h3 className="display" style={{ fontSize: "1.7rem", fontWeight: 800, color: "#0f1f4f", margin: "0 0 12px" }}>Talebiniz Alındı! 🎉</h3>
-              <p style={{ color: "#4b5563", lineHeight: 1.7, maxWidth: 420, margin: "0 auto 32px" }}>
-                En kısa sürede <strong style={{ color: "#1e3a8a" }}>{form.phone || "belirttiğiniz numara"}</strong>&apos;dan sizi arayacağız. Görüşmek üzere!
+              <p style={{ color: "#4b5563", lineHeight: 1.7, maxWidth: 420, margin: "0 auto 12px" }}>
+                En kısa sürede <strong style={{ color: "#1e3a8a" }}>{form.phone || "belirttiğiniz numara"}</strong>&apos;dan sizi arayacağız.
+              </p>
+              <p style={{ color: "#6b7280", fontSize: "0.9rem", maxWidth: 420, margin: "0 auto 32px" }}>
+                📧 Bilgileriniz e-posta ile iletildi. WhatsApp otomatik açılmadıysa{" "}
+                <a href={`https://wa.me/905473803801`} target="_blank" rel="noopener noreferrer" style={{ color: "#1e3a8a", fontWeight: 600 }}>buraya tıklayın</a>.
               </p>
               <button onClick={onClose} style={{ background: "linear-gradient(135deg,#1e3a8a,#1e40af)", color: "white", border: "none", padding: "13px 36px", borderRadius: 10, fontWeight: 700, fontSize: "1rem", cursor: "pointer", boxShadow: "0 4px 14px rgba(30,58,138,0.35)" }}>
                 Kapat
@@ -833,7 +873,8 @@ export default function OgrenciKocuAdana() {
               <div>
                 <h4 style={{ fontWeight: 600, fontSize: "1.05rem", color: "#fdba74", margin: "0 0 16px" }}>İletişim</h4>
                 {[
-                  { Icon: IconPhone,  text: "0547 380 38 01" },
+                  { Icon: IconPhone, text: "0547 380 38 01" },
+                  { Icon: IconPhone, text: "0540 380 38 01" },
                   { Icon: IconMail,   text: "ogrencikocuadana@gmail.com" },
                   { Icon: IconMapPin, text: "Adana, Türkiye" },
                 ].map(({ Icon, text }, i) => (
