@@ -7,8 +7,9 @@ export async function generateStaticParams() {
   return posts.map((p) => ({ slug: p.slug }));
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const post = getPostBySlug(params.slug);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const post = getPostBySlug(slug);
   if (!post) return {};
   return {
     title: `${post.title} | Öğrenci Koçu Adana`,
@@ -24,7 +25,6 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-// Markdown benzeri içeriği HTML'e çeviren basit parser
 function renderContent(content: string) {
   const lines = content.trim().split("\n");
   const elements: React.ReactNode[] = [];
@@ -58,7 +58,6 @@ function renderContent(content: string) {
     } else if (line.startsWith("---")) {
       elements.push(<hr key={i} style={{ border: "none", borderTop: "2px solid #f3f4f6", margin: "36px 0" }} />);
     } else if (line.startsWith("| ")) {
-      // Tablo
       const tableLines: string[] = [];
       while (i < lines.length && lines[i].startsWith("|")) {
         if (!lines[i].startsWith("|--")) tableLines.push(lines[i]);
@@ -104,14 +103,13 @@ function renderContent(content: string) {
   return elements;
 }
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
-  const post = getPostBySlug(params.slug);
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const post = getPostBySlug(slug);
   if (!post) notFound();
 
   return (
     <main style={{ minHeight: "100vh", background: "white" }}>
-
-      {/* Hero */}
       <div style={{ background: "linear-gradient(135deg, #0f1f4f, #1e3a8a)", padding: "60px 16px 80px" }}>
         <div style={{ maxWidth: 780, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
@@ -120,30 +118,28 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
               Blog
             </Link>
             <span style={{ color: "#4b5563" }}>/</span>
-            <span style={{ color: "#bfdbfe", fontSize: "0.9rem" }}>{post.category}</span>
+            <span style={{ color: "#bfdbfe", fontSize: "0.9rem" }}>{post!.category}</span>
           </div>
           <span style={{ fontSize: "0.75rem", fontWeight: 600, background: "rgba(255,255,255,0.15)", color: "#bfdbfe", padding: "4px 12px", borderRadius: 9999, display: "inline-block", marginBottom: 20 }}>
-            {post.category}
+            {post!.category}
           </span>
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 800, color: "white", lineHeight: 1.3, marginBottom: 20 }}>
-            {post.title}
+            {post!.title}
           </h1>
           <p style={{ color: "#bfdbfe", fontSize: "1.05rem", lineHeight: 1.7, marginBottom: 28 }}>
-            {post.description}
+            {post!.description}
           </p>
           <div style={{ display: "flex", alignItems: "center", gap: 16, color: "#93c5fd", fontSize: "0.85rem" }}>
-            <span>📅 {new Date(post.date).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}</span>
+            <span>📅 {new Date(post!.date).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}</span>
             <span>·</span>
-            <span>⏱ {post.readTime} okuma</span>
+            <span>⏱ {post!.readTime} okuma</span>
           </div>
         </div>
       </div>
 
-      {/* İçerik */}
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "60px 16px" }}>
-        <article>{renderContent(post.content)}</article>
+        <article>{renderContent(post!.content)}</article>
 
-        {/* CTA kutusu */}
         <div style={{ marginTop: 64, background: "linear-gradient(135deg, #1e3a8a, #1e40af)", borderRadius: 16, padding: "40px 36px", textAlign: "center" }}>
           <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.6rem", fontWeight: 800, color: "white", marginBottom: 12 }}>
             Sistematik bir destek almak ister misiniz?
@@ -160,7 +156,6 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
           </Link>
         </div>
 
-        {/* Alt navigasyon */}
         <div style={{ marginTop: 48, textAlign: "center" }}>
           <Link href="/blog" style={{ color: "#1e3a8a", fontWeight: 600, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
             ← Tüm Yazılara Dön
