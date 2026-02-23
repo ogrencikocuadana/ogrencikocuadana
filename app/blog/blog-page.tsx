@@ -1,13 +1,7 @@
+"use client";
+
 import Link from "next/link";
 import { posts } from "../data/posts";
-import { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Blog | Öğrenci Koçu Adana",
-  description:
-    "LGS ve YKS hazırlık sürecinde işinize yarayacak yazılar. Zaman yönetimi, sınav kaygısı, verimli ders çalışma ve daha fazlası.",
-  alternates: { canonical: "https://ogrencikocuadana.com/blog" },
-};
 
 export default function BlogPage() {
   return (
