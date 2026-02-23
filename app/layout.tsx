@@ -1,9 +1,20 @@
 import "./globals.css";
-import { Inter } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
 import Navbar from "./components/Navbar";
 import { GoogleAnalytics } from "@next/third-parties/google";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  preload: true,
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+  variable: "--font-playfair",
+});
 
 export const metadata = {
   title: "Öğrenci Koçu Adana | Akademik Performans ve Psikolojik Dayanıklılık Modeli",
@@ -27,7 +38,7 @@ export const metadata = {
     "adana öğrenci koçluğu",
     "adana öğrenci koçu",
     "eğitim koçu adana",
-    "adana ders koçu"
+    "adana ders koçu",
   ],
   openGraph: {
     title: "Öğrenci Koçu Adana | Akademik Performans ve Psikolojik Dayanıklılık Modeli",
@@ -38,19 +49,20 @@ export const metadata = {
     locale: "tr_TR",
     type: "website",
     images: [
-  {
-    url: "/og-image.png",
-    width: 1200,
-    height: 630,
-    alt: "Öğrenci Koçu Adana",
-  },
-],
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Öğrenci Koçu Adana",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Öğrenci Koçu Adana | Akademik Performans ve Psikolojik Dayanıklılık Modeli",
     description:
       "Adana'da LGS ve YKS öğrencilerine özel bireysel akademik performans koçluğu ve psikolojik dayanıklılık eğitimi.",
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,
@@ -71,7 +83,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="tr" className="scroll-smooth">
+    <html lang="tr" className={`scroll-smooth ${playfair.variable}`}>
       <body className={`${inter.className} bg-white text-slate-900`}>
         <Navbar />
         <div className="h-20" />
