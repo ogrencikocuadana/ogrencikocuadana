@@ -8,6 +8,9 @@ export const metadata = {
   title: "Öğrenci Koçu Adana | Akademik Performans ve Psikolojik Dayanıklılık Modeli",
   description:
     "Öğrenci Koçu Adana - Akademik performans artırma ve psikolojik dayanıklılık modeli ile LGS ve YKS öğrencilerine disiplinli performans koçluğu hizmeti.",
+  verification: {
+    google: "hcEpeTsta9BYeI_63ruaZco1k3_92EYv9l9yHDMLNVw",
+  },
 };
 
 export default function RootLayout({
