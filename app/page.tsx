@@ -415,14 +415,99 @@ function AppointmentModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+
+// ─── Geri Sayım ──────────────────────────────────────────────────────────────
+function CountdownSection() {
+  const exams = [
+    { name: "LGS", date: new Date("2026-06-14T09:00:00"), color: "#1e3a8a", bg: "#eff6ff", border: "#bfdbfe", tag: "8. Sınıf" },
+    { name: "YKS", date: new Date("2026-06-20T10:00:00"), color: "#c2410c", bg: "#fff7ed", border: "#fed7aa", tag: "12. Sınıf" },
+  ];
+
+  const [days, setDays] = useState<number[]>(exams.map(() => 0));
+
+  useState(() => {
+    const calc = () => {
+      const now = new Date().getTime();
+      setDays(exams.map(e => Math.max(0, Math.ceil((e.date.getTime() - now) / (1000 * 60 * 60 * 24)))));
+    };
+    calc();
+    const t = setInterval(calc, 60000);
+    return () => clearInterval(t);
+  });
+
+  return (
+    <section style={{ padding: "40px 16px", background: "linear-gradient(135deg, #f8faff, #eff6ff)" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <p style={{ textAlign: "center", fontSize: "0.85rem", fontWeight: 600, color: "#6b7280", letterSpacing: "0.08em", marginBottom: 20 }}>SINAVA NE KADAR KALDI?</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }} className="grid-cols-2">
+          {exams.map((exam, i) => (
+            <div key={i} className="card-hover" style={{ background: exam.bg, borderRadius: 16, padding: "28px 32px", border: `2px solid ${exam.border}`, display: "flex", alignItems: "center", gap: 24, boxShadow: "0 4px 16px rgba(0,0,0,0.06)" }}>
+              <div style={{ textAlign: "center", flexShrink: 0 }}>
+                <div style={{ fontSize: "3.5rem", fontWeight: 800, color: exam.color, lineHeight: 1, fontFamily: "var(--font-playfair), serif" }}>{days[i]}</div>
+                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: exam.color, opacity: 0.7, marginTop: 4 }}>GÜN</div>
+              </div>
+              <div style={{ width: 2, height: 60, background: exam.border, flexShrink: 0 }} />
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: "1.6rem", fontWeight: 800, color: exam.color, fontFamily: "var(--font-playfair), serif" }}>{exam.name}</span>
+                  <span style={{ fontSize: "0.7rem", fontWeight: 600, background: exam.border, color: exam.color, padding: "3px 10px", borderRadius: 9999 }}>{exam.tag}</span>
+                </div>
+                <div style={{ fontSize: "0.9rem", color: "#4b5563" }}>{exam.name === "LGS" ? "14 Haziran 2026" : "20-21 Haziran 2026"}</div>
+                <div style={{ fontSize: "0.8rem", color: "#9ca3af", marginTop: 2 }}>{days[i] === 0 ? "🎉 Sınav günü!" : `${Math.floor(days[i] / 7)} hafta ${days[i] % 7} gün`}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── Ana Sayfa ───────────────────────────────────────────────────────────────
 export default function OgrenciKocuAdana() {
   const [showModal, setShowModal] = useState(false);
   const openModal  = () => setShowModal(true);
   const closeModal = () => setShowModal(false);
 
+
+  const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "EducationalOrganization",
+    "name": "Öğrenci Koçu Adana",
+    "description": "LGS ve YKS öğrencileri için yapılandırılmış Akademik Performans ve Psikolojik Dayanıklılık Modeli",
+    "url": "https://ogrencikocuadana.com",
+    "logo": "https://ogrencikocuadana.com/og-image.png",
+    "image": "https://ogrencikocuadana.com/og-image.png",
+    "telephone": ["+905473803801", "+905403803801"],
+    "email": "ogrencikocuadana@gmail.com",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Adana",
+      "addressCountry": "TR"
+    },
+    "openingHoursSpecification": [
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        "opens": "10:00",
+        "closes": "20:00"
+      },
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": "Saturday",
+        "opens": "10:00",
+        "closes": "17:00"
+      }
+    ],
+    "priceRange": "₺₺",
+    "areaServed": {
+      "@type": "City",
+      "name": "Adana"
+    }
+  };
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
       <style>{`
 
         * { box-sizing: border-box; }
@@ -505,6 +590,9 @@ export default function OgrenciKocuAdana() {
             </div>
           </div>
         </section>
+
+        {/* ══════════════════════ GERİ SAYIM ══════════════════════ */}
+        <CountdownSection />
 
         {/* ══════════════════════ SORUNLAR ══════════════════════ */}
         <section style={{ padding: "80px 16px", background: "white" }}>
@@ -828,7 +916,76 @@ export default function OgrenciKocuAdana() {
           </div>
         </section>
 
-        {/* ══════════════════════ CTA ══════════════════════ */}
+        {/* ══════════════════════ YORUMLAR ══════════════════════ */}
+        <section style={{ padding: "80px 0", background: "linear-gradient(135deg, #f8faff, #eff6ff)", overflow: "hidden" }}>
+          <div style={{ maxWidth: 1280, margin: "0 auto", paddingBottom: 0 }}>
+            <div style={{ textAlign: "center", marginBottom: 48, padding: "0 16px" }}>
+              <div style={{ display: "inline-block", marginBottom: 16, padding: "8px 20px", background: "#dbeafe", borderRadius: 9999 }}>
+                <span style={{ color: "#1e40af", fontWeight: 600, fontSize: "0.8rem", letterSpacing: "0.05em" }}>YORUMLAR</span>
+              </div>
+              <h2 className="display" style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", fontWeight: 800, color: "#0f1f4f", marginBottom: 12 }}>
+                Veli ve Öğrenciler Ne Diyor?
+              </h2>
+              <p style={{ fontSize: "1.1rem", color: "#4b5563", maxWidth: 640, margin: "0 auto" }}>
+                Sistemi deneyimleyenlerin gözünden
+              </p>
+            </div>
+          </div>
+
+          {/* Kayan bantlar */}
+          <style>{`
+            @keyframes scroll-left {
+              0%   { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
+            }
+            .scroll-track { animation: scroll-left 30s linear infinite; }
+            .scroll-track:hover { animation-play-state: paused; }
+          `}</style>
+
+          {(() => {
+            const reviews = [
+              { type: "Veli",      name: "Ayşe K.",    role: "8. Sınıf Velisi",    color: "#1e3a8a", bg: "#eff6ff", border: "#bfdbfe", text: "Kızımın LGS sürecinde çok karamsardık. Sisteme dahil olduktan sonra hem akademik hem de psikolojik olarak inanılmaz bir değişim yaşadı. Haftalık raporlar bizi çok rahatlattı." },
+              { type: "Öğrenci",   name: "Emirhan T.", role: "YKS Öğrencisi",      color: "#c2410c", bg: "#fff7ed", border: "#fed7aa", text: "Daha önce ne çalışacağımı bilmiyordum, motivasyonum sürekli düşüyordu. Şimdi her haftanın planı belli, deneme analizlerim yapılıyor. Net ortalamam 3 ayda ciddi arttı." },
+              { type: "Veli",      name: "Melek A.",  role: "12. Sınıf Velisi",   color: "#1e3a8a", bg: "#eff6ff", border: "#bfdbfe", text: "Kızım sınav kaygısı yüzünden denemede bildiğini yapamıyordu. Psikolojik dayanıklılık eğitimiyle bu sorunun üstesinden geldi. Şimdi çok daha sakin ve odaklı." },
+              { type: "Öğrenci",   name: "Zeynep S.",  role: "LGS Öğrencisi",     color: "#c2410c", bg: "#fff7ed", border: "#fed7aa", text: "Hızlı okuma eğitimi benim için çok faydalı oldu. Artık metinleri çok daha hızlı okuyup anlıyorum. Türkçe netlerim fark edilir şekilde yükseldi." },
+              { type: "Veli",      name: "Fatma Y.",   role: "8. Sınıf Velisi",    color: "#1e3a8a", bg: "#eff6ff", border: "#bfdbfe", text: "30 öğrenci kapasitesi olduğunu duyunca önce tereddüt ettim ama bu sınırlı kontenjanın neden olduğunu şimdi çok iyi anlıyorum. Bireysel ilgi gerçekten fark yaratıyor." },
+              { type: "Öğrenci",   name: "Burak D.",   role: "YKS Öğrencisi",     color: "#c2410c", bg: "#fff7ed", border: "#fed7aa", text: "Telefon bağımlılığı ve zaman yönetimi konusundaki seminerler hayatımı değiştirdi. Artık çok daha verimli çalışıyorum ve boş zamanlarımı doğru kullanıyorum." },
+            ];
+            const doubled = [...reviews, ...reviews];
+            return (
+              <div style={{ display: "flex", overflow: "hidden", userSelect: "none" }}>
+                <div className="scroll-track" style={{ display: "flex", gap: 24, padding: "8px 0", width: "max-content" }}>
+                  {doubled.map((item, i) => (
+                    <div key={i} style={{ width: 360, flexShrink: 0, background: item.bg, borderRadius: 16, padding: 28, border: `2px solid ${item.border}`, display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 4px 16px rgba(0,0,0,0.06)" }}>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        {Array.from({ length: 5 }).map((_, s) => (
+                          <svg key={s} width="18" height="18" fill="#f97316" viewBox="0 0 24 24">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                          </svg>
+                        ))}
+                      </div>
+                      <p style={{ color: "#374151", lineHeight: 1.7, margin: 0, fontSize: "0.95rem", flexGrow: 1 }}>
+                        &ldquo;{item.text}&rdquo;
+                      </p>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 12, borderTop: `1px solid ${item.border}` }}>
+                        <div style={{ width: 40, height: 40, background: item.color, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <span style={{ color: "white", fontWeight: 700, fontSize: "1rem" }}>{item.name[0]}</span>
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, color: "#0f1f4f", fontSize: "0.9rem" }}>{item.name}</div>
+                          <div style={{ fontSize: "0.78rem", color: item.color, fontWeight: 500 }}>{item.role}</div>
+                        </div>
+                        <div style={{ marginLeft: "auto", fontSize: "0.7rem", fontWeight: 600, background: item.border, color: item.color, padding: "3px 10px", borderRadius: 9999 }}>{item.type}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+        </section>
+
+                {/* ══════════════════════ CTA ══════════════════════ */}
         <section id="İletişim" style={{ padding: "80px 16px", background: "linear-gradient(135deg, #1e3a8a, #1e40af, #1e3a8a)", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", top: 0, right: 0, width: 384, height: 384, background: "rgba(249,115,22,0.2)", borderRadius: "50%", filter: "blur(64px)" }} />
           <div style={{ position: "absolute", bottom: 0, left: 0, width: 384, height: 384, background: "rgba(30,64,175,0.3)", borderRadius: "50%", filter: "blur(64px)" }} />
