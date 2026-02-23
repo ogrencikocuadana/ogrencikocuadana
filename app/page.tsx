@@ -328,7 +328,7 @@ function AppointmentModal({ onClose }: { onClose: () => void }) {
               </div>
               <h3 className="display" style={{ fontSize: "1.7rem", fontWeight: 800, color: "#0f1f4f", margin: "0 0 12px" }}>Talebiniz Alındı! 🎉</h3>
               <p style={{ color: "#4b5563", lineHeight: 1.7, maxWidth: 420, margin: "0 auto 12px" }}>
-                En kısa sürede <strong style={{ color: "#1e3a8a" }}>0547 380 38 01</strong> telefon numarasından sizi arayacağız.
+                En kısa sürede <strong style={{ color: "#1e3a8a" }}>{form.phone || "belirttiğiniz numara"}</strong>&apos;dan sizi arayacağız.
               </p>
               <p style={{ color: "#6b7280", fontSize: "0.9rem", maxWidth: 420, margin: "0 auto 32px" }}>
                 📧 Bilgileriniz e-posta ile iletildi. WhatsApp otomatik açılmadıysa{" "}
@@ -424,10 +424,10 @@ export default function OgrenciKocuAdana() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600;700&display=swap');
+
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'Inter', sans-serif; }
-        .display { font-family: 'Playfair Display', serif; }
+        .display { font-family: var(--font-playfair), 'Playfair Display', serif; }
         .dot-bg { background-image: radial-gradient(#1e3a8a 1px, transparent 1px); background-size: 24px 24px; }
         .card-hover { transition: all 0.3s ease; }
         .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.12); }
