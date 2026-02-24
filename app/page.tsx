@@ -389,6 +389,7 @@ function AppointmentModal({ onClose }: { onClose: () => void }) {
                     <option value="8">8. Sınıf (LGS)</option>
                     <option value="11">11. Sınıf (YKS)</option>
                     <option value="12">12. Sınıf (YKS)</option>
+                    <option value="Mezun">Mezun</option>
                   </select>
                 </div>
               </div>
