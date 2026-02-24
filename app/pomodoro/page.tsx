@@ -76,7 +76,8 @@ export default function PomodoroPage() {
   const [tab, setTab] = useState<"timer" | "library" | "report">("timer");
   const [loaded, setLoaded] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const workStartRef = useRef<number>(0); // çalışma başlangıç zamanı
+  const workStartRef = useRef<number>(0);   // çalışma başlangıç zamanı (ms)
+  const phaseEndRef = useRef<number>(0);    // fazın biteceği zaman (ms) — ekran kilidi için
   const mode = MODES[modeIdx];
 
   // ─── localStorage yükleme / kaydetme ─────────────────────────────────────
@@ -108,12 +109,16 @@ export default function PomodoroPage() {
 
   // ─── Timer mantığı ────────────────────────────────────────────────────────
   const startWork = useCallback(() => {
-    workStartRef.current = Date.now();
+    const now = Date.now();
+    workStartRef.current = now;
+    phaseEndRef.current = now + mode.work * 60 * 1000;
     setPhase("work");
     setSeconds(mode.work * 60);
   }, [mode.work]);
 
   const startRest = useCallback(() => {
+    const now = Date.now();
+    phaseEndRef.current = now + mode.rest * 60 * 1000;
     setPhase("rest");
     setSeconds(mode.rest * 60);
   }, [mode.rest]);
@@ -128,28 +133,34 @@ export default function PomodoroPage() {
   const completeWork = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     recordSession(mode.work, workStartRef.current);
-    startRest();
-  }, [mode.work, recordSession, startRest]);
+    const now = Date.now();
+    phaseEndRef.current = now + mode.rest * 60 * 1000;
+    setPhase("rest");
+    setSeconds(mode.rest * 60);
+  }, [mode.work, mode.rest, recordSession]);
 
   useEffect(() => {
     if (phase === "idle") { if (intervalRef.current) clearInterval(intervalRef.current); return; }
 
+    // Ekran kilidi sonrası doğru kalan süreyi hesapla (wall-clock tabanlı)
     intervalRef.current = setInterval(() => {
-      setSeconds(s => {
-        if (s <= 1) {
-          clearInterval(intervalRef.current!);
-          if (phase === "work") {
-            recordSession(mode.work, workStartRef.current);
-            setPhase("rest");
-            return mode.rest * 60;
-          } else {
-            setPhase("idle");
-            return 0;
-          }
+      const remaining = Math.max(0, Math.round((phaseEndRef.current - Date.now()) / 1000));
+      if (remaining <= 0) {
+        clearInterval(intervalRef.current!);
+        if (phase === "work") {
+          recordSession(mode.work, workStartRef.current);
+          const now = Date.now();
+          phaseEndRef.current = now + mode.rest * 60 * 1000;
+          setPhase("rest");
+          setSeconds(mode.rest * 60);
+        } else {
+          setPhase("idle");
+          setSeconds(0);
         }
-        return s - 1;
-      });
-    }, 1000);
+      } else {
+        setSeconds(remaining);
+      }
+    }, 500); // 500ms — ekran açılınca hızlıca güncellenir
 
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [phase, mode.work, mode.rest, recordSession]);
