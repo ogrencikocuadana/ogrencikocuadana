@@ -27,6 +27,7 @@ declare global {
 const MODES = [
   { label: "Klasik", work: 25, rest: 5, color: "#1e3a8a", light: "#eff6ff", accent: "#3b82f6" },
   { label: "Derin Odak", work: 50, rest: 10, color: "#c2410c", light: "#fff7ed", accent: "#f97316" },
+  { label: "Maraton", work: 90, rest: 20, color: "#065f46", light: "#ecfdf5", accent: "#10b981" },
 ];
 
 // ─── Yardımcılar ─────────────────────────────────────────────────────────────
@@ -424,6 +425,7 @@ export default function PomodoroPage() {
                   { label: "Toplam Saat", val: Math.floor(sessions.reduce((a, s) => a + s.duration, 0) / 60) },
                   { label: "Klasik (25dk)", val: sessions.filter(s => s.duration === 25).length },
                   { label: "Derin Odak (50dk)", val: sessions.filter(s => s.duration === 50).length },
+                  { label: "Maraton (90dk)", val: sessions.filter(s => s.duration === 90).length },
                   { label: "Aktif Gün", val: new Set(sessions.map(s => s.date)).size },
                 ].map((item, i) => (
                   <div key={i} style={{ textAlign: "center" }}>
