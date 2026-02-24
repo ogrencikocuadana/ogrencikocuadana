@@ -84,6 +84,11 @@ export default function Navbar() {
                 <span className="absolute left-0 -bottom-2 w-full h-[2px] bg-slate-900 rounded-full transition-all duration-300"></span>
               )}
             </Link>
+            <Link href="/pomodoro" onClick={closeMenu}
+              className={`relative transition ${pathname === "/pomodoro" ? "text-slate-900" : "text-slate-600 hover:text-slate-900"}`}>
+              Pomodoro
+              {pathname === "/pomodoro" && <span className="absolute left-0 -bottom-2 w-full h-[2px] bg-slate-900 rounded-full" />}
+            </Link>
           </nav>
 
           {/* Masaüstü CTA */}
@@ -128,6 +133,11 @@ export default function Navbar() {
               className="text-slate-700 hover:text-slate-900 transition border-b border-slate-100 pb-4"
             >
               Blog
+            </Link>
+            <Link href="/pomodoro" onClick={closeMenu}
+              className={`relative transition ${pathname === "/pomodoro" ? "text-slate-900" : "text-slate-600 hover:text-slate-900"}`}>
+              Pomodoro
+              {pathname === "/pomodoro" && <span className="absolute left-0 -bottom-2 w-full h-[2px] bg-slate-900 rounded-full" />}
             </Link>
           </nav>
 
