@@ -89,6 +89,8 @@ const ANIMAL_TWEMOJI: Record<string, string> = {
   butterfly:   "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f98b.svg",
   snail:       "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f40c.svg",
   turtle:      "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f422.svg",
+  chick:       "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f425.svg",
+  rabbit:      "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f430.svg",
 };
 
 function AnimalImg({ id, size = 32 }: { id: string; size?: number }) {
@@ -107,7 +109,8 @@ const ANIMALS = [
   { id: "penguin",    name: "Penguen"    }, { id: "cat",        name: "Kedi"       },
   { id: "bear",       name: "Ayı"        }, { id: "caterpillar",name: "Tırtıl"     },
   { id: "butterfly",  name: "Kelebek"   }, { id: "snail",      name: "Salyangoz"  },
-  { id: "turtle",     name: "Kaplumbağa"},
+  { id: "turtle",     name: "Kaplumbağa"}, { id: "chick",      name: "Civciv"     },
+  { id: "rabbit",     name: "Tavşan"    },
 ];
 
 // ─── Kitap ────────────────────────────────────────────────────────────────────
@@ -189,13 +192,368 @@ function CelebrationBg() {
   );
 }
 
+
+// ─── Dijital Saat Segmenti ────────────────────────────────────────────────────
+// 7-segment display karakterleri
+const SEG_MAP: Record<string, number[]> = {
+  "0":[1,1,1,1,1,1,0],"1":[0,1,1,0,0,0,0],"2":[1,1,0,1,1,0,1],
+  "3":[1,1,1,1,0,0,1],"4":[0,1,1,0,0,1,1],"5":[1,0,1,1,0,1,1],
+  "6":[1,0,1,1,1,1,1],"7":[1,1,1,0,0,0,0],"8":[1,1,1,1,1,1,1],
+  "9":[1,1,1,1,0,1,1],":":[0,0,0,0,0,0,0],
+};
+
+function SevenSeg({ char, size = 40 }: { char: string; size?: number }) {
+  const segs = SEG_MAP[char] ?? [0,0,0,0,0,0,0];
+  const w = size * 0.55;
+  const h = size;
+  const t = size * 0.08; // kalınlık
+  const g = size * 0.03; // boşluk
+  const on  = "#ff5500";
+  const off = "#1a0800";
+  const glow = `0 0 ${size*0.18}px #ff4400, 0 0 ${size*0.35}px #ff220044`;
+
+  if (char === ":") {
+    return (
+      <div style={{ width: w * 0.4, height: h, position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-around", paddingBlock: h * 0.22 }}>
+        <div style={{ width: t * 1.2, height: t * 1.2, borderRadius: "50%", background: on, boxShadow: glow }} />
+        <div style={{ width: t * 1.2, height: t * 1.2, borderRadius: "50%", background: on, boxShadow: glow }} />
+      </div>
+    );
+  }
+
+  // Segment pozisyonları: top, top-right, bot-right, bottom, bot-left, top-left, middle
+  const segStyle = (active: boolean) => ({
+    background: active ? on : off,
+    boxShadow: active ? glow : "none",
+    borderRadius: t * 0.6,
+    position: "absolute" as const,
+    transition: "all 0.1s",
+  });
+
+  const hw = w - t * 2 - g * 2; // yatay segment genişliği
+  const vh = (h / 2) - t * 1.5 - g; // dikey segment yüksekliği
+
+  return (
+    <div style={{ width: w, height: h, position: "relative" }}>
+      {/* top */}
+      <div style={{ ...segStyle(!!segs[0]), left: t + g, top: 0, width: hw, height: t }} />
+      {/* top-right */}
+      <div style={{ ...segStyle(!!segs[1]), right: 0, top: t + g, width: t, height: vh }} />
+      {/* bot-right */}
+      <div style={{ ...segStyle(!!segs[2]), right: 0, bottom: t + g, width: t, height: vh }} />
+      {/* bottom */}
+      <div style={{ ...segStyle(!!segs[3]), left: t + g, bottom: 0, width: hw, height: t }} />
+      {/* bot-left */}
+      <div style={{ ...segStyle(!!segs[4]), left: 0, bottom: t + g, width: t, height: vh }} />
+      {/* top-left */}
+      <div style={{ ...segStyle(!!segs[5]), left: 0, top: t + g, width: t, height: vh }} />
+      {/* middle */}
+      <div style={{ ...segStyle(!!segs[6]), left: t + g, top: "50%", transform: "translateY(-50%)", width: hw, height: t }} />
+    </div>
+  );
+}
+
+function DigitalDisplay({ value, size = 40 }: { value: string; size?: number }) {
+  return (
+    <div style={{
+      display: "inline-flex", alignItems: "center", gap: size * 0.04,
+      background: "#080400",
+      borderRadius: size * 0.2,
+      padding: `${size * 0.2}px ${size * 0.25}px`,
+      boxShadow: "inset 0 2px 8px rgba(0,0,0,0.8), 0 0 20px rgba(255,60,0,0.08), 0 2px 4px rgba(0,0,0,0.5)",
+      border: "1px solid #1a0800",
+    }}>
+      {value.split("").map((ch, i) => (
+        <SevenSeg key={i} char={ch} size={size} />
+      ))}
+    </div>
+  );
+}
+
+// ─── Sınav Sekmesi ────────────────────────────────────────────────────────────
+const EXAMS = [
+  {
+    id: "lgs-sozel",
+    group: "LGS",
+    label: "Sözel",
+    duration: 75,
+    color: "#7c3aed",
+    accent: "#a78bfa",
+    icon: "📝",
+    desc: "75 dakika",
+  },
+  {
+    id: "lgs-sayisal",
+    group: "LGS",
+    label: "Sayısal",
+    duration: 80,
+    color: "#7c3aed",
+    accent: "#a78bfa",
+    icon: "📐",
+    desc: "80 dakika",
+  },
+  {
+    id: "yks-tyt",
+    group: "YKS",
+    label: "TYT",
+    duration: 165,
+    color: "#0e7490",
+    accent: "#22d3ee",
+    icon: "📋",
+    desc: "165 dakika",
+  },
+  {
+    id: "yks-ayt",
+    group: "YKS",
+    label: "AYT",
+    duration: 180,
+    color: "#0e7490",
+    accent: "#22d3ee",
+    icon: "🎯",
+    desc: "180 dakika",
+  },
+];
+
+function SinavTab() {
+  const [selectedExam, setSelectedExam] = useState<string | null>(null);
+  const [examPhase, setExamPhase] = useState<"idle" | "countdown" | "running" | "done">("idle");
+  const [examSeconds, setExamSeconds] = useState(0);
+  const [countdown, setCountdown] = useState(5);
+  const [now, setNow] = useState(new Date());
+  const examEndRef = useRef<number>(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const clockRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    clockRef.current = setInterval(() => setNow(new Date()), 1000);
+    return () => { if (clockRef.current) clearInterval(clockRef.current); };
+  }, []);
+
+  const exam = EXAMS.find(e => e.id === selectedExam);
+
+  const startExam = () => {
+    if (!exam) return;
+    setCountdown(5);
+    setExamPhase("countdown");
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    let c = 5;
+    intervalRef.current = setInterval(() => {
+      c -= 1;
+      if (c <= 0) {
+        clearInterval(intervalRef.current!);
+        // Geri sayım bitti, sınavı başlat
+        const end = Date.now() + exam.duration * 60 * 1000;
+        examEndRef.current = end;
+        setExamPhase("running");
+        setExamSeconds(exam.duration * 60);
+        intervalRef.current = setInterval(() => {
+          const rem = Math.max(0, Math.round((examEndRef.current - Date.now()) / 1000));
+          setExamSeconds(rem);
+          if (rem <= 0) {
+            clearInterval(intervalRef.current!);
+            setExamPhase("done");
+          }
+        }, 500);
+      } else {
+        setCountdown(c);
+      }
+    }, 1000);
+  };
+
+  const resetExam = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setExamPhase("idle");
+    setExamSeconds(0);
+    setCountdown(5);
+  };
+
+  useEffect(() => () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+  }, []);
+
+  const fmtExamTime = (sec: number) => {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    if (h > 0) return `${h}:${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}`;
+    return `${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}`;
+  };
+
+  const fmtClock = (d: Date) => {
+    return `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}:${d.getSeconds().toString().padStart(2,"0")}`;
+  };
+
+  const totalSec = exam ? exam.duration * 60 : 1;
+  const pct = examPhase === "running" ? ((totalSec - examSeconds) / totalSec) * 100 : examPhase === "done" ? 100 : 0;
+  const isUrgent = examPhase === "running" && examSeconds <= 300; // son 5 dakika
+
+  return (
+    <div className="fade-in" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 28 }}>
+      <div style={{ textAlign: "center" }}>
+        <h2 style={{ color: "white", fontSize: "1.4rem", fontWeight: 800, margin: "0 0 6px" }}>🎓 Gerçek Sınav Atmosferi</h2>
+        <p style={{ color: "rgba(255,255,255,0.4)", fontSize: ".85rem", margin: 0 }}>Sınavını seç ve gerçek koşullarda çalış</p>
+      </div>
+
+      {/* Sınav seçimi */}
+      {examPhase === "idle" && (
+        <div style={{ width: "100%", maxWidth: 580 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+            {["LGS", "YKS"].map(group => (
+              <div key={group}>
+                <div style={{ color: "rgba(255,255,255,0.4)", fontSize: ".72rem", fontWeight: 700, letterSpacing: ".08em", marginBottom: 8, textAlign: "center" }}>{group}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {EXAMS.filter(e => e.group === group).map(e => (
+                    <button key={e.id}
+                      onClick={() => setSelectedExam(e.id)}
+                      style={{
+                        background: selectedExam === e.id ? `${e.color}33` : "rgba(255,255,255,0.05)",
+                        border: `2px solid ${selectedExam === e.id ? e.accent : "rgba(255,255,255,0.1)"}`,
+                        borderRadius: 14, padding: "14px 16px", cursor: "pointer",
+                        transition: "all 0.2s", textAlign: "left",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: "1.4rem" }}>{e.icon}</span>
+                        <div>
+                          <div style={{ color: selectedExam === e.id ? e.accent : "white", fontWeight: 800, fontSize: ".95rem" }}>{e.group} — {e.label}</div>
+                          <div style={{ color: "rgba(255,255,255,0.45)", fontSize: ".78rem", marginTop: 2 }}>{e.desc}</div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={startExam}
+            disabled={!selectedExam}
+            style={{
+              width: "100%", padding: "15px", borderRadius: 14, border: "none",
+              background: selectedExam ? (exam?.color ?? "#3b82f6") : "rgba(255,255,255,0.1)",
+              color: selectedExam ? "white" : "rgba(255,255,255,0.3)",
+              fontSize: "1rem", fontWeight: 700, cursor: selectedExam ? "pointer" : "not-allowed",
+              boxShadow: selectedExam ? `0 8px 24px ${exam?.color ?? "#3b82f6"}55` : "none",
+              transition: "all 0.3s",
+            }}
+          >
+            {selectedExam ? `🚀 ${exam?.group} ${exam?.label} Sınavını Başlat` : "↑ Önce bir sınav seç"}
+          </button>
+        </div>
+      )}
+
+      {/* ── Geri sayım ── */}
+      {examPhase === "countdown" && (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: ".85rem", fontWeight: 700, letterSpacing: ".1em" }}>
+            {exam?.group} — {exam?.label} başlıyor...
+          </div>
+          <div style={{
+            width: 140, height: 140, borderRadius: "50%",
+            background: "#080400",
+            border: `4px solid ${exam?.accent ?? "#ff5500"}`,
+            boxShadow: `0 0 40px ${exam?.accent ?? "#ff5500"}66, inset 0 0 30px rgba(0,0,0,0.8)`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            animation: "countdown-pulse 1s ease-in-out infinite",
+          }}>
+            <span style={{
+              fontSize: "4.5rem", fontWeight: 900,
+              color: "#ff5500",
+              textShadow: "0 0 20px #ff4400, 0 0 40px #ff220088",
+              fontVariantNumeric: "tabular-nums",
+              lineHeight: 1,
+            }}>
+              {countdown}
+            </span>
+          </div>
+          <div style={{ color: "rgba(255,255,255,0.4)", fontSize: ".8rem" }}>Hazır ol!</div>
+          <button onClick={resetExam} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.5)", borderRadius: 10, padding: "8px 20px", cursor: "pointer", fontSize: ".8rem" }}>
+            İptal
+          </button>
+        </div>
+      )}
+
+      {/* Çalışıyor */}
+      {(examPhase === "running" || examPhase === "done") && (
+        <div style={{ width: "100%", maxWidth: 580, display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Sınav başlığı */}
+          <div style={{ textAlign: "center" }}>
+            <div style={{ color: exam?.accent, fontSize: ".82rem", fontWeight: 700, letterSpacing: ".1em", marginBottom: 4 }}>
+              {exam?.group} — {exam?.label}
+            </div>
+            {examPhase === "done" && (
+              <div style={{ color: "#10b981", fontSize: "1.1rem", fontWeight: 800 }}>✓ Süre Doldu! Tebrikler!</div>
+            )}
+          </div>
+
+          {/* Geri sayım - dijital */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            <div style={{ color: "rgba(255,255,255,0.35)", fontSize: ".72rem", fontWeight: 700, letterSpacing: ".1em" }}>
+              {examPhase === "done" ? "TAMAMLANDI" : "KALAN SÜRE"}
+            </div>
+            <DigitalDisplay
+              value={fmtExamTime(examSeconds)}
+              size={examSeconds >= 3600 ? 34 : 44}
+            />
+          </div>
+
+          {/* Şimdiki saat */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            <div style={{ color: "rgba(255,255,255,0.35)", fontSize: ".72rem", fontWeight: 700, letterSpacing: ".1em" }}>ŞİMDİKİ SAAT</div>
+            <DigitalDisplay value={fmtClock(now)} size={32} />
+          </div>
+
+          {/* İlerleme çubuğu */}
+          <div style={{ position: "relative", height: 10, background: "rgba(255,255,255,0.08)", borderRadius: 5 }}>
+            <div style={{
+              position: "absolute", left: 0, top: 0, bottom: 0,
+              width: `${pct}%`,
+              background: examPhase === "done" ? "#10b981" : isUrgent ? "linear-gradient(90deg,#ef4444,#f97316)" : `linear-gradient(90deg,${exam?.color},${exam?.accent})`,
+              borderRadius: 5,
+              transition: "width 0.5s ease",
+              boxShadow: isUrgent ? "0 0 12px #ef444488" : "none",
+            }} />
+          </div>
+
+          {/* Son 5 dk uyarısı */}
+          {isUrgent && (
+            <div style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 12, padding: "12px 16px", textAlign: "center" }}>
+              <p style={{ color: "#fca5a5", margin: 0, fontWeight: 700, fontSize: ".88rem" }}>⚠️ Son 5 dakika! Cevaplarını kontrol et!</p>
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={resetExam} style={{ flex: 1, background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 12, padding: 13, color: "white", fontWeight: 600, cursor: "pointer", fontSize: ".9rem" }}>
+              ← Geri Dön
+            </button>
+            {examPhase === "running" && (
+              <button onClick={resetExam} style={{ flex: 2, background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 12, padding: 13, color: "#fca5a5", fontWeight: 700, cursor: "pointer", fontSize: ".9rem" }}>
+                Sınavı Bitir
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Saat her zaman göster (idle modda) */}
+      {examPhase === "idle" && (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+          <div style={{ color: "rgba(255,255,255,0.35)", fontSize: ".72rem", fontWeight: 700, letterSpacing: ".1em" }}>ŞİMDİKİ SAAT</div>
+          <DigitalDisplay value={fmtClock(now)} size={36} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Ana Bileşen ──────────────────────────────────────────────────────────────
 export default function PomodoroPage() {
   const [modeIdx, setModeIdx]         = useState(0);
   const [phase, setPhase]             = useState<"idle"|"work"|"rest">("idle");
   const [seconds, setSeconds]         = useState(0);
   const [sessions, setSessions]       = useState<Session[]>([]);
-  const [tab, setTab]                 = useState<"timer"|"library"|"report">("timer");
+  const [tab, setTab]                 = useState<"timer"|"library"|"report"|"sinav">("timer");
   const [loaded, setLoaded]           = useState(false);
   const [customWork, setCustomWork]   = useState(30);
   const [customRest, setCustomRest]   = useState(5);
@@ -381,6 +739,7 @@ export default function PomodoroPage() {
         @keyframes confetti-fall { 0%{transform:translateY(-20px) rotate(0deg);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
         @keyframes celebrate-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0)} 50%{box-shadow:0 0 40px 10px rgba(16,185,129,0.3)} }
         @keyframes streak-bounce { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+        @keyframes countdown-pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.06);opacity:.85} }
         .fade-in { animation: fade-in 0.4s ease forwards; }
         .tab-btn { border:none;cursor:pointer;transition:all 0.2s;font-weight:600;border-radius:10px;padding:10px 14px;font-size:.8rem; }
         .mode-btn { border:2px solid;cursor:pointer;transition:all 0.25s;border-radius:14px;padding:10px 12px;text-align:center;background:none; }
@@ -413,9 +772,9 @@ export default function PomodoroPage() {
             )}
           </div>
           <div style={{ display: "flex", gap: 5, background: "rgba(255,255,255,0.08)", borderRadius: 14, padding: 4 }}>
-            {(["timer","library","report"] as const).map(t => (
+            {(["timer","library","report","sinav"] as const).map(t => (
               <button key={t} className="tab-btn" onClick={() => setTab(t)} style={{ background: tab === t ? "white" : "transparent", color: tab === t ? "#0f1f4f" : "rgba(255,255,255,0.6)" }}>
-                {t === "timer" ? "⏱ Timer" : t === "library" ? "📚 Kütüphane" : "📊 Rapor"}
+                {t === "timer" ? "⏱ Timer" : t === "library" ? "📚 Kütüphane" : t === "report" ? "📊 Rapor" : "🎓 Sınav"}
               </button>
             ))}
           </div>
@@ -627,6 +986,12 @@ export default function PomodoroPage() {
             </div>
           </div>
         )}
+
+        {/* ── SINAV ── */}
+        {tab === "sinav" && (
+          <SinavTab />
+        )}
+
       </div>
 
       {/* ── HEDEF MODAL ── */}
