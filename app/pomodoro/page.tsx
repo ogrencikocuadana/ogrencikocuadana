@@ -17,41 +17,153 @@ const PRESET_MODES = [
 ];
 
 const AMBIENT_SOUNDS = [
-  { id: "off",    label: "Sessiz",       icon: "🔇" },
-  { id: "rain",   label: "Yağmur",       icon: "🌧️" },
-  { id: "cafe",   label: "Kafe",         icon: "☕" },
-  { id: "forest", label: "Orman",        icon: "🌲" },
-  { id: "waves",  label: "Dalga",        icon: "🌊" },
+  { id: "off",      label: "Sessiz",   icon: "🔇" },
+  { id: "rain",     label: "Yağmur",   icon: "🌧️" },
+  { id: "fireplace",label: "Şömine",   icon: "🔥" },
+  { id: "forest",   label: "Orman",    icon: "🌲" },
+  { id: "ocean",    label: "Okyanus",  icon: "🌊" },
 ];
 
-// Web Audio ile ambient ses üretici
-function createAmbientNode(ctx: AudioContext, type: string): AudioNode | null {
+// Web Audio ile çok katmanlı ambient ses
+function createAmbientNode(ctx: AudioContext, type: string): GainNode | null {
   if (type === "off") return null;
-  const bufferSize = 2 * ctx.sampleRate;
-  const buf = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
 
-  const source = ctx.createBufferSource();
-  source.buffer = buf; source.loop = true;
+  const master = ctx.createGain();
+  master.connect(ctx.destination);
 
-  const filter = ctx.createBiquadFilter();
-  const gain = ctx.createGain();
-  gain.gain.value = 0.18;
+  const makeNoise = (color: "white"|"pink"|"brown") => {
+    const bufSize = 4 * ctx.sampleRate;
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    if (color === "white") {
+      for (let i = 0; i < bufSize; i++) d[i] = Math.random() * 2 - 1;
+    } else if (color === "pink") {
+      let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0;
+      for (let i = 0; i < bufSize; i++) {
+        const w = Math.random() * 2 - 1;
+        b0=0.99886*b0+w*0.0555179; b1=0.99332*b1+w*0.0750759;
+        b2=0.96900*b2+w*0.1538520; b3=0.86650*b3+w*0.3104856;
+        b4=0.55000*b4+w*0.5329522; b5=-0.7616*b5-w*0.0168980;
+        d[i]=(b0+b1+b2+b3+b4+b5+w*0.5362)*0.11;
+      }
+    } else { // brown
+      let last = 0;
+      for (let i = 0; i < bufSize; i++) {
+        const w = Math.random() * 2 - 1;
+        d[i] = (last + 0.02 * w) / 1.02; last = d[i]; d[i] *= 3.5;
+      }
+    }
+    const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; return src;
+  };
+
+  const makeOsc = (freq: number, type: OscillatorType, vol: number) => {
+    const osc = ctx.createOscillator(); const g = ctx.createGain();
+    osc.type = type; osc.frequency.value = freq; g.gain.value = vol;
+    osc.connect(g); return { osc, g };
+  };
 
   if (type === "rain") {
-    filter.type = "highpass"; filter.frequency.value = 400;
-  } else if (type === "cafe") {
-    filter.type = "bandpass"; filter.frequency.value = 800; filter.Q.value = 0.3; gain.gain.value = 0.12;
+    // Pembe gürültü (yağmur sesi) + hafif bas
+    const src = makeNoise("pink");
+    const hpf = ctx.createBiquadFilter(); hpf.type="highpass"; hpf.frequency.value=300;
+    const lpf = ctx.createBiquadFilter(); lpf.type="lowpass"; lpf.frequency.value=8000;
+    const g = ctx.createGain(); g.gain.value = 0.5;
+    src.connect(hpf); hpf.connect(lpf); lpf.connect(g); g.connect(master);
+    src.start();
+    // Damla efekti: periyodik tıklamalar
+    const dropGain = ctx.createGain(); dropGain.gain.value = 0.05;
+    dropGain.connect(master);
+    const scheduleDrops = () => {
+      const now2 = ctx.currentTime;
+      for (let i = 0; i < 8; i++) {
+        const t = now2 + Math.random() * 2;
+        const osc2 = ctx.createOscillator(); const og = ctx.createGain();
+        osc2.frequency.value = 800 + Math.random()*400; osc2.type="sine";
+        og.gain.setValueAtTime(0.08, t); og.gain.exponentialRampToValueAtTime(0.001, t+0.1);
+        osc2.connect(og); og.connect(dropGain); osc2.start(t); osc2.stop(t+0.1);
+      }
+      setTimeout(scheduleDrops, 1800);
+    };
+    scheduleDrops();
+    master.gain.value = 0.7;
+
+  } else if (type === "fireplace") {
+    // Kahverengi gürültü (ateş crackle) + alçak frekans uğultu
+    const src = makeNoise("brown");
+    const lpf = ctx.createBiquadFilter(); lpf.type="lowpass"; lpf.frequency.value=1200;
+    const g = ctx.createGain(); g.gain.value = 0.6;
+    src.connect(lpf); lpf.connect(g); g.connect(master);
+    src.start();
+    // Crackle: ani yüksek frekans patlamalar
+    const crackleGain = ctx.createGain(); crackleGain.gain.value = 0.08;
+    crackleGain.connect(master);
+    const scheduleCrackle = () => {
+      const now2 = ctx.currentTime;
+      if (Math.random() > 0.4) {
+        const osc2 = ctx.createOscillator(); const og = ctx.createGain();
+        osc2.frequency.value = 2000 + Math.random()*3000; osc2.type="sawtooth";
+        og.gain.setValueAtTime(0.15, now2); og.gain.exponentialRampToValueAtTime(0.001, now2+0.05);
+        osc2.connect(og); og.connect(crackleGain); osc2.start(now2); osc2.stop(now2+0.05);
+      }
+      setTimeout(scheduleCrackle, 200 + Math.random()*600);
+    };
+    scheduleCrackle();
+    // Alçak uğultu (ateşin hissettirdiği ısı)
+    const {osc: rumble, g: rg} = makeOsc(60, "sine", 0.08);
+    rumble.connect(rg); rg.connect(master); rumble.start();
+    master.gain.value = 0.6;
+
   } else if (type === "forest") {
-    filter.type = "bandpass"; filter.frequency.value = 600; filter.Q.value = 0.5; gain.gain.value = 0.1;
-  } else if (type === "waves") {
-    filter.type = "lowpass"; filter.frequency.value = 300; gain.gain.value = 0.22;
+    // Pembe gürültü (rüzgar) + kuş sesleri
+    const src = makeNoise("pink");
+    const bpf = ctx.createBiquadFilter(); bpf.type="bandpass"; bpf.frequency.value=700; bpf.Q.value=0.3;
+    const g = ctx.createGain(); g.gain.value = 0.25;
+    src.connect(bpf); bpf.connect(g); g.connect(master);
+    src.start();
+    // Kuş sesi simülasyonu
+    const birdGain = ctx.createGain(); birdGain.gain.value = 0.15;
+    birdGain.connect(master);
+    const scheduleBird = () => {
+      const now2 = ctx.currentTime;
+      const chirps = 2 + Math.floor(Math.random() * 4);
+      const baseFreq = 2000 + Math.random() * 1500;
+      for (let i = 0; i < chirps; i++) {
+        const t = now2 + i * 0.15;
+        const osc2 = ctx.createOscillator(); const og = ctx.createGain();
+        osc2.frequency.setValueAtTime(baseFreq, t);
+        osc2.frequency.linearRampToValueAtTime(baseFreq * 1.3, t + 0.08);
+        osc2.type = "sine";
+        og.gain.setValueAtTime(0.2, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+        osc2.connect(og); og.connect(birdGain); osc2.start(t); osc2.stop(t + 0.12);
+      }
+      setTimeout(scheduleBird, 3000 + Math.random() * 5000);
+    };
+    scheduleBird();
+    master.gain.value = 0.6;
+
+  } else if (type === "ocean") {
+    // Düşük frekanslı dalgalar — gerçekçi okyanus
+    const src = makeNoise("brown");
+    const lpf = ctx.createBiquadFilter(); lpf.type="lowpass"; lpf.frequency.value=600;
+    const hpf = ctx.createBiquadFilter(); hpf.type="highpass"; hpf.frequency.value=60;
+    const g = ctx.createGain(); g.gain.value = 0.55;
+    src.connect(lpf); lpf.connect(hpf); hpf.connect(g); g.connect(master);
+    src.start();
+    // Dalga ritmi — LFO ile gain modülasyonu
+    const lfo = ctx.createOscillator(); const lfoGain = ctx.createGain();
+    lfo.frequency.value = 0.15; lfoGain.gain.value = 0.18;
+    lfo.connect(lfoGain); lfoGain.connect(g.gain);
+    lfo.start();
+    // Dalga köpüğü sesi
+    const src2 = makeNoise("white");
+    const hpf2 = ctx.createBiquadFilter(); hpf2.type="highpass"; hpf2.frequency.value=4000;
+    const g2 = ctx.createGain(); g2.gain.value = 0.06;
+    src2.connect(hpf2); hpf2.connect(g2); g2.connect(master);
+    src2.start();
+    master.gain.value = 0.65;
   }
 
-  source.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
-  source.start(0);
-  return gain;
+  return master;
 }
 
 const STORAGE_KEY = "pomodoro_sessions_v2";
@@ -547,6 +659,140 @@ function SinavTab() {
   );
 }
 
+// ─── Hayvan Yol Arkadaşı ─────────────────────────────────────────────────────
+const COMPANION_MESSAGES = {
+  idle:  ["Hadi başlayalım! 📚", "Seninle çalışmaya hazırım!", "Bugün harika olacak! ✨"],
+  work:  ["Süper gidiyorsun! 💪", "Odaklan, yapabilirsin!", "Beraber başarırız! 🔥", "Harika! Devam et!", "Sen çalışırken ben de buradayım 📖"],
+  rest:  ["Molayı hak ettin!", "Biraz nefes al 😌", "Hemen döneceğiz!", "Su iç, gözlerini dinlendir 💙"],
+  done:  ["Muhteşemsin! 🎉", "Tebrikler, harika iş!", "Bunu hak ettin! ⭐"],
+};
+
+function AnimalCompanion({ animalId, phase }: { animalId: string; phase: "idle"|"work"|"rest" }) {
+  const [bubble, setBubble] = useState<string | null>(null);
+  const [showBubble, setShowBubble] = useState(false);
+  const [isStudying, setIsStudying] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const getMsg = (p: string) => {
+    const msgs = COMPANION_MESSAGES[p as keyof typeof COMPANION_MESSAGES] ?? COMPANION_MESSAGES.idle;
+    return msgs[Math.floor(Math.random() * msgs.length)];
+  };
+
+  // Faz değişince mesaj göster
+  useEffect(() => {
+    setBubble(getMsg(phase));
+    setShowBubble(true);
+    setIsStudying(phase === "work");
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setShowBubble(false), 3500);
+  }, [phase]);
+
+  // Periyodik mesajlar
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBubble(getMsg(phase));
+      setShowBubble(true);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setShowBubble(false), 3500);
+    }, 18000); // 18 saniyede bir
+    return () => clearInterval(interval);
+  }, [phase]);
+
+  // Tıklanınca mesaj
+  const handleClick = () => {
+    setBubble(getMsg(phase));
+    setShowBubble(true);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setShowBubble(false), 3000);
+  };
+
+  return (
+    <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}
+      onClick={handleClick}
+      title="Tıkla, konuşsun!"
+    >
+      {/* Konuşma balonu */}
+      <div style={{
+        position: "absolute", bottom: "100%", left: "50%",
+        marginBottom: 10, zIndex: 10,
+        opacity: showBubble ? 1 : 0,
+        transform: `translateX(-50%) translateY(${showBubble ? 0 : 6}px)`,
+        transition: "opacity 0.3s, transform 0.3s",
+        pointerEvents: "none",
+        minWidth: 140, maxWidth: 200,
+      }}>
+        <div style={{
+          background: "white", color: "#1a1a2e",
+          borderRadius: 14, padding: "8px 14px",
+          fontSize: ".8rem", fontWeight: 600, textAlign: "center",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.3)",
+          lineHeight: 1.4,
+          position: "relative",
+        }}>
+          {bubble}
+          {/* Balonun oku */}
+          <div style={{
+            position: "absolute", bottom: -7, left: "50%", transform: "translateX(-50%)",
+            width: 0, height: 0,
+            borderLeft: "7px solid transparent",
+            borderRight: "7px solid transparent",
+            borderTop: "7px solid white",
+          }} />
+        </div>
+      </div>
+
+      {/* Hayvan + sahne */}
+      <div style={{
+        background: "rgba(255,255,255,0.05)",
+        borderRadius: 20, padding: "14px 20px",
+        border: "1px solid rgba(255,255,255,0.1)",
+        display: "flex", alignItems: "flex-end", gap: 10,
+        transition: "all 0.3s",
+        boxShadow: phase === "work" ? "0 0 20px rgba(59,130,246,0.15)" : "none",
+      }}>
+        {/* Masa */}
+        <div style={{ position: "relative" }}>
+          {/* Kitap (çalışma modunda) */}
+          {isStudying && (
+            <div style={{ position: "absolute", bottom: 46, left: "50%", transform: "translateX(-50%)", animation: "float 3s ease-in-out infinite" }}>
+              <div style={{ fontSize: "1.1rem" }}>📖</div>
+            </div>
+          )}
+          {/* Hayvan */}
+          <div style={{ animation: phase === "work" ? "bob 2s ease-in-out infinite" : "none" }}>
+            <AnimalImg id={animalId} size={52} />
+          </div>
+          {/* Masa tahtası */}
+          <div style={{
+            width: 80, height: 8, marginTop: 4,
+            background: "linear-gradient(90deg, #8b6914, #c8941a, #8b6914)",
+            borderRadius: 4, boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
+          }} />
+          {/* Masa bacakları */}
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "0 8px" }}>
+            <div style={{ width: 6, height: 14, background: "#8b6914", borderRadius: "0 0 3px 3px" }} />
+            <div style={{ width: 6, height: 14, background: "#8b6914", borderRadius: "0 0 3px 3px" }} />
+          </div>
+        </div>
+        {/* Kalem & not defteri */}
+        {isStudying && (
+          <div style={{ paddingBottom: 22, display: "flex", flexDirection: "column", gap: 2, opacity: 0.8 }}>
+            <div style={{ fontSize: ".9rem", animation: "writing 1.5s ease-in-out infinite" }}>✏️</div>
+            <div style={{ fontSize: ".75rem" }}>📓</div>
+          </div>
+        )}
+        {/* Mola modunda çay */}
+        {phase === "rest" && (
+          <div style={{ paddingBottom: 22, fontSize: "1rem", animation: "steam 2s ease-in-out infinite" }}>☕</div>
+        )}
+      </div>
+      <div style={{ color: "rgba(255,255,255,0.3)", fontSize: ".68rem", marginTop: 6 }}>
+        Tıkla, konuşsun! 👆
+      </div>
+    </div>
+  );
+}
+
 // ─── Ana Bileşen ──────────────────────────────────────────────────────────────
 export default function PomodoroPage() {
   const [modeIdx, setModeIdx]         = useState(0);
@@ -657,7 +903,8 @@ export default function PomodoroPage() {
   // ─── Timer ───────────────────────────────────────────────────────────────
   const startWork = useCallback(() => {
     const now = Date.now();
-    workStartRef.current = now; phaseEndRef.current = now + mode.work * 60 * 1000;
+    workStartRef.current = now;
+    phaseEndRef.current = now + mode.work * 60 * 1000;
     setPhase("work"); setSeconds(mode.work * 60);
   }, [mode.work]);
 
@@ -673,7 +920,11 @@ export default function PomodoroPage() {
 
   const completeWork = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
-    recordSession(mode.work, workStartRef.current);
+    // workStartRef'i sıfırla — aynı oturum iki kez kaydedilmesin
+    const startedAt = workStartRef.current;
+    workStartRef.current = 0;
+    if (startedAt === 0) return; // zaten tamamlandı, tekrar basıldı
+    recordSession(mode.work, startedAt);
     playBeep("work_end");
     sendNotification("Ders tamamlandı! 🎉", `${mode.work} dakika çalıştın. Mola zamanı!`);
     const now = Date.now(); phaseEndRef.current = now + mode.rest * 60 * 1000;
@@ -687,7 +938,9 @@ export default function PomodoroPage() {
       if (remaining <= 0) {
         clearInterval(intervalRef.current!);
         if (phase === "work") {
-          recordSession(mode.work, workStartRef.current);
+          const startedAt = workStartRef.current;
+          workStartRef.current = 0;
+          if (startedAt > 0) recordSession(mode.work, startedAt);
           playBeep("work_end");
           sendNotification("Ders tamamlandı! 🎉", `${mode.work} dakika çalıştın. Mola zamanı!`);
           const now = Date.now(); phaseEndRef.current = now + mode.rest * 60 * 1000;
@@ -750,6 +1003,10 @@ export default function PomodoroPage() {
         .ambient-btn:hover { border-color:rgba(255,255,255,0.3); }
         .ambient-btn.active { border-color:#3b82f6;background:rgba(59,130,246,0.15);color:white; }
         input[type=range] { accent-color:#3b82f6;width:100%; }
+        @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+        @keyframes float { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-5px)} }
+        @keyframes writing { 0%,100%{transform:rotate(-10deg)} 50%{transform:rotate(10deg)} }
+        @keyframes steam { 0%,100%{opacity:1;transform:translateY(0)} 50%{opacity:0.6;transform:translateY(-3px)} }
       `}</style>
 
       {/* Header */}
@@ -823,6 +1080,9 @@ export default function PomodoroPage() {
                 </div>
               </div>
             )}
+
+            {/* Yol arkadaşı */}
+            <AnimalCompanion animalId={dailyGoal.animal} phase={phase === "rest" ? "rest" : phase === "work" ? "work" : "idle"} />
 
             {/* Timer dairesi */}
             <div style={{ position: "relative", width: 220, height: 220 }}>
