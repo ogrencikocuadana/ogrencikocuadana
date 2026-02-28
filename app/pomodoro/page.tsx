@@ -744,47 +744,63 @@ function AnimalCompanion({ animalId, phase }: { animalId: string; phase: "idle"|
       {/* Hayvan + sahne */}
       <div style={{
         background: "rgba(255,255,255,0.05)",
-        borderRadius: 20, padding: "14px 20px",
+        borderRadius: 20, padding: "18px 24px 10px",
         border: "1px solid rgba(255,255,255,0.1)",
-        display: "flex", alignItems: "flex-end", gap: 10,
-        transition: "all 0.3s",
+        transition: "box-shadow 0.3s",
         boxShadow: phase === "work" ? "0 0 20px rgba(59,130,246,0.15)" : "none",
       }}>
-        {/* Masa */}
-        <div style={{ position: "relative" }}>
-          {/* Kitap (çalışma modunda) */}
+        {/* Masa yüzeyi — her şeyin içinde olduğu relative container */}
+        <div style={{ position: "relative", display: "flex", alignItems: "flex-end", gap: 8 }}>
+
+          {/* Sol: hayvan oturur, önünde defter */}
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            {/* Hayvan — sabit, animasyonsuz */}
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <AnimalImg id={animalId} size={54} />
+            </div>
+            {/* Defter — hayvanın hemen önünde, masa yüzeyiyle aynı hizada (z-index: 2) */}
+            {isStudying && (
+              <div style={{
+                position: "absolute",
+                bottom: 0, left: "50%", transform: "translateX(-50%)",
+                zIndex: 2, fontSize: "1.4rem", lineHeight: 1,
+              }}>📓</div>
+            )}
+            {/* Mola: çay fincanı önde */}
+            {phase === "rest" && (
+              <div style={{
+                position: "absolute",
+                bottom: 0, left: "50%", transform: "translateX(-50%)",
+                zIndex: 2, fontSize: "1.2rem",
+                animation: "steam 2s ease-in-out infinite",
+              }}>☕</div>
+            )}
+          </div>
+
+          {/* Sağ: kitap yığını — masa üstünde dikey */}
           {isStudying && (
-            <div style={{ position: "absolute", bottom: 46, left: "50%", transform: "translateX(-50%)", animation: "float 3s ease-in-out infinite" }}>
-              <div style={{ fontSize: "1.1rem" }}>📖</div>
+            <div style={{
+              display: "flex", flexDirection: "column", alignItems: "center",
+              gap: 1, paddingBottom: 2, flexShrink: 0,
+            }}>
+              <div style={{ fontSize: "1rem" }}>📚</div>
+              <div style={{ fontSize: ".85rem" }}>📘</div>
+              <div style={{ fontSize: ".75rem" }}>📗</div>
             </div>
           )}
-          {/* Hayvan */}
-          <div style={{ animation: phase === "work" ? "bob 2s ease-in-out infinite" : "none" }}>
-            <AnimalImg id={animalId} size={52} />
-          </div>
-          {/* Masa tahtası */}
-          <div style={{
-            width: 80, height: 8, marginTop: 4,
-            background: "linear-gradient(90deg, #8b6914, #c8941a, #8b6914)",
-            borderRadius: 4, boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
-          }} />
-          {/* Masa bacakları */}
-          <div style={{ display: "flex", justifyContent: "space-between", padding: "0 8px" }}>
-            <div style={{ width: 6, height: 14, background: "#8b6914", borderRadius: "0 0 3px 3px" }} />
-            <div style={{ width: 6, height: 14, background: "#8b6914", borderRadius: "0 0 3px 3px" }} />
-          </div>
         </div>
-        {/* Kalem & not defteri */}
-        {isStudying && (
-          <div style={{ paddingBottom: 22, display: "flex", flexDirection: "column", gap: 2, opacity: 0.8 }}>
-            <div style={{ fontSize: ".9rem", animation: "writing 1.5s ease-in-out infinite" }}>✏️</div>
-            <div style={{ fontSize: ".75rem" }}>📓</div>
-          </div>
-        )}
-        {/* Mola modunda çay */}
-        {phase === "rest" && (
-          <div style={{ paddingBottom: 22, fontSize: "1rem", animation: "steam 2s ease-in-out infinite" }}>☕</div>
-        )}
+
+        {/* Masa tahtası */}
+        <div style={{
+          height: 8, marginTop: 4,
+          background: "linear-gradient(90deg, #8b6914, #c8941a, #8b6914)",
+          borderRadius: 4, boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
+        }} />
+        {/* Masa bacakları */}
+        <div style={{ display: "flex", justifyContent: "space-between", padding: "0 10px" }}>
+          <div style={{ width: 6, height: 14, background: "#8b6914", borderRadius: "0 0 3px 3px" }} />
+          <div style={{ width: 6, height: 14, background: "#8b6914", borderRadius: "0 0 3px 3px" }} />
+        </div>
       </div>
       <div style={{ color: "rgba(255,255,255,0.3)", fontSize: ".68rem", marginTop: 6 }}>
         Tıkla, konuşsun! 👆
@@ -854,9 +870,11 @@ export default function PomodoroPage() {
   }, []);
 
   // ─── Ses bildirimi ────────────────────────────────────────────────────────
-  const playBeep = useCallback((type: "work_end"|"rest_end") => {
+  const playBeep = useCallback(async (type: "work_end"|"rest_end") => {
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AC = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AC();
+      if (ctx.state === "suspended") await ctx.resume();
       const notes = type === "work_end" ? [523, 659, 784] : [784, 659, 523];
       notes.forEach((freq, i) => {
         const osc = ctx.createOscillator(); const gain = ctx.createGain();
@@ -884,13 +902,25 @@ export default function PomodoroPage() {
   }, []);
 
   // ─── Ambient ses ──────────────────────────────────────────────────────────
-  const startAmbient = useCallback((id: string) => {
+  const startAmbient = useCallback(async (id: string) => {
     try {
-      if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      if (ambientGainRef.current) (ambientGainRef.current as GainNode).gain.setValueAtTime(0, audioCtxRef.current.currentTime);
-      if (id === "off") { ambientGainRef.current = null; return; }
+      // iOS/iPadOS: AudioContext sadece kullanıcı dokunuşuyla başlar
+      if (!audioCtxRef.current) {
+        const AC = window.AudioContext || (window as any).webkitAudioContext;
+        audioCtxRef.current = new AC();
+      }
+      // Context "suspended" olabilir (özellikle iPad) — resume et
+      if (audioCtxRef.current.state === "suspended") {
+        await audioCtxRef.current.resume();
+      }
+      // Önceki sesi durdur
+      if (ambientGainRef.current) {
+        try { (ambientGainRef.current as GainNode).gain.setValueAtTime(0, audioCtxRef.current.currentTime); } catch {}
+        ambientGainRef.current = null;
+      }
+      if (id === "off") return;
       ambientGainRef.current = createAmbientNode(audioCtxRef.current, id);
-    } catch {}
+    } catch (e) { console.warn("Audio error:", e); }
   }, []);
 
   // ─── Oturum kaydet ────────────────────────────────────────────────────────
