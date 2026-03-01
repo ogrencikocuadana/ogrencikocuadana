@@ -10,10 +10,10 @@ interface DailyGoal { minutes: number; animal: string; }
 
 // ─── Sabitler ─────────────────────────────────────────────────────────────────
 const PRESET_MODES = [
-  { label: "Klasik",     work: 25, rest: 5,  color: "#1e3a8a", light: "#eff6ff", accent: "#3b82f6" },
-  { label: "Derin Odak", work: 50, rest: 10, color: "#c2410c", light: "#fff7ed", accent: "#f97316" },
-  { label: "Maraton",    work: 90, rest: 10, color: "#065f46", light: "#ecfdf5", accent: "#10b981" },
-  { label: "Serbest",    work: 0,  rest: 0,  color: "#7c3aed", light: "#f5f3ff", accent: "#a78bfa" },
+  { label: "Klasik",     work: 25, rest: 5,  color: "#E8454A", light: "#2A1212", accent: "#E8454A", grad1: "#2A1212", grad2: "#1A0A0A", icon: "🍅", desc: "25 dk ders · 5 dk mola" },
+  { label: "Derin Odak", work: 50, rest: 10, color: "#4A9E8E", light: "#0E2220", accent: "#4A9E8E", grad1: "#0E2220", grad2: "#0A1817", icon: "🧠", desc: "50 dk ders · 10 dk mola" },
+  { label: "Maraton",    work: 90, rest: 10, color: "#4A6BE8", light: "#0E1428", accent: "#4A6BE8", grad1: "#0E1428", grad2: "#0A1018", icon: "⚡", desc: "90 dk ders · 10 dk mola" },
+  { label: "Serbest",    work: 0,  rest: 0,  color: "#9B6FE8", light: "#1A0E28", accent: "#9B6FE8", grad1: "#1A0E28", grad2: "#120A1A", icon: "🎯", desc: "Kendin belirle" },
 ];
 
 const AMBIENT_SOUNDS = [
@@ -166,12 +166,55 @@ function createAmbientNode(ctx: AudioContext, type: string): GainNode | null {
   return master;
 }
 
+// ─── Tema sistemi ─────────────────────────────────────────────────────────────
+const THEME_KEY = "pomodoro_theme_v1";
+
+const DARK_THEME = {
+  bg:          "linear-gradient(160deg, #1a1630 0%, #1e1c3a 40%, #141f3a 80%, #16261e 100%)",
+  surface:     "rgba(255,255,255,0.06)",
+  surface2:    "rgba(255,255,255,0.04)",
+  surfaceSolid:"#1e1c2e",
+  border:      "rgba(255,255,255,0.1)",
+  borderSoft:  "rgba(255,255,255,0.06)",
+  text:        "#F5F5F5",
+  textSub:     "rgba(255,255,255,0.4)",
+  textMuted:   "rgba(255,255,255,0.25)",
+  navBg:       "rgba(10,8,20,0.92)",
+  navBorder:   "rgba(255,255,255,0.08)",
+  timerBg:     "rgba(0,0,0,0.6)",
+  modalBg:     "linear-gradient(160deg,#1a1228,#12101e)",
+  isDark:      true,
+};
+
+const LIGHT_THEME = {
+  bg:          "linear-gradient(160deg, #f0eeff 0%, #e8f0ff 40%, #eef5ff 80%, #edfaf3 100%)",
+  surface:     "rgba(255,255,255,0.85)",
+  surface2:    "rgba(255,255,255,0.7)",
+  surfaceSolid:"#ffffff",
+  border:      "rgba(0,0,0,0.08)",
+  borderSoft:  "rgba(0,0,0,0.05)",
+  text:        "#1a1a2e",
+  textSub:     "rgba(0,0,0,0.45)",
+  textMuted:   "rgba(0,0,0,0.3)",
+  navBg:       "rgba(255,255,255,0.92)",
+  navBorder:   "rgba(0,0,0,0.08)",
+  timerBg:     "rgba(255,255,255,0.8)",
+  modalBg:     "linear-gradient(160deg,#f5f0ff,#eef0ff)",
+  isDark:      false,
+};
+
+type Theme = typeof DARK_THEME;
+
+
 const STORAGE_KEY   = "pomodoro_sessions_v2";
 const GOAL_KEY      = "pomodoro_goal_v1";
 const STREAK_KEY    = "pomodoro_streak_v1";
 const LAST_SEEN_KEY = "pomodoro_last_seen_v1";
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
+function getTurkishDay() { return ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"][new Date().getDay()]; }
+function getTurkishDate() { const months=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"]; const d=new Date(); return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`; }
+function fmtMin(m: number) { if(m<60) return `${m} dk`; const h=Math.floor(m/60),r=m%60; return r>0?`${h} sa ${r} dk`:`${h} sa`; }
 function weekStart() { const d = new Date(); const day = d.getDay() || 7; d.setDate(d.getDate() - day + 1); return d.toISOString().slice(0, 10); }
 function fmtTime(sec: number) { return `${Math.floor(sec/60).toString().padStart(2,"0")}:${(sec%60).toString().padStart(2,"0")}`; }
 
@@ -291,48 +334,52 @@ function Book({ session, index }: { session: Session; index: number }) {
 }
 
 // ─── Progress Bar ─────────────────────────────────────────────────────────────
-function GoalProgressBar({ todayMin, goalMin, animal }: { todayMin: number; goalMin: number; animal: string }) {
+function GoalCard({ todayMin, goalMin, animal, onPress, T, isDark }: { todayMin: number; goalMin: number; animal: string; onPress: () => void; T: Theme; isDark: boolean }) {
   const pct = goalMin > 0 ? Math.min(100, (todayMin / goalMin) * 100) : 0;
-  // Hayvanı dolgu çubuğunun SAĞ ucuna sabitle — offset ile hizala
-  const animalLeft = `calc(${Math.min(pct, 100)}% - 16px)`;
+  const goalMet = pct >= 100;
+  const motivText = goalMet ? "Hedefine ulaştın! 🎉" : pct >= 75 ? "Neredeyse bitti! 💪" : pct >= 50 ? "Harika gidiyorsun!" : pct >= 25 ? "İyi başlangıç!" : todayMin > 0 ? "Devam et!" : "Bugün çalışmaya başla!";
 
   return (
-    <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 16, padding: "20px 24px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <span style={{ color: "rgba(255,255,255,0.6)", fontSize: ".82rem", fontWeight: 600 }}>GÜNLÜK HEDEF</span>
-        <span style={{ color: "white", fontWeight: 700, fontSize: ".9rem" }}>{todayMin} / {goalMin} dk</span>
-      </div>
-      <div style={{ position: "relative", height: 40, background: "rgba(255,255,255,0.08)", borderRadius: 20 }}>
-        {/* Dolgu */}
-        <div style={{
-          position: "absolute", left: 0, top: 0, bottom: 0,
-          width: `${pct}%`, minWidth: pct > 0 ? 20 : 0,
-          background: pct >= 100 ? "linear-gradient(90deg,#10b981,#34d399)" : "linear-gradient(90deg,#3b82f6,#60a5fa)",
-          borderRadius: 20, transition: "width 0.8s cubic-bezier(.4,0,.2,1)",
-        }} />
-        {/* Hayvan — dolgunun sağ ucunda, tam hizalı */}
-        {pct > 0 && (
-          <div style={{
-            position: "absolute", top: "50%",
-            left: animalLeft,
-            transform: "translateY(-50%)",
-            width: 32, height: 32,
-            transition: "left 0.8s cubic-bezier(.4,0,.2,1)",
-            zIndex: 3,
-            filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.6))",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <AnimalImg id={animal} size={30} />
-          </div>
-        )}
-        {/* Bayrak */}
-        <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: ".75rem", fontWeight: 700, color: pct >= 100 ? "#10b981" : "rgba(255,255,255,0.35)", whiteSpace: "nowrap", zIndex: 1 }}>
-          {goalMin}dk 🏁
+    <div onClick={onPress} style={{ borderRadius: 20, marginBottom: 20, overflow: "hidden", border: "1px solid rgba(155,111,232,0.2)", cursor: "pointer", background: isDark ? "linear-gradient(135deg, rgba(155,111,232,0.12), rgba(74,107,232,0.08))" : "linear-gradient(135deg, rgba(155,111,232,0.08), rgba(74,107,232,0.05))" }}>
+      <div style={{ display: "flex", alignItems: "center", padding: "16px", gap: 14 }}>
+        {/* Maskot */}
+        <div style={{ width: 70, height: 70, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <AnimalImg id={animal} size={64} />
+        </div>
+        {/* Sağ içerik */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {goalMin === 0 ? (
+            <>
+              <div style={{ color: T.text, fontWeight: 700, fontSize: ".9rem", marginBottom: 4 }}>Günlük Hedef</div>
+              <div style={{ color: T.textSub, fontSize: ".78rem", marginBottom: 8 }}>Hedef belirleyerek motivasyonunu artır</div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#9B6FE8", fontSize: ".78rem", fontWeight: 600 }}>
+                <span>+</span><span>Hedef Belirle</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ color: T.text, fontWeight: 700, fontSize: ".9rem" }}>Günlük Hedef</span>
+                <span style={{ color: T.textSub, fontSize: ".72rem" }}>✏️</span>
+              </div>
+              <div style={{ fontSize: ".85rem", marginBottom: 6 }}>
+                <span style={{ color: T.text, fontWeight: 700 }}>{fmtMin(todayMin)}</span>
+                <span style={{ color: T.textSub }}> / {fmtMin(goalMin)}</span>
+              </div>
+              <div style={{ height: 6, background: T.border, borderRadius: 3, overflow: "hidden", marginBottom: 5 }}>
+                <div style={{ height: "100%", width: `${pct}%`, background: goalMet ? "#4A9E8E" : "#9B6FE8", borderRadius: 3, transition: "width 0.8s cubic-bezier(.4,0,.2,1)" }} />
+              </div>
+              <div style={{ color: "#9B6FE8", fontSize: ".72rem", fontWeight: 600 }}>{motivText}</div>
+            </>
+          )}
         </div>
       </div>
-      <div style={{ marginTop: 6, textAlign: "center", fontSize: ".78rem", color: "rgba(255,255,255,0.35)" }}>%{Math.round(pct)} tamamlandı</div>
     </div>
   );
+}
+
+function GoalProgressBar({ todayMin, goalMin, animal, T, isDark }: { todayMin: number; goalMin: number; animal: string; T: Theme; isDark: boolean }) {
+  return <GoalCard todayMin={todayMin} goalMin={goalMin} animal={animal} onPress={() => {}} T={T} isDark={isDark} />;
 }
 
 // ─── Kutlama ──────────────────────────────────────────────────────────────────
@@ -787,9 +834,9 @@ function AnimalCompanion({ animalId, phase }: { animalId: string; phase: "idle"|
 
       {/* Hayvan + sahne */}
       <div style={{
-        background: "rgba(255,255,255,0.05)",
+        background: "#1A1A1A",
         borderRadius: 20, padding: "14px 20px 10px",
-        border: "1px solid rgba(255,255,255,0.1)",
+        border: "1px solid #2A2A2A",
         transition: "box-shadow 0.3s",
         boxShadow: phase === "work" ? "0 0 20px rgba(59,130,246,0.15)" : "none",
         display: "inline-block",
@@ -850,7 +897,7 @@ function AnimalCompanion({ animalId, phase }: { animalId: string; phase: "idle"|
 
 
 // ─── Kütüphane Sekmesi ────────────────────────────────────────────────────────
-function LibraryTab({ sessions }: { sessions: Session[] }) {
+function LibraryTab({ sessions, T, isDark }: { sessions: Session[]; T: Theme; isDark: boolean }) {
   const dayMap: Record<string, number> = {};
   sessions.forEach(s => { dayMap[s.date] = (dayMap[s.date] ?? 0) + s.actualDuration; });
   const dailyBooks = Object.entries(dayMap).sort(([a], [b]) => a.localeCompare(b));
@@ -859,18 +906,18 @@ function LibraryTab({ sessions }: { sessions: Session[] }) {
   return (
     <div className="fade-in">
       <div style={{ marginBottom: 20, textAlign: "center" }}>
-        <h2 style={{ color: "white", fontSize: "1.3rem", fontWeight: 800, margin: "0 0 6px" }}>📚 Sanal Kütüphanem</h2>
-        <p style={{ color: "rgba(255,255,255,0.4)", fontSize: ".82rem", margin: 0 }}>Her kitap bir günü temsil eder · üzerine gel, süreyi gör</p>
+        <h2 style={{ color: T.text, fontSize: "1.3rem", fontWeight: 800, margin: "0 0 6px" }}>📚 Sanal Kütüphanem</h2>
+        <p style={{ color: T.textSub, fontSize: ".82rem", margin: 0 }}>Her kitap bir günü temsil eder · üzerine gel, süreyi gör</p>
       </div>
       {dailyBooks.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "80px 0", color: "rgba(255,255,255,0.3)" }}>
+        <div style={{ textAlign: "center", padding: "80px 0", color: T.textMuted }}>
           <div style={{ fontSize: "4rem", marginBottom: 16 }}>📭</div>
           <div style={{ fontSize: "1.1rem", fontWeight: 600 }}>Henüz kitap yok</div>
           <div style={{ fontSize: ".85rem", marginTop: 8 }}>İlk oturumunu tamamla!</div>
         </div>
       ) : (
         <>
-          <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 20, padding: "32px 24px 0", border: "1px solid rgba(255,255,255,0.08)", overflowX: "auto" }}>
+          <div style={{ background: T.surface, borderRadius: 20, padding: "32px 24px 0", border: `1px solid ${T.border}`, overflowX: "auto" }}>
             <div style={{ display: "flex", alignItems: "flex-end", gap: 6, minHeight: 130, paddingBottom: 12, minWidth: "max-content" }}>
               {dailyBooks.map(([date, minutes], i) => (
                 <DailyBook key={date} date={date} minutes={minutes} index={i} />
@@ -904,10 +951,12 @@ export default function PomodoroPage() {
   const [sessions, setSessions]       = useState<Session[]>([]);
   const [tab, setTab]                 = useState<"timer"|"library"|"report"|"sinav">("timer");
   const [loaded, setLoaded]           = useState(false);
+  const [isDark, setIsDark]           = useState(true);
+  const T = isDark ? DARK_THEME : LIGHT_THEME;
   const [absenceMsg, setAbsenceMsg]   = useState<{days: number; msg: string} | null>(null);
   const [customWork, setCustomWork]   = useState(30);
   const [customRest, setCustomRest]   = useState(5);
-  const [dailyGoal, setDailyGoal]     = useState<DailyGoal>({ minutes: 120, animal: "capybara" });
+  const [dailyGoal, setDailyGoal]     = useState<DailyGoal>({ minutes: 90, animal: "capybara" });
   const [showGoalSetup, setShowGoalSetup] = useState(false);
   const [tempGoal, setTempGoal]       = useState(120);
   const [tempAnimal, setTempAnimal]   = useState("capybara");
@@ -928,9 +977,16 @@ export default function PomodoroPage() {
   // ─── Storage ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY); if (raw) setSessions(JSON.parse(raw));
-      const g   = localStorage.getItem(GOAL_KEY);    if (g)   setDailyGoal(JSON.parse(g));
-      const sk  = localStorage.getItem(STREAK_KEY);  if (sk)  setStreak(parseInt(sk));
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const loadedSessions: Session[] = raw ? JSON.parse(raw) : [];
+      if (raw) setSessions(loadedSessions);
+      const g = localStorage.getItem(GOAL_KEY); if (g) setDailyGoal(JSON.parse(g));
+      // Sayfa açılışında streak'i taze hesapla (cache eski gün yansıtabilir)
+      if (loadedSessions.length > 0) {
+        setTimeout(() => updateStreak(loadedSessions), 50);
+      } else {
+        const sk = localStorage.getItem(STREAK_KEY); if (sk) setStreak(parseInt(sk));
+      }
 
       // Yokluk kontrolü
       const today = todayStr();
@@ -955,6 +1011,7 @@ export default function PomodoroPage() {
         }
       }
       localStorage.setItem(LAST_SEEN_KEY, today);
+      const savedTheme = localStorage.getItem(THEME_KEY); if (savedTheme) setIsDark(savedTheme === 'dark');
     } catch { /* ilk kullanım */ }
     setLoaded(true);
   }, []);
@@ -968,10 +1025,10 @@ export default function PomodoroPage() {
 
   // ─── Streak hesaplama ─────────────────────────────────────────────────────
   const updateStreak = useCallback((list: Session[]) => {
-    let goalMin = 120;
+    let goalMin = 90;
     try {
       const g = localStorage.getItem(GOAL_KEY);
-      if (g) goalMin = JSON.parse(g).minutes ?? 120;
+      if (g) goalMin = JSON.parse(g).minutes ?? 90;
     } catch {}
 
     let count = 0;
@@ -1167,13 +1224,13 @@ export default function PomodoroPage() {
   const dashOffset = circumference - (progress / 100) * circumference;
 
   if (!loaded) return (
-    <main style={{ minHeight: "100vh", background: "#0a1628", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ color: "white" }}>Yükleniyor...</div>
+    <main style={{ minHeight: "100vh", background: "linear-gradient(160deg, #1a1630, #1e1c3a)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ color: T.text }}>Yükleniyor...</div>
     </main>
   );
 
   return (
-    <main style={{ minHeight: "100vh", background: "linear-gradient(160deg, #0a1628 0%, #0f1f4f 50%, #1a0a2e 100%)", fontFamily: "system-ui, sans-serif", position: "relative" }}>
+    <main style={{ minHeight: "100vh", background: T.bg, fontFamily: "system-ui, sans-serif", position: "relative" }}>
       {goalMet && <CelebrationBg />}
       <style>{`
         @keyframes pulse-ring { 0%,100%{transform:scale(1);opacity:.6} 50%{transform:scale(1.08);opacity:1} }
@@ -1188,10 +1245,16 @@ export default function PomodoroPage() {
         .mode-btn:hover { transform:translateY(-2px); }
         .action-btn { border:none;cursor:pointer;transition:all 0.2s;border-radius:14px;font-weight:700;font-size:1rem;padding:14px 30px; }
         .action-btn:hover { filter:brightness(1.1);transform:translateY(-1px); }
-        .ambient-btn { border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);cursor:pointer;border-radius:12px;padding:10px 14px;color:rgba(255,255,255,0.7);font-size:.8rem;font-weight:600;transition:all 0.2s;display:flex;flex-direction:column;align-items:center;gap:4px; }
-        .ambient-btn:hover { border-color:rgba(255,255,255,0.3); }
-        .ambient-btn.active { border-color:#3b82f6;background:rgba(59,130,246,0.15);color:white; }
-        input[type=range] { accent-color:#3b82f6;width:100%; }
+        .ambient-btn { border:1px solid ${T.border};background:${T.surface};cursor:pointer;border-radius:12px;padding:10px 14px;color:${T.textSub};font-size:.8rem;font-weight:600;transition:all 0.2s;display:flex;flex-direction:column;align-items:center;gap:4px; }
+        .ambient-btn:hover { border-color:${T.isDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.2)"}; background:${T.surface2}; }
+        .ambient-btn.active { border-color:#9B6FE8;background:#9B6FE818;color:${T.text}; }
+        input[type=range] { accent-color:#9B6FE8;width:100%; }
+        .mode-card { cursor:pointer; border-radius:20px; border:1px solid ${T.border}; overflow:hidden; transition:all 0.2s; }
+        .mode-card:hover { transform:translateY(-2px); }
+        .tool-card { cursor:pointer; border-radius:20px; border:1px solid ${T.border}; overflow:hidden; transition:all 0.2s; flex:1; }
+        .tool-card:hover { transform:translateY(-2px); }
+        .bottom-nav-btn { display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;background:none;border:none;padding:8px 16px;transition:all 0.2s;flex:1; }
+        .bottom-nav-btn:hover { opacity:0.8; }
         @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
         @keyframes float { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-5px)} }
         @keyframes writing { 0%,100%{transform:rotate(-10deg)} 50%{transform:rotate(10deg)} }
@@ -1199,70 +1262,89 @@ export default function PomodoroPage() {
       `}</style>
 
       {/* Header */}
-      <div style={{ padding: "28px 24px 0", maxWidth: 900, margin: "0 auto", position: "relative", zIndex: 1 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div>
-              <h1 style={{ color: "white", fontSize: "1.5rem", fontWeight: 800, margin: 0 }}>⏱ Pomodoro</h1>
-              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: ".78rem", margin: "3px 0 0" }}>Sanal Kütüphane · Öğrenci Koçu Adana</p>
-            </div>
-            {/* Streak */}
+      <div style={{ padding: "52px 20px 0", maxWidth: 640, margin: "0 auto", position: "relative", zIndex: 1 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
+          <div>
+            <div style={{ color: T.text, fontSize: "1.7rem", fontWeight: 800, lineHeight: 1.1 }}>{getTurkishDay()}</div>
+            <div style={{ color: T.textSub, fontSize: ".82rem", marginTop: 3 }}>{getTurkishDate()}</div>
+          </div>
+          {/* Tema butonu */}
+          <button
+            onClick={() => { const next = !isDark; setIsDark(next); try { localStorage.setItem(THEME_KEY, next ? "dark" : "light"); } catch {} }}
+            style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: "6px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "all 0.3s" }}
+          >
+            <span style={{ fontSize: "1.1rem" }}>{isDark ? "☀️" : "🌙"}</span>
+            <span style={{ color: T.text, fontWeight: 700, fontSize: ".78rem" }}>{isDark ? "Gündüz" : "Gece"}</span>
+          </button>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
             {streak > 0 && (
-              <div style={{ background: "rgba(249,115,22,0.15)", border: "1px solid rgba(249,115,22,0.35)", borderRadius: 12, padding: "6px 14px", display: "flex", alignItems: "center", gap: 6, animation: streak >= 7 ? "streak-bounce 2s ease-in-out infinite" : "none" }}>
+              <div style={{ background: "rgba(232,69,74,0.15)", border: "1px solid rgba(232,69,74,0.35)", borderRadius: 12, padding: "6px 14px", display: "flex", alignItems: "center", gap: 6, animation: streak >= 7 ? "streak-bounce 2s ease-in-out infinite" : "none" }}>
                 <span style={{ fontSize: "1.2rem" }}>🔥</span>
                 <div>
-                  <div style={{ color: "#fdba74", fontWeight: 800, fontSize: "1rem", lineHeight: 1 }}>{streak}</div>
-                  <div style={{ color: "rgba(253,186,116,0.6)", fontSize: ".65rem" }}>gün seri</div>
+                  <div style={{ color: "#E8454A", fontWeight: 800, fontSize: "1rem", lineHeight: 1 }}>{streak}</div>
+                  <div style={{ color: "rgba(232,69,74,0.6)", fontSize: ".65rem" }}>gün seri</div>
+                </div>
+              </div>
+            )}
+            {todaySessions.length > 0 && (
+              <div style={{ background: "rgba(74,158,142,0.15)", border: "1px solid rgba(74,158,142,0.35)", borderRadius: 12, padding: "6px 14px", display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: "1.2rem" }}>✅</span>
+                <div>
+                  <div style={{ color: "#4A9E8E", fontWeight: 800, fontSize: "1rem", lineHeight: 1 }}>{todaySessions.length}</div>
+                  <div style={{ color: "rgba(74,158,142,0.6)", fontSize: ".65rem" }}>oturum</div>
                 </div>
               </div>
             )}
           </div>
-          <div style={{ display: "flex", gap: 5, background: "rgba(255,255,255,0.08)", borderRadius: 14, padding: 4 }}>
-            {(["timer","library","report","sinav"] as const).map(t => (
-              <button key={t} className="tab-btn" onClick={() => setTab(t)} style={{ background: tab === t ? "white" : "transparent", color: tab === t ? "#0f1f4f" : "rgba(255,255,255,0.6)" }}>
-                {t === "timer" ? "⏱ Timer" : t === "library" ? "📚 Kütüphane" : t === "report" ? "📊 Rapor" : "🎓 Sınav"}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 24px 60px", position: "relative", zIndex: 1 }}>
+      <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 20px 100px", position: "relative", zIndex: 1 }}>
 
         {/* ── TIMER ── */}
         {tab === "timer" && (
           <div className="fade-in" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 22 }}>
 
-            {/* Mod seçimi */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, width: "100%", maxWidth: 580 }}>
+            {/* Çalışma modu başlığı */}
+            <div style={{ color: T.textSub, fontSize: ".72rem", fontWeight: 700, letterSpacing: "1.5px", marginBottom: 4, width: "100%" }}>ÇALIŞMA MODU</div>
+
+            {/* Mod seçimi — Expo gradient kartlar */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, width: "100%" }}>
               {PRESET_MODES.map((m, i) => (
-                <button key={i} className="mode-btn" onClick={() => { setModeIdx(i); reset(); }} style={{
-                  background: modeIdx === i ? m.light : "rgba(255,255,255,0.05)",
-                  borderColor: modeIdx === i ? m.color : "rgba(255,255,255,0.1)",
-                  color: modeIdx === i ? m.color : "rgba(255,255,255,0.7)",
-                }}>
-                  <div style={{ fontWeight: 800, fontSize: ".82rem" }}>{m.label}</div>
-                  <div style={{ fontSize: ".68rem", opacity: .8, marginTop: 2 }}>{i === 3 ? "Kendin ayarla" : `${m.work}dk · ${m.rest}dk`}</div>
-                </button>
+                <div key={i} className="mode-card"
+                  onClick={() => { setModeIdx(i); reset(); }}
+                  style={{
+                    background: `linear-gradient(135deg, ${m.grad1}, ${m.grad2})`,
+                    borderColor: modeIdx === i ? m.color : "#2A2A2A",
+                    boxShadow: modeIdx === i ? `0 0 0 2px ${m.color}44` : "none",
+                    padding: "16px",
+                  }}>
+                  <div style={{ fontSize: "1.6rem", marginBottom: 10 }}>{m.icon}</div>
+                  <div style={{ color: T.text, fontWeight: 800, fontSize: ".95rem", marginBottom: 3 }}>{m.label}</div>
+                  <div style={{ color: m.color, fontWeight: 600, fontSize: ".72rem", marginBottom: 4 }}>{m.desc}</div>
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <div style={{ width: 26, height: 26, borderRadius: 13, background: `${m.color}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".8rem", color: m.color }}>→</div>
+                  </div>
+                </div>
               ))}
             </div>
 
             {/* Serbest mod */}
             {modeIdx === 3 && (
-              <div style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(167,139,250,0.3)", borderRadius: 16, padding: "18px 24px", width: "100%", maxWidth: 520 }}>
-                <p style={{ color: "#c4b5fd", fontWeight: 700, fontSize: ".82rem", margin: "0 0 14px", textAlign: "center" }}>⚙️ Süreleri Belirle</p>
+              <div style={{ background: T.surface, border: `1px solid #9B6FE840`, borderRadius: 16, padding: "18px 24px", width: "100%", maxWidth: 520 }}>
+                <p style={{ color: "#9B6FE8", fontWeight: 700, fontSize: ".82rem", margin: "0 0 14px", textAlign: "center" }}>⚙️ Süreleri Belirle</p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                      <label style={{ color: "rgba(255,255,255,0.6)", fontSize: ".76rem", fontWeight: 600 }}>DERS SÜRESİ</label>
-                      <span style={{ color: "white", fontWeight: 700, fontSize: ".9rem" }}>{customWork} dk</span>
+                      <label style={{ color: T.textSub, fontSize: ".76rem", fontWeight: 600 }}>DERS SÜRESİ</label>
+                      <span style={{ color: T.text, fontWeight: 700, fontSize: ".9rem" }}>{customWork} dk</span>
                     </div>
                     <input type="range" min={5} max={180} step={5} value={customWork} onChange={e => { setCustomWork(+e.target.value); reset(); }} />
                   </div>
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                      <label style={{ color: "rgba(255,255,255,0.6)", fontSize: ".76rem", fontWeight: 600 }}>MOLA SÜRESİ</label>
-                      <span style={{ color: "white", fontWeight: 700, fontSize: ".9rem" }}>{customRest} dk</span>
+                      <label style={{ color: T.textSub, fontSize: ".76rem", fontWeight: 600 }}>MOLA SÜRESİ</label>
+                      <span style={{ color: T.text, fontWeight: 700, fontSize: ".9rem" }}>{customRest} dk</span>
                     </div>
                     <input type="range" min={1} max={60} step={1} value={customRest} onChange={e => { setCustomRest(+e.target.value); reset(); }} />
                   </div>
@@ -1275,32 +1357,55 @@ export default function PomodoroPage() {
 
             {/* Timer dairesi */}
             <div style={{ position: "relative", width: 220, height: 220 }}>
-              {phase === "work" && <div style={{ position: "absolute", inset: -16, borderRadius: "50%", background: `radial-gradient(circle, ${mode.accent}22 0%, transparent 70%)`, animation: "pulse-ring 2s ease-in-out infinite" }} />}
+              {phase === "work" && <div style={{ position: "absolute", inset: -16, borderRadius: "50%", background: `radial-gradient(circle, ${mode.accent}33 0%, transparent 70%)`, animation: "pulse-ring 2s ease-in-out infinite" }} />}
               {goalMet && <div style={{ position: "absolute", inset: -8, borderRadius: "50%", animation: "celebrate-pulse 1.5s ease-in-out infinite" }} />}
               <svg width="220" height="220" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
                 <circle cx="110" cy="110" r="90" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="10" />
-                <circle cx="110" cy="110" r="90" fill="none" stroke={phase === "rest" ? "#10b981" : mode.accent} strokeWidth="10" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset} style={{ transition: "stroke-dashoffset 0.5s ease" }} />
+                <circle cx="110" cy="110" r="90" fill="none" stroke={phase === "rest" ? "#4A9E8E" : mode.accent} strokeWidth="10" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset} style={{ transition: "stroke-dashoffset 0.5s ease" }} />
               </svg>
               <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                <div style={{ fontSize: "2.8rem", fontWeight: 800, color: "white", letterSpacing: "-2px", fontVariantNumeric: "tabular-nums" }}>
+                <div style={{ fontSize: "2.8rem", fontWeight: 800, color: T.text, letterSpacing: "-2px", fontVariantNumeric: "tabular-nums" }}>
                   {phase === "idle" ? fmtTime(mode.work * 60) : fmtTime(seconds)}
                 </div>
-                <div style={{ fontSize: ".78rem", color: "rgba(255,255,255,0.5)", marginTop: 4, fontWeight: 600 }}>
-                  {phase === "idle" ? "Başlamaya hazır" : phase === "work" ? "🔥 Odak zamanı" : "☕ Mola"}
+                <div style={{ fontSize: ".78rem", color: T.textSub, marginTop: 4, fontWeight: 600 }}>
+                  {phase === "idle" ? "Başlamaya hazır" : phase === "work" ? "🔥 Odak zamanı" : "☕ Mola zamanı"}
                 </div>
               </div>
             </div>
 
             {/* Butonlar */}
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-              {phase === "idle" && <button className="action-btn" onClick={startWork} style={{ background: mode.color, color: "white", boxShadow: `0 8px 24px ${mode.color}55` }}>▶ Başla</button>}
-              {phase === "work" && <><button className="action-btn" onClick={reset} style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>✕ İptal</button><button className="action-btn" onClick={completeWork} style={{ background: "#10b981", color: "white" }}>✓ Tamamla</button></>}
-              {phase === "rest" && <><button className="action-btn" onClick={reset} style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>Atla</button><button className="action-btn" onClick={startWork} style={{ background: mode.color, color: "white" }}>▶ Yeni Ders</button></>}
+              {phase === "idle" && <button className="action-btn" onClick={startWork} style={{ background: mode.accent, color: T.text, boxShadow: `0 8px 24px ${mode.accent}55`, letterSpacing:".03em" }}>▶ Başla</button>}
+              {phase === "work" && <><button className="action-btn" onClick={reset} style={{ background: T.surface, color: T.textSub, border:`1px solid ${T.border}` }}>✕ İptal</button><button className="action-btn" onClick={completeWork} style={{ background: "#4A9E8E", color: T.text, boxShadow:"0 8px 24px #4A9E8E44" }}>✓ Tamamla</button></>}
+              {phase === "rest" && <><button className="action-btn" onClick={reset} style={{ background: T.surface, color: T.textSub, border:`1px solid ${T.border}` }}>Atla</button><button className="action-btn" onClick={startWork} style={{ background: mode.accent, color: T.text, boxShadow:`0 8px 24px ${mode.accent}55` }}>▶ Yeni Ders</button></>}
             </div>
+
+            {/* Araçlar — idle modda göster */}
+            {phase === "idle" && (
+              <>
+                <div style={{ color: T.textSub, fontSize: ".72rem", fontWeight: 700, letterSpacing: "1.5px", width: "100%" }}>ARAÇLAR</div>
+                <div style={{ display: "flex", gap: 12, width: "100%" }}>
+                  <div className="tool-card" onClick={() => setTab("report")} style={{ background: isDark ? "linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))" : "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7))" }}>
+                    <div style={{ padding: 18 }}>
+                      <div style={{ fontSize: "1.6rem", marginBottom: 10 }}>📊</div>
+                      <div style={{ color: T.text, fontWeight: 800, fontSize: ".95rem", marginBottom: 3 }}>Rapor</div>
+                      <div style={{ color: T.textSub, fontSize: ".75rem" }}>İstatistiklerini gör</div>
+                    </div>
+                  </div>
+                  <div className="tool-card" onClick={() => setTab("sinav")} style={{ background: isDark ? "linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))" : "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7))" }}>
+                    <div style={{ padding: 18 }}>
+                      <div style={{ fontSize: "1.6rem", marginBottom: 10 }}>🎓</div>
+                      <div style={{ color: T.text, fontWeight: 800, fontSize: ".95rem", marginBottom: 3 }}>Sınav</div>
+                      <div style={{ color: T.textSub, fontSize: ".75rem" }}>LGS / YKS sayacı</div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Ambient ses */}
             <div style={{ width: "100%", maxWidth: 520 }}>
-              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: ".75rem", fontWeight: 600, textAlign: "center", marginBottom: 10 }}>🎵 ODAK MÜZİĞİ</p>
+              <p style={{ color: T.textSub, fontSize: ".72rem", fontWeight: 700, letterSpacing: "1.5px", textAlign: "center", marginBottom: 10 }}>🎵 ODAK MÜZİĞİ</p>
               <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
                 {AMBIENT_SOUNDS.map(s => (
                   <button key={s.id} className={`ambient-btn ${ambientId === s.id ? "active" : ""}`}
@@ -1314,16 +1419,15 @@ export default function PomodoroPage() {
             </div>
 
             {/* Günlük hedef */}
-            {dailyGoal.minutes > 0 && (
-              <div style={{ width: "100%", maxWidth: 580 }}>
-                <GoalProgressBar todayMin={todayMin} goalMin={dailyGoal.minutes} animal={dailyGoal.animal} />
-              </div>
-            )}
+            {/* Hedef kartı — her zaman göster, tıklayınca modal açılır */}
+            <div style={{ width: "100%" }}>
+              <GoalCard todayMin={todayMin} goalMin={dailyGoal.minutes} animal={dailyGoal.animal} onPress={() => { setTempGoal(dailyGoal.minutes); setTempAnimal(dailyGoal.animal); setShowGoalSetup(true); }} T={T} isDark={isDark} />
+            </div>
 
             {/* Motivasyon */}
             {dailyGoal.minutes > 0 && (
-              <div style={{ width: "100%", maxWidth: 580, borderRadius: 14, padding: "14px 20px", textAlign: "center", background: goalMet ? "linear-gradient(135deg,rgba(16,185,129,0.2),rgba(52,211,153,0.1))" : "rgba(255,255,255,0.05)", border: goalMet ? "1px solid rgba(16,185,129,0.4)" : "1px solid rgba(255,255,255,0.08)", transition: "all 0.5s" }}>
-                <p style={{ color: goalMet ? "#6ee7b7" : "rgba(255,255,255,0.7)", margin: 0, fontWeight: 600, fontSize: ".88rem" }}>{motivation.msg}</p>
+              <div style={{ width: "100%", maxWidth: 580, borderRadius: 14, padding: "14px 20px", textAlign: "center", background: goalMet ? (isDark?"#0A2E22":"#e6f7f3") : T.surface, border: goalMet ? "1px solid #4A9E8E40" : `1px solid ${T.border}`, transition: "all 0.5s" }}>
+                <p style={{ color: goalMet ? "#4A9E8E" : "#888", margin: 0, fontWeight: 600, fontSize: ".88rem" }}>{motivation.msg}</p>
               </div>
             )}
 
@@ -1335,7 +1439,7 @@ export default function PomodoroPage() {
             )}
 
             <button onClick={() => { setTempGoal(dailyGoal.minutes); setTempAnimal(dailyGoal.animal); setShowGoalSetup(true); }}
-              style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.5)", borderRadius: 10, padding: "8px 20px", cursor: "pointer", fontSize: ".78rem", transition: "all 0.2s" }}
+              style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: T.textSub, borderRadius: 10, padding: "8px 20px", cursor: "pointer", fontSize: ".78rem", transition: "all 0.2s" }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "white"}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.5)"}
             >🎯 Günlük hedef ayarla</button>
@@ -1344,29 +1448,29 @@ export default function PomodoroPage() {
 
         {/* ── KÜTÜPHANe ── */}
         {tab === "library" && (
-          <LibraryTab sessions={sessions} />
+          <LibraryTab sessions={sessions} T={T} isDark={isDark} />
         )}
 
         {/* ── RAPOR ── */}
         {tab === "report" && (
           <div className="fade-in">
-            <h2 style={{ color:"white", fontSize:"1.3rem", fontWeight:800, margin:"0 0 24px", textAlign:"center" }}>📊 Raporlar</h2>
-            {dailyGoal.minutes > 0 && <div style={{ marginBottom:18 }}><GoalProgressBar todayMin={todayMin} goalMin={dailyGoal.minutes} animal={dailyGoal.animal} /></div>}
+            <div style={{ color:T.textSub, fontSize:".72rem", fontWeight:700, letterSpacing:"1.5px", marginBottom:16 }}>RAPORLAR</div>
+            <div style={{ marginBottom:18 }}><GoalCard todayMin={todayMin} goalMin={dailyGoal.minutes} animal={dailyGoal.animal} onPress={() => { setTempGoal(dailyGoal.minutes); setTempAnimal(dailyGoal.animal); setShowGoalSetup(true); }} T={T} isDark={isDark} /></div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18, marginBottom:18 }}>
-              <div style={{ background:"rgba(59,130,246,0.12)", border:"1px solid rgba(59,130,246,0.3)", borderRadius:20, padding:22 }}>
-                <div style={{ color:"#93c5fd", fontSize:".78rem", fontWeight:700, letterSpacing:".05em", marginBottom:10 }}>BUGÜN</div>
-                <div style={{ color:"white", fontSize:"2rem", fontWeight:800 }}>{todaySessions.length}</div>
-                <div style={{ color:"rgba(255,255,255,0.4)", fontSize:".82rem", marginTop:3 }}>oturum · {todayMin} dakika</div>
+              <div style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:20, padding:22 }}>
+                <div style={{ color:"#E8454A", fontSize:".78rem", fontWeight:700, letterSpacing:".05em", marginBottom:10 }}>BUGÜN</div>
+                <div style={{ color:T.text, fontSize:"2rem", fontWeight:800 }}>{todaySessions.length}</div>
+                <div style={{ color:T.textSub, fontSize:".82rem", marginTop:3 }}>oturum · {todayMin} dakika</div>
                 <div style={{ marginTop:12, display:"flex", gap:5, flexWrap:"wrap" }}>
                   {todaySessions.map((s,i)=>(
-                    <div key={i} style={{ background:s.plannedDuration>=90?"#065f46":s.plannedDuration>=50?"#c2410c":s.plannedDuration===0?"#7c3aed":"#1e3a8a", borderRadius:8, padding:"3px 9px", fontSize:".72rem", color:"white", fontWeight:600 }}>{s.actualDuration}dk</div>
+                    <div key={i} style={{ background:s.plannedDuration>=90?"#065f46":s.plannedDuration>=50?"#c2410c":s.plannedDuration===0?"#7c3aed":"#1e3a8a", borderRadius:8, padding:"3px 9px", fontSize:".72rem", color:T.text, fontWeight:600 }}>{s.actualDuration}dk</div>
                   ))}
                 </div>
               </div>
-              <div style={{ background:"rgba(249,115,22,0.12)", border:"1px solid rgba(249,115,22,0.3)", borderRadius:20, padding:22 }}>
-                <div style={{ color:"#fdba74", fontSize:".78rem", fontWeight:700, letterSpacing:".05em", marginBottom:10 }}>BU HAFTA</div>
-                <div style={{ color:"white", fontSize:"2rem", fontWeight:800 }}>{weekSessions.length}</div>
-                <div style={{ color:"rgba(255,255,255,0.4)", fontSize:".82rem", marginTop:3 }}>oturum · {weekMin} dakika</div>
+              <div style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:20, padding:22 }}>
+                <div style={{ color:"#4A9E8E", fontSize:".78rem", fontWeight:700, letterSpacing:".05em", marginBottom:10 }}>BU HAFTA</div>
+                <div style={{ color:T.text, fontSize:"2rem", fontWeight:800 }}>{weekSessions.length}</div>
+                <div style={{ color:T.textSub, fontSize:".82rem", marginTop:3 }}>oturum · {weekMin} dakika</div>
                 <div style={{ marginTop:12, display:"flex", alignItems:"flex-end", gap:5, height:44 }}>
                   {["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"].map((day,i)=>{
                     const dd=new Date(); dd.setDate(dd.getDate()-dd.getDay()+1+i);
@@ -1375,7 +1479,7 @@ export default function PomodoroPage() {
                     const maxM=Math.max(...Array.from({length:7},(_,j)=>{const d2=new Date();d2.setDate(d2.getDate()-d2.getDay()+1+j);return sessions.filter(s=>s.date===d2.toISOString().slice(0,10)).reduce((a,s)=>a+s.actualDuration,0);}),1);
                     return (
                       <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
-                        <div style={{ width:"100%", background:mins>0?(ds===today?"#3b82f6":"#f97316"):"rgba(255,255,255,0.1)", borderRadius:3, height:Math.max((mins/maxM)*36,mins>0?5:3), transition:"height 0.3s" }} />
+                        <div style={{ width:"100%", background:mins>0?(ds===today?"#9B6FE8":"#4A6BE8"):"#252525", borderRadius:3, height:Math.max((mins/maxM)*36,mins>0?5:3), transition:"height 0.3s" }} />
                         <div style={{ color:ds===today?"white":"rgba(255,255,255,0.4)", fontSize:".62rem", fontWeight:ds===today?700:400 }}>{day}</div>
                       </div>
                     );
@@ -1383,8 +1487,8 @@ export default function PomodoroPage() {
                 </div>
               </div>
             </div>
-            <div style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:20, padding:22 }}>
-              <div style={{ color:"rgba(255,255,255,0.5)", fontSize:".78rem", fontWeight:700, letterSpacing:".05em", marginBottom:18 }}>TÜM ZAMANLAR</div>
+            <div style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:20, padding:22 }}>
+              <div style={{ color:T.textSub, fontSize:".78rem", fontWeight:700, letterSpacing:".05em", marginBottom:18 }}>TÜM ZAMANLAR</div>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:18 }}>
                 {[
                   { label:"Toplam Oturum",   val:sessions.length },
@@ -1398,8 +1502,8 @@ export default function PomodoroPage() {
                   { label:"En Uzun Seri 🔥",  val:streak },
                 ].map((item,i)=>(
                   <div key={i} style={{ textAlign:"center" }}>
-                    <div style={{ color:"white", fontSize:"1.4rem", fontWeight:800 }}>{item.val}</div>
-                    <div style={{ color:"rgba(255,255,255,0.4)", fontSize:".72rem", marginTop:3 }}>{item.label}</div>
+                    <div style={{ color:T.text, fontSize:"1.4rem", fontWeight:800 }}>{item.val}</div>
+                    <div style={{ color:T.textSub, fontSize:".72rem", marginTop:3 }}>{item.label}</div>
                   </div>
                 ))}
               </div>
@@ -1416,7 +1520,7 @@ export default function PomodoroPage() {
                     setStreak(0);
                   }
                 }}
-                style={{ background: "transparent", border: "1px solid rgba(239,68,68,0.35)", color: "rgba(239,68,68,0.6)", borderRadius: 10, padding: "8px 20px", cursor: "pointer", fontSize: ".78rem", transition: "all 0.2s" }}
+                style={{ background: T.surface, border: "1px solid #E8454A30", color: "#E8454A60", borderRadius: 10, padding: "8px 20px", cursor: "pointer", fontSize: ".78rem", transition: "all 0.2s" }}
                 onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(239,68,68,0.7)"; el.style.color = "#ef4444"; }}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(239,68,68,0.35)"; el.style.color = "rgba(239,68,68,0.6)"; }}
               >🗑 Tüm verileri temizle</button>
@@ -1431,26 +1535,52 @@ export default function PomodoroPage() {
 
       </div>
 
+      {/* ── BOTTOM NAV ── */}
+      <nav style={{
+        position: "fixed", bottom: 0, left: 0, right: 0,
+        background: T.navBg,
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderTop: `1px solid ${T.navBorder}`,
+        display: "flex", alignItems: "center",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        zIndex: 50,
+      }}>
+        {([
+          { key: "timer",   icon: "🍅", label: "Timer"      },
+          { key: "library", icon: "📚", label: "Kütüphane"  },
+          { key: "report",  icon: "📊", label: "Rapor"      },
+          { key: "sinav",   icon: "🎓", label: "Sınav"      },
+        ] as const).map(item => (
+          <button key={item.key} className="bottom-nav-btn" onClick={() => setTab(item.key)}
+            style={{ color: tab === item.key ? "#9B6FE8" : T.textMuted }}>
+            <span style={{ fontSize: "1.3rem", lineHeight: 1 }}>{item.icon}</span>
+            <span style={{ fontSize: ".62rem", fontWeight: 700, letterSpacing: ".03em" }}>{item.label}</span>
+            {tab === item.key && <div style={{ width: 4, height: 4, borderRadius: 2, background: "#9B6FE8", marginTop: 1 }} />}
+          </button>
+        ))}
+      </nav>
+
       {/* ── YOKLUK MODAL ── */}
       {absenceMsg && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-          <div style={{ background:"linear-gradient(135deg,#0f1f4f,#1a0a2e)", borderRadius:24, padding:32, maxWidth:360, width:"100%", border:"1px solid rgba(255,255,255,0.15)", textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.6)" }}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div style={{ background:T.modalBg, borderRadius:24, padding:32, maxWidth:360, width:"100%", border:"1px solid rgba(255,255,255,0.15)", textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.6)" }}>
             {/* Hayvan */}
             <div style={{ fontSize:"4rem", marginBottom:8 }}>
               <AnimalImg id={dailyGoal.animal} size={72} />
             </div>
             {/* Gün sayısı */}
-            <div style={{ color:"rgba(255,255,255,0.4)", fontSize:".78rem", fontWeight:700, letterSpacing:".1em", marginBottom:12 }}>
+            <div style={{ color:T.textSub, fontSize:".78rem", fontWeight:700, letterSpacing:".1em", marginBottom:12 }}>
               {absenceMsg.days === 1 ? "1 GÜN SONRA" : `${absenceMsg.days} GÜN SONRA`}
             </div>
             {/* Mesaj */}
-            <p style={{ color:"white", fontSize:"1.05rem", fontWeight:700, margin:"0 0 24px", lineHeight:1.5 }}>
+            <p style={{ color:T.text, fontSize:"1.05rem", fontWeight:700, margin:"0 0 24px", lineHeight:1.5 }}>
               {absenceMsg.msg}
             </p>
             {/* Buton */}
             <button
               onClick={() => setAbsenceMsg(null)}
-              style={{ background:"linear-gradient(135deg,#3b82f6,#7c3aed)", border:"none", borderRadius:14, padding:"14px 32px", color:"white", fontWeight:800, fontSize:"1rem", cursor:"pointer", width:"100%", boxShadow:"0 8px 24px rgba(59,130,246,0.4)" }}
+              style={{ background:"linear-gradient(135deg,#3b82f6,#7c3aed)", border:"none", borderRadius:14, padding:"14px 32px", color:T.text, fontWeight:800, fontSize:"1rem", cursor:"pointer", width:"100%", boxShadow:"0 8px 24px rgba(59,130,246,0.4)" }}
             >
               Hadi Başlayalım! 🚀
             </button>
@@ -1463,16 +1593,16 @@ export default function PomodoroPage() {
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
           onClick={e => { if (e.target===e.currentTarget) setShowGoalSetup(false); }}>
           <div style={{ background:"#0f1f4f", borderRadius:20, padding:28, maxWidth:440, width:"100%", border:"1px solid rgba(255,255,255,0.15)" }}>
-            <h3 style={{ color:"white", fontSize:"1.1rem", fontWeight:800, margin:"0 0 22px", textAlign:"center" }}>🎯 Günlük Hedef Belirle</h3>
+            <h3 style={{ color:T.text, fontSize:"1.1rem", fontWeight:800, margin:"0 0 22px", textAlign:"center" }}>🎯 Günlük Hedef Belirle</h3>
             <div style={{ marginBottom:22 }}>
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}>
                 <label style={{ color:"rgba(255,255,255,0.6)", fontSize:".78rem", fontWeight:600 }}>GÜNLÜK ÇALIŞMA HEDEFİ</label>
-                <span style={{ color:"white", fontWeight:800 }}>{tempGoal} dk</span>
+                <span style={{ color:T.text, fontWeight:800 }}>{tempGoal} dk</span>
               </div>
               <input type="range" min={30} max={480} step={10} value={tempGoal} onChange={e=>setTempGoal(+e.target.value)} />
               <div style={{ display:"flex", justifyContent:"space-between", marginTop:10, gap:6 }}>
                 {[60,120,180,240,300].map(v=>(
-                  <button key={v} onClick={()=>setTempGoal(v)} style={{ flex:1, background:tempGoal===v?"#3b82f6":"rgba(255,255,255,0.08)", border:"none", borderRadius:8, padding:"5px 0", color:"white", fontSize:".72rem", cursor:"pointer", fontWeight:600 }}>{v}dk</button>
+                  <button key={v} onClick={()=>setTempGoal(v)} style={{ flex:1, background:tempGoal===v?"#9B6FE830":T.surface, border:`1px solid ${tempGoal===v?"#9B6FE880":T.border}`, borderRadius:8, padding:"5px 0", color:tempGoal===v?"#9B6FE8":T.textSub, fontSize:".72rem", cursor:"pointer", fontWeight:600 }}>{v}dk</button>
                 ))}
               </div>
             </div>
@@ -1487,14 +1617,14 @@ export default function PomodoroPage() {
                   </button>
                 ))}
               </div>
-              <p style={{ color:"rgba(255,255,255,0.4)", fontSize:".72rem", textAlign:"center", marginTop:8 }}>
+              <p style={{ color:T.textSub, fontSize:".72rem", textAlign:"center", marginTop:8 }}>
                 {ANIMALS.find(a=>a.id===tempAnimal)?.name} seçildi
               </p>
             </div>
             <div style={{ display:"flex", gap:10 }}>
-              <button onClick={()=>setShowGoalSetup(false)} style={{ flex:1, background:"rgba(255,255,255,0.08)", border:"none", borderRadius:12, padding:13, color:"white", fontWeight:600, cursor:"pointer" }}>İptal</button>
+              <button onClick={()=>setShowGoalSetup(false)} style={{ flex:1, background:"rgba(255,255,255,0.08)", border:"none", borderRadius:12, padding:13, color:T.text, fontWeight:600, cursor:"pointer" }}>İptal</button>
               <button onClick={()=>{ const g={minutes:tempGoal,animal:tempAnimal}; setDailyGoal(g); saveGoal(g); setShowGoalSetup(false); }}
-                style={{ flex:2, background:"#3b82f6", border:"none", borderRadius:12, padding:13, color:"white", fontWeight:700, cursor:"pointer" }}>Kaydet</button>
+                style={{ flex:2, background:"#3b82f6", border:"none", borderRadius:12, padding:13, color:T.text, fontWeight:700, cursor:"pointer" }}>Kaydet</button>
             </div>
           </div>
         </div>
