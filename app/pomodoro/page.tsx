@@ -226,6 +226,49 @@ const ANIMALS = [
 ];
 
 // ─── Kitap ────────────────────────────────────────────────────────────────────
+// Günlük toplam dakika → kitap yüksekliği (min 50, max 120)
+function DailyBook({ date, minutes, index }: { date: string; minutes: number; index: number }) {
+  const h = Math.min(120, Math.max(50, Math.round(minutes / 3)));
+  const w = 20;
+  const palettes = [
+    ["#1e3a8a","#2d4fa0"],["#c2410c","#d4510f"],["#065f46","#0a7a5c"],
+    ["#4c1d95","#6b2cb5"],["#7c2d12","#9a3a18"],["#1e40af","#2563eb"],
+    ["#7c3aed","#8b5cf6"],["#92400e","#b45309"],["#0e7490","#0891b2"],
+  ];
+  const [bg, spine] = palettes[index % palettes.length];
+  const d = new Date(date + "T12:00:00");
+  const dayLabel = d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
+  const hours = Math.floor(minutes / 60);
+  const mins  = minutes % 60;
+  const durLabel = hours > 0 ? `${hours}s ${mins}dk` : `${mins}dk`;
+  return (
+    <div
+      title={`${dayLabel} — ${durLabel}`}
+      style={{ width: w, height: h, position: "relative", cursor: "default", transition: "transform 0.25s", transformOrigin: "bottom center", flexShrink: 0 }}
+      onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = "translateY(-10px)"}
+      onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = "translateY(0)"}
+    >
+      {/* Kitap gövdesi */}
+      <div style={{ position: "absolute", inset: 0, background: bg, borderRadius: "2px 4px 4px 2px", boxShadow: "inset -3px 0 6px rgba(0,0,0,0.2), 2px 2px 8px rgba(0,0,0,0.3)" }} />
+      {/* Sırt */}
+      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 5, background: spine, borderRadius: "2px 0 0 2px" }} />
+      {/* Süre — dikey yazı */}
+      <div style={{
+        position: "absolute", top: "50%", left: "50%",
+        transform: "translate(-50%, -50%) rotate(-90deg)",
+        fontSize: 7, fontWeight: 700, color: "rgba(255,255,255,0.75)",
+        whiteSpace: "nowrap", letterSpacing: ".5px",
+      }}>{durLabel}</div>
+      {/* Tarih — alt */}
+      <div style={{
+        position: "absolute", bottom: 4, left: "50%",
+        transform: "translateX(-50%) rotate(-90deg)",
+        fontSize: 6, color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap",
+      }}>{dayLabel}</div>
+    </div>
+  );
+}
+
 function Book({ session, index }: { session: Session; index: number }) {
   const h = session.plannedDuration >= 90 ? 100 : session.plannedDuration >= 50 ? 80 : 60;
   const w = session.plannedDuration >= 90 ? 24 : session.plannedDuration >= 50 ? 18 : 14;
@@ -744,49 +787,44 @@ function AnimalCompanion({ animalId, phase }: { animalId: string; phase: "idle"|
       {/* Hayvan + sahne */}
       <div style={{
         background: "rgba(255,255,255,0.05)",
-        borderRadius: 20, padding: "18px 24px 10px",
+        borderRadius: 20, padding: "14px 20px 10px",
         border: "1px solid rgba(255,255,255,0.1)",
         transition: "box-shadow 0.3s",
         boxShadow: phase === "work" ? "0 0 20px rgba(59,130,246,0.15)" : "none",
+        display: "inline-block",
       }}>
-        {/* Masa yüzeyi — her şeyin içinde olduğu relative container */}
-        <div style={{ position: "relative", display: "flex", alignItems: "flex-end", gap: 8 }}>
+        {/* Masa üstü: hayvan + yanındaki nesneler */}
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
 
-          {/* Sol: hayvan oturur, önünde defter */}
-          <div style={{ position: "relative", flexShrink: 0 }}>
-            {/* Hayvan — sabit, animasyonsuz */}
-            <div style={{ position: "relative", zIndex: 1 }}>
-              <AnimalImg id={animalId} size={54} />
+          {/* Sol: kitaplar dik duruyor */}
+          {isStudying && (
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 2, paddingBottom: 2 }}>
+              {/* Dikey kitap sırtları */}
+              {[
+                { h: 44, w: 10, bg: "#1e3a8a" },
+                { h: 38, w: 9,  bg: "#7c3aed" },
+                { h: 50, w: 11, bg: "#065f46" },
+                { h: 34, w: 8,  bg: "#c2410c" },
+              ].map((b, i) => (
+                <div key={i} style={{
+                  width: b.w, height: b.h,
+                  background: b.bg,
+                  borderRadius: "2px 3px 3px 2px",
+                  boxShadow: "inset -2px 0 4px rgba(0,0,0,0.3), 1px 1px 4px rgba(0,0,0,0.3)",
+                  flexShrink: 0,
+                }} />
+              ))}
             </div>
-            {/* Defter — hayvanın hemen önünde, masa yüzeyiyle aynı hizada (z-index: 2) */}
-            {isStudying && (
-              <div style={{
-                position: "absolute",
-                bottom: 0, left: "50%", transform: "translateX(-50%)",
-                zIndex: 2, fontSize: "1.4rem", lineHeight: 1,
-              }}>📓</div>
-            )}
-            {/* Mola: çay fincanı önde */}
-            {phase === "rest" && (
-              <div style={{
-                position: "absolute",
-                bottom: 0, left: "50%", transform: "translateX(-50%)",
-                zIndex: 2, fontSize: "1.2rem",
-                animation: "steam 2s ease-in-out infinite",
-              }}>☕</div>
-            )}
+          )}
+
+          {/* Orta: hayvan oturur */}
+          <div style={{ flexShrink: 0 }}>
+            <AnimalImg id={animalId} size={54} />
           </div>
 
-          {/* Sağ: kitap yığını — masa üstünde dikey */}
-          {isStudying && (
-            <div style={{
-              display: "flex", flexDirection: "column", alignItems: "center",
-              gap: 1, paddingBottom: 2, flexShrink: 0,
-            }}>
-              <div style={{ fontSize: "1rem" }}>📚</div>
-              <div style={{ fontSize: ".85rem" }}>📘</div>
-              <div style={{ fontSize: ".75rem" }}>📗</div>
-            </div>
+          {/* Sağ: mola çayı */}
+          {phase === "rest" && (
+            <div style={{ fontSize: "1.3rem", paddingBottom: 4, animation: "steam 2s ease-in-out infinite" }}>☕</div>
           )}
         </div>
 
@@ -805,6 +843,54 @@ function AnimalCompanion({ animalId, phase }: { animalId: string; phase: "idle"|
       <div style={{ color: "rgba(255,255,255,0.3)", fontSize: ".68rem", marginTop: 6 }}>
         Tıkla, konuşsun! 👆
       </div>
+    </div>
+  );
+}
+
+
+// ─── Kütüphane Sekmesi ────────────────────────────────────────────────────────
+function LibraryTab({ sessions }: { sessions: Session[] }) {
+  const dayMap: Record<string, number> = {};
+  sessions.forEach(s => { dayMap[s.date] = (dayMap[s.date] ?? 0) + s.actualDuration; });
+  const dailyBooks = Object.entries(dayMap).sort(([a], [b]) => a.localeCompare(b));
+  const totalMin = sessions.reduce((a, s) => a + s.actualDuration, 0);
+
+  return (
+    <div className="fade-in">
+      <div style={{ marginBottom: 20, textAlign: "center" }}>
+        <h2 style={{ color: "white", fontSize: "1.3rem", fontWeight: 800, margin: "0 0 6px" }}>📚 Sanal Kütüphanem</h2>
+        <p style={{ color: "rgba(255,255,255,0.4)", fontSize: ".82rem", margin: 0 }}>Her kitap bir günü temsil eder · üzerine gel, süreyi gör</p>
+      </div>
+      {dailyBooks.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "80px 0", color: "rgba(255,255,255,0.3)" }}>
+          <div style={{ fontSize: "4rem", marginBottom: 16 }}>📭</div>
+          <div style={{ fontSize: "1.1rem", fontWeight: 600 }}>Henüz kitap yok</div>
+          <div style={{ fontSize: ".85rem", marginTop: 8 }}>İlk oturumunu tamamla!</div>
+        </div>
+      ) : (
+        <>
+          <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 20, padding: "32px 24px 0", border: "1px solid rgba(255,255,255,0.08)", overflowX: "auto" }}>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, minHeight: 130, paddingBottom: 12, minWidth: "max-content" }}>
+              {dailyBooks.map(([date, minutes], i) => (
+                <DailyBook key={date} date={date} minutes={minutes} index={i} />
+              ))}
+            </div>
+            <div style={{ height: 10, background: "linear-gradient(90deg,#8b6914,#c8941a,#8b6914)", borderRadius: "0 0 4px 4px", boxShadow: "0 4px 12px rgba(0,0,0,0.4)" }} />
+          </div>
+          <div style={{ display: "flex", gap: 14, marginTop: 18 }}>
+            {[
+              { label: "Aktif Gün",     val: dailyBooks.length },
+              { label: "Toplam Dakika", val: totalMin },
+              { label: "Toplam Saat",   val: Math.floor(totalMin / 60) },
+            ].map((item, i) => (
+              <div key={i} style={{ flex: 1, background: "rgba(255,255,255,0.06)", borderRadius: 14, padding: "14px 16px", textAlign: "center" }}>
+                <div style={{ color: "white", fontSize: "1.6rem", fontWeight: 800 }}>{item.val}</div>
+                <div style={{ color: "rgba(255,255,255,0.4)", fontSize: ".78rem", marginTop: 4 }}>{item.label}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -829,8 +915,9 @@ export default function PomodoroPage() {
   const intervalRef   = useRef<ReturnType<typeof setInterval>|null>(null);
   const workStartRef  = useRef<number>(0);
   const phaseEndRef   = useRef<number>(0);
-  const audioCtxRef   = useRef<AudioContext|null>(null);
-  const ambientGainRef= useRef<AudioNode|null>(null);
+  const audioCtxRef    = useRef<AudioContext|null>(null);
+  const ambientGainRef = useRef<GainNode|null>(null);
+  const ambientNodes   = useRef<AudioNode[]>([]);  // tüm node'ları takip et
 
   const mode = modeIdx === 3
     ? { label:"Serbest", work:customWork, rest:customRest, color:"#7c3aed", light:"#f5f3ff", accent:"#a78bfa" }
@@ -904,22 +991,24 @@ export default function PomodoroPage() {
   // ─── Ambient ses ──────────────────────────────────────────────────────────
   const startAmbient = useCallback(async (id: string) => {
     try {
-      // iOS/iPadOS: AudioContext sadece kullanıcı dokunuşuyla başlar
-      if (!audioCtxRef.current) {
-        const AC = window.AudioContext || (window as any).webkitAudioContext;
-        audioCtxRef.current = new AC();
-      }
-      // Context "suspended" olabilir (özellikle iPad) — resume et
-      if (audioCtxRef.current.state === "suspended") {
-        await audioCtxRef.current.resume();
-      }
-      // Önceki sesi durdur
-      if (ambientGainRef.current) {
-        try { (ambientGainRef.current as GainNode).gain.setValueAtTime(0, audioCtxRef.current.currentTime); } catch {}
+      // iOS/iPadOS: her seferinde yeni context oluştur (suspend sorununu önler)
+      if (audioCtxRef.current) {
+        try { await audioCtxRef.current.close(); } catch {}
+        audioCtxRef.current = null;
         ambientGainRef.current = null;
       }
       if (id === "off") return;
-      ambientGainRef.current = createAmbientNode(audioCtxRef.current, id);
+
+      const AC = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AC();
+      audioCtxRef.current = ctx;
+
+      // iOS: kullanıcı dokunuşu sonrası context hâlâ suspended olabilir
+      if (ctx.state === "suspended") {
+        await ctx.resume();
+      }
+
+      ambientGainRef.current = createAmbientNode(ctx, id);
     } catch (e) { console.warn("Audio error:", e); }
   }, []);
 
@@ -1185,36 +1274,7 @@ export default function PomodoroPage() {
 
         {/* ── KÜTÜPHANe ── */}
         {tab === "library" && (
-          <div className="fade-in">
-            <div style={{ marginBottom: 20, textAlign: "center" }}>
-              <h2 style={{ color: "white", fontSize: "1.3rem", fontWeight: 800, margin: "0 0 6px" }}>📚 Sanal Kütüphanem</h2>
-              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: ".82rem", margin: 0 }}>Fare ile üzerine gel — kaç dakika çalıştığını gör!</p>
-            </div>
-            {sessions.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "80px 0", color: "rgba(255,255,255,0.3)" }}>
-                <div style={{ fontSize: "4rem", marginBottom: 16 }}>📭</div>
-                <div style={{ fontSize: "1.1rem", fontWeight: 600 }}>Henüz kitap yok</div>
-                <div style={{ fontSize: ".85rem", marginTop: 8 }}>İlk oturumunu tamamla!</div>
-              </div>
-            ) : (
-              <>
-                <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 20, padding: "32px 32px 0", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 4, minHeight: 110, paddingBottom: 12 }}>
-                    {sessions.map((s, i) => <Book key={s.id} session={s} index={i} />)}
-                  </div>
-                  <div style={{ height: 10, background: "linear-gradient(90deg,#8b6914,#c8941a,#8b6914)", borderRadius: "0 0 4px 4px", boxShadow: "0 4px 12px rgba(0,0,0,0.4)" }} />
-                </div>
-                <div style={{ display: "flex", gap: 14, marginTop: 18 }}>
-                  {[{ label:"Toplam Kitap",val:sessions.length },{ label:"Çalışılan Dk",val:sessions.reduce((a,s)=>a+s.actualDuration,0) },{ label:"Toplam Saat",val:Math.floor(sessions.reduce((a,s)=>a+s.actualDuration,0)/60) }].map((item,i)=>(
-                    <div key={i} style={{ flex:1, background:"rgba(255,255,255,0.06)", borderRadius:14, padding:"14px 16px", textAlign:"center" }}>
-                      <div style={{ color:"white", fontSize:"1.6rem", fontWeight:800 }}>{item.val}</div>
-                      <div style={{ color:"rgba(255,255,255,0.4)", fontSize:".78rem", marginTop:4 }}>{item.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          <LibraryTab sessions={sessions} />
         )}
 
         {/* ── RAPOR ── */}
@@ -1273,6 +1333,23 @@ export default function PomodoroPage() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Verileri temizle */}
+            <div style={{ marginTop: 24, textAlign: "center" }}>
+              <button
+                onClick={() => {
+                  if (window.confirm("Tüm veriler silinecek. Emin misin?")) {
+                    localStorage.removeItem("pomodoro_sessions_v2");
+                    localStorage.removeItem("pomodoro_streak_v1");
+                    setSessions([]);
+                    setStreak(0);
+                  }
+                }}
+                style={{ background: "transparent", border: "1px solid rgba(239,68,68,0.35)", color: "rgba(239,68,68,0.6)", borderRadius: 10, padding: "8px 20px", cursor: "pointer", fontSize: ".78rem", transition: "all 0.2s" }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(239,68,68,0.7)"; el.style.color = "#ef4444"; }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(239,68,68,0.35)"; el.style.color = "rgba(239,68,68,0.6)"; }}
+              >🗑 Tüm verileri temizle</button>
             </div>
           </div>
         )}
