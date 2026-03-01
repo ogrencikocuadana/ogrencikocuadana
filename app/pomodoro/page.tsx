@@ -166,12 +166,13 @@ function createAmbientNode(ctx: AudioContext, type: string): GainNode | null {
   return master;
 }
 
-const STORAGE_KEY = "pomodoro_sessions_v2";
-const GOAL_KEY    = "pomodoro_goal_v1";
-const STREAK_KEY  = "pomodoro_streak_v1";
+const STORAGE_KEY   = "pomodoro_sessions_v2";
+const GOAL_KEY      = "pomodoro_goal_v1";
+const STREAK_KEY    = "pomodoro_streak_v1";
+const LAST_SEEN_KEY = "pomodoro_last_seen_v1";
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
-function weekStart() { const d = new Date(); d.setDate(d.getDate() - d.getDay() + 1); return d.toISOString().slice(0, 10); }
+function weekStart() { const d = new Date(); const day = d.getDay() || 7; d.setDate(d.getDate() - day + 1); return d.toISOString().slice(0, 10); }
 function fmtTime(sec: number) { return `${Math.floor(sec/60).toString().padStart(2,"0")}:${(sec%60).toString().padStart(2,"0")}`; }
 
 function getMotivation(pct: number, goalMet: boolean, animalName: string) {
@@ -903,6 +904,7 @@ export default function PomodoroPage() {
   const [sessions, setSessions]       = useState<Session[]>([]);
   const [tab, setTab]                 = useState<"timer"|"library"|"report"|"sinav">("timer");
   const [loaded, setLoaded]           = useState(false);
+  const [absenceMsg, setAbsenceMsg]   = useState<{days: number; msg: string} | null>(null);
   const [customWork, setCustomWork]   = useState(30);
   const [customRest, setCustomRest]   = useState(5);
   const [dailyGoal, setDailyGoal]     = useState<DailyGoal>({ minutes: 120, animal: "capybara" });
@@ -929,6 +931,30 @@ export default function PomodoroPage() {
       const raw = localStorage.getItem(STORAGE_KEY); if (raw) setSessions(JSON.parse(raw));
       const g   = localStorage.getItem(GOAL_KEY);    if (g)   setDailyGoal(JSON.parse(g));
       const sk  = localStorage.getItem(STREAK_KEY);  if (sk)  setStreak(parseInt(sk));
+
+      // Yokluk kontrolü
+      const today = todayStr();
+      const lastSeen = localStorage.getItem(LAST_SEEN_KEY);
+      if (lastSeen && lastSeen !== today) {
+        const diff = Math.round((new Date(today).getTime() - new Date(lastSeen).getTime()) / 86400000);
+        if (diff >= 1) {
+          const animalData = localStorage.getItem(GOAL_KEY);
+          const animalId = animalData ? JSON.parse(animalData).animal ?? "capybara" : "capybara";
+          const ANIMAL_NAMES: Record<string,string> = {
+            capybara:"Kapibara", koala:"Koala", penguin:"Penguen", cat:"Kedi",
+            bear:"Ayı", caterpillar:"Tırtıl", butterfly:"Kelebek",
+            snail:"Salyangoz", turtle:"Kaplumbağa", chick:"Civciv", rabbit:"Tavşan"
+          };
+          const name = ANIMAL_NAMES[animalId] ?? "Arkadaşın";
+          const msgs1 = [`${name} seni özledi! 😢 ${diff} gündür burada değildin.`, `Neredeydin? ${name} her gün bekledi! 🥺`];
+          const msgs2 = [`${diff} gün geçti... ${name} seninle çalışmak için sabırsızlanıyor!`, `Geri döndün! ${name} çok mutlu! 🎉 Haydi kaldığımız yerden devam edelim.`];
+          const msgs7 = [`${name} haftadır seni bekledi... Serisini kırdın ama her şey yeniden başlayabilir! 💪`, `Uzun zaman oldu. ${name} sevindiğin için çok mutlu! Tekrar başlamak için en iyi an şimdi! ⭐`];
+          let msg = diff === 1 ? msgs1[Math.floor(Math.random()*2)] : diff < 7 ? msgs2[Math.floor(Math.random()*2)] : msgs7[Math.floor(Math.random()*2)];
+          // State set etmeden önce setTimeout ile garantiye al
+          setTimeout(() => setAbsenceMsg({ days: diff, msg }), 500);
+        }
+      }
+      localStorage.setItem(LAST_SEEN_KEY, today);
     } catch { /* ilk kullanım */ }
     setLoaded(true);
   }, []);
@@ -942,15 +968,27 @@ export default function PomodoroPage() {
 
   // ─── Streak hesaplama ─────────────────────────────────────────────────────
   const updateStreak = useCallback((list: Session[]) => {
-    const today = todayStr();
-    let count = 0; let d = new Date();
-    while (true) {
+    let goalMin = 120;
+    try {
+      const g = localStorage.getItem(GOAL_KEY);
+      if (g) goalMin = JSON.parse(g).minutes ?? 120;
+    } catch {}
+
+    let count = 0;
+    const d = new Date();
+    // Bugünden geriye doğru gün gün kontrol
+    for (let i = 0; i < 366; i++) {
       const ds = d.toISOString().slice(0, 10);
       const dayMin = list.filter(s => s.date === ds).reduce((a, s) => a + s.actualDuration, 0);
-      const goal = parseInt(localStorage.getItem(GOAL_KEY) ? JSON.parse(localStorage.getItem(GOAL_KEY)!).minutes : "120");
-      if (ds === today || dayMin >= goal) { count++; d.setDate(d.getDate() - 1); }
-      else break;
-      if (count > 365) break;
+      if (dayMin >= goalMin) {
+        count++;
+        d.setDate(d.getDate() - 1);
+      } else if (i === 0) {
+        // Bugün henüz hedef tutmadıysa streak'i kırmaz, dünden kontrol et
+        d.setDate(d.getDate() - 1);
+      } else {
+        break;
+      }
     }
     setStreak(count);
     try { localStorage.setItem(STREAK_KEY, count.toString()); } catch {}
@@ -1008,16 +1046,48 @@ export default function PomodoroPage() {
         await ctx.resume();
       }
 
+      // iOS silent buffer unlock trick
+      const silentBuf = ctx.createBuffer(1, 1, 22050);
+      const silentSrc = ctx.createBufferSource();
+      silentSrc.buffer = silentBuf;
+      silentSrc.connect(ctx.destination);
+      silentSrc.start(0);
+
       ambientGainRef.current = createAmbientNode(ctx, id);
     } catch (e) { console.warn("Audio error:", e); }
   }, []);
 
   // ─── Oturum kaydet ────────────────────────────────────────────────────────
-  const recordSession = useCallback((plannedDuration: number, startedAt: number) => {
-    const actualDuration = Math.max(1, Math.round((Date.now() - startedAt) / 60000));
+  const recordSession = useCallback((plannedDuration: number, startedAt: number, forcedActual?: number) => {
+    const actualDuration = forcedActual ?? Math.max(1, Math.round((Date.now() - startedAt) / 60000));
     const s: Session = { id: Date.now().toString(), date: todayStr(), plannedDuration, actualDuration, completedAt: new Date().toISOString() };
     setSessions(prev => { const u = [...prev, s]; saveSessions(u); updateStreak(u); return u; });
   }, [saveSessions, updateStreak]);
+
+  // ─── Sayfa geri gelince çalışma kaydını koru ──────────────────────────────
+  // Kullanıcı süreyi aşıp döndüğünde gerçek çalışma süresini kaydet
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        const now = Date.now();
+        if (workStartRef.current > 0) {
+          const elapsedMin = Math.round((now - workStartRef.current) / 60000);
+          // Timer zaten bitmişse (phaseEnd geçtiyse) → kaydet ve idle'a al
+          if (now > phaseEndRef.current + 5000) {
+            const startedAt = workStartRef.current;
+            workStartRef.current = 0;
+            phaseEndRef.current = 0;
+            // Gerçek süreyi kaydet (planned değil actual)
+            recordSession(0, startedAt, elapsedMin);
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            setPhase("idle"); setSeconds(0);
+          }
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [recordSession]);
 
   // ─── Timer ───────────────────────────────────────────────────────────────
   const startWork = useCallback(() => {
@@ -1360,6 +1430,33 @@ export default function PomodoroPage() {
         )}
 
       </div>
+
+      {/* ── YOKLUK MODAL ── */}
+      {absenceMsg && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div style={{ background:"linear-gradient(135deg,#0f1f4f,#1a0a2e)", borderRadius:24, padding:32, maxWidth:360, width:"100%", border:"1px solid rgba(255,255,255,0.15)", textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.6)" }}>
+            {/* Hayvan */}
+            <div style={{ fontSize:"4rem", marginBottom:8 }}>
+              <AnimalImg id={dailyGoal.animal} size={72} />
+            </div>
+            {/* Gün sayısı */}
+            <div style={{ color:"rgba(255,255,255,0.4)", fontSize:".78rem", fontWeight:700, letterSpacing:".1em", marginBottom:12 }}>
+              {absenceMsg.days === 1 ? "1 GÜN SONRA" : `${absenceMsg.days} GÜN SONRA`}
+            </div>
+            {/* Mesaj */}
+            <p style={{ color:"white", fontSize:"1.05rem", fontWeight:700, margin:"0 0 24px", lineHeight:1.5 }}>
+              {absenceMsg.msg}
+            </p>
+            {/* Buton */}
+            <button
+              onClick={() => setAbsenceMsg(null)}
+              style={{ background:"linear-gradient(135deg,#3b82f6,#7c3aed)", border:"none", borderRadius:14, padding:"14px 32px", color:"white", fontWeight:800, fontSize:"1rem", cursor:"pointer", width:"100%", boxShadow:"0 8px 24px rgba(59,130,246,0.4)" }}
+            >
+              Hadi Başlayalım! 🚀
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── HEDEF MODAL ── */}
       {showGoalSetup && (
