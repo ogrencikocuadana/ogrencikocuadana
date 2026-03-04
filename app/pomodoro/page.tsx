@@ -247,6 +247,19 @@ const ANIMAL_TWEMOJI: Record<string, string> = {
   turtle:      "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f422.svg",
   chick:       "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f425.svg",
   rabbit:      "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f430.svg",
+  horse:       "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f434.svg",
+  bee:         "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f41d.svg",
+  canary:      "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f425.svg",
+  eagle:       "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f985.svg",
+  lion:        "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f981.svg",
+};
+
+// Bazı hayvanlara CSS filtresi uygula (renk düzeltmesi)
+const ANIMAL_FILTER: Record<string, string> = {
+  // Kanarya: civciv emojisini sarı-altın tona getir
+  canary: "sepia(1) saturate(4) hue-rotate(5deg) brightness(1.1)",
+  // Arı: biraz daha canlı
+  bee: "saturate(1.4) brightness(1.05)",
 };
 
 function AnimalImg({ id, size = 32 }: { id: string; size?: number }) {
@@ -255,7 +268,7 @@ function AnimalImg({ id, size = 32 }: { id: string; size?: number }) {
       src={ANIMAL_TWEMOJI[id] ?? ANIMAL_TWEMOJI["capybara"]}
       width={size} height={size}
       alt={id}
-      style={{ imageRendering: "crisp-edges" }}
+      style={{ imageRendering: "crisp-edges", filter: ANIMAL_FILTER[id] ?? "none" }}
     />
   );
 }
@@ -266,7 +279,9 @@ const ANIMALS = [
   { id: "bear",       name: "Ayı"        }, { id: "caterpillar",name: "Tırtıl"     },
   { id: "butterfly",  name: "Kelebek"   }, { id: "snail",      name: "Salyangoz"  },
   { id: "turtle",     name: "Kaplumbağa"}, { id: "chick",      name: "Civciv"     },
-  { id: "rabbit",     name: "Tavşan"    },
+  { id: "rabbit",     name: "Tavşan"    }, { id: "horse",      name: "At"         },
+  { id: "bee",        name: "Arı"       }, { id: "canary",     name: "Kanarya"    },
+  { id: "eagle",      name: "Kartal"    }, { id: "lion",       name: "Aslan"      },
 ];
 
 // ─── Kitap ────────────────────────────────────────────────────────────────────
@@ -456,11 +471,11 @@ function SevenSeg({ char, size = 40 }: { char: string; size?: number }) {
   );
 }
 
-function DigitalDisplay({ value, size = 40 }: { value: string; size?: number }) {
+function DigitalDisplay({ value, size = 40, isDark = true }: { value: string; size?: number; isDark?: boolean }) {
   return (
     <div style={{
       display: "inline-flex", alignItems: "center", gap: size * 0.04,
-      background: "#080400",
+      background: isDark ? "#080400" : "#1a1a2e",
       borderRadius: size * 0.2,
       padding: `${size * 0.2}px ${size * 0.25}px`,
       boxShadow: "inset 0 2px 8px rgba(0,0,0,0.8), 0 0 20px rgba(255,60,0,0.08), 0 2px 4px rgba(0,0,0,0.5)",
@@ -517,7 +532,7 @@ const EXAMS = [
   },
 ];
 
-function SinavTab() {
+function SinavTab({ T, isDark }: { T: Theme; isDark: boolean }) {
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
   const [examPhase, setExamPhase] = useState<"idle" | "countdown" | "running" | "done">("idle");
   const [examSeconds, setExamSeconds] = useState(0);
@@ -593,8 +608,8 @@ function SinavTab() {
   return (
     <div className="fade-in" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 28 }}>
       <div style={{ textAlign: "center" }}>
-        <h2 style={{ color: "white", fontSize: "1.4rem", fontWeight: 800, margin: "0 0 6px" }}>🎓 Gerçek Sınav Atmosferi</h2>
-        <p style={{ color: "rgba(255,255,255,0.4)", fontSize: ".85rem", margin: 0 }}>Sınavını seç ve gerçek koşullarda çalış</p>
+        <h2 style={{ color: T.text, fontSize: "1.4rem", fontWeight: 800, margin: "0 0 6px" }}>🎓 Gerçek Sınav Atmosferi</h2>
+        <p style={{ color: T.textSub, fontSize: ".85rem", margin: 0 }}>Sınavını seç ve gerçek koşullarda çalış</p>
       </div>
 
       {/* Sınav seçimi */}
@@ -603,14 +618,14 @@ function SinavTab() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
             {["LGS", "YKS"].map(group => (
               <div key={group}>
-                <div style={{ color: "rgba(255,255,255,0.4)", fontSize: ".72rem", fontWeight: 700, letterSpacing: ".08em", marginBottom: 8, textAlign: "center" }}>{group}</div>
+                <div style={{ color: T.textSub, fontSize: ".72rem", fontWeight: 700, letterSpacing: ".08em", marginBottom: 8, textAlign: "center" }}>{group}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {EXAMS.filter(e => e.group === group).map(e => (
                     <button key={e.id}
                       onClick={() => setSelectedExam(e.id)}
                       style={{
-                        background: selectedExam === e.id ? `${e.color}33` : "rgba(255,255,255,0.05)",
-                        border: `2px solid ${selectedExam === e.id ? e.accent : "rgba(255,255,255,0.1)"}`,
+                        background: selectedExam === e.id ? `${e.color}33` : T.surface2,
+                        border: `2px solid ${selectedExam === e.id ? e.accent : T.border}`,
                         borderRadius: 14, padding: "14px 16px", cursor: "pointer",
                         transition: "all 0.2s", textAlign: "left",
                       }}
@@ -618,8 +633,8 @@ function SinavTab() {
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <span style={{ fontSize: "1.4rem" }}>{e.icon}</span>
                         <div>
-                          <div style={{ color: selectedExam === e.id ? e.accent : "white", fontWeight: 800, fontSize: ".95rem" }}>{e.group} — {e.label}</div>
-                          <div style={{ color: "rgba(255,255,255,0.45)", fontSize: ".78rem", marginTop: 2 }}>{e.desc}</div>
+                          <div style={{ color: selectedExam === e.id ? e.accent : T.text, fontWeight: 800, fontSize: ".95rem" }}>{e.group} — {e.label}</div>
+                          <div style={{ color: T.textSub, fontSize: ".78rem", marginTop: 2 }}>{e.desc}</div>
                         </div>
                       </div>
                     </button>
@@ -634,8 +649,8 @@ function SinavTab() {
             disabled={!selectedExam}
             style={{
               width: "100%", padding: "15px", borderRadius: 14, border: "none",
-              background: selectedExam ? (exam?.color ?? "#3b82f6") : "rgba(255,255,255,0.1)",
-              color: selectedExam ? "white" : "rgba(255,255,255,0.3)",
+              background: selectedExam ? (exam?.color ?? "#3b82f6") : (isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"),
+              color: selectedExam ? (isDark ? "white" : "#fff") : T.textMuted,
               fontSize: "1rem", fontWeight: 700, cursor: selectedExam ? "pointer" : "not-allowed",
               boxShadow: selectedExam ? `0 8px 24px ${exam?.color ?? "#3b82f6"}55` : "none",
               transition: "all 0.3s",
@@ -649,7 +664,7 @@ function SinavTab() {
       {/* ── Geri sayım ── */}
       {examPhase === "countdown" && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: ".85rem", fontWeight: 700, letterSpacing: ".1em" }}>
+          <div style={{ color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", fontSize: ".85rem", fontWeight: 700, letterSpacing: ".1em" }}>
             {exam?.group} — {exam?.label} başlıyor...
           </div>
           <div style={{
@@ -670,8 +685,8 @@ function SinavTab() {
               {countdown}
             </span>
           </div>
-          <div style={{ color: "rgba(255,255,255,0.4)", fontSize: ".8rem" }}>Hazır ol!</div>
-          <button onClick={resetExam} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.5)", borderRadius: 10, padding: "8px 20px", cursor: "pointer", fontSize: ".8rem" }}>
+          <div style={{ color: T.textSub, fontSize: ".8rem" }}>Hazır ol!</div>
+          <button onClick={resetExam} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", borderRadius: 10, padding: "8px 20px", cursor: "pointer", fontSize: ".8rem" }}>
             İptal
           </button>
         </div>
@@ -692,23 +707,23 @@ function SinavTab() {
 
           {/* Geri sayım - dijital */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <div style={{ color: "rgba(255,255,255,0.35)", fontSize: ".72rem", fontWeight: 700, letterSpacing: ".1em" }}>
+            <div style={{ color: isDark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.4)", fontSize: ".72rem", fontWeight: 700, letterSpacing: ".1em" }}>
               {examPhase === "done" ? "TAMAMLANDI" : "KALAN SÜRE"}
             </div>
             <DigitalDisplay
               value={fmtExamTime(examSeconds)}
               size={examSeconds >= 3600 ? 34 : 44}
-            />
+            isDark={isDark} />
           </div>
 
           {/* Şimdiki saat */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <div style={{ color: "rgba(255,255,255,0.35)", fontSize: ".72rem", fontWeight: 700, letterSpacing: ".1em" }}>ŞİMDİKİ SAAT</div>
-            <DigitalDisplay value={fmtClock(now)} size={32} />
+            <div style={{ color: isDark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.4)", fontSize: ".72rem", fontWeight: 700, letterSpacing: ".1em" }}>ŞİMDİKİ SAAT</div>
+            <DigitalDisplay value={fmtClock(now)} size={32} isDark={isDark} />
           </div>
 
           {/* İlerleme çubuğu */}
-          <div style={{ position: "relative", height: 10, background: "rgba(255,255,255,0.08)", borderRadius: 5 }}>
+          <div style={{ position: "relative", height: 10, background: T.surface, borderRadius: 5 }}>
             <div style={{
               position: "absolute", left: 0, top: 0, bottom: 0,
               width: `${pct}%`,
@@ -727,7 +742,7 @@ function SinavTab() {
           )}
 
           <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={resetExam} style={{ flex: 1, background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 12, padding: 13, color: "white", fontWeight: 600, cursor: "pointer", fontSize: ".9rem" }}>
+            <button onClick={resetExam} style={{ flex: 1, background: T.surface, border: "none", borderRadius: 12, padding: 13, color: T.text, fontWeight: 600, cursor: "pointer", fontSize: ".9rem" }}>
               ← Geri Dön
             </button>
             {examPhase === "running" && (
@@ -742,8 +757,8 @@ function SinavTab() {
       {/* Saat her zaman göster (idle modda) */}
       {examPhase === "idle" && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-          <div style={{ color: "rgba(255,255,255,0.35)", fontSize: ".72rem", fontWeight: 700, letterSpacing: ".1em" }}>ŞİMDİKİ SAAT</div>
-          <DigitalDisplay value={fmtClock(now)} size={36} />
+          <div style={{ color: isDark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.4)", fontSize: ".72rem", fontWeight: 700, letterSpacing: ".1em" }}>ŞİMDİKİ SAAT</div>
+          <DigitalDisplay value={fmtClock(now)} size={36} isDark={isDark} />
         </div>
       )}
     </div>
@@ -931,9 +946,9 @@ function LibraryTab({ sessions, T, isDark }: { sessions: Session[]; T: Theme; is
               { label: "Toplam Dakika", val: totalMin },
               { label: "Toplam Saat",   val: Math.floor(totalMin / 60) },
             ].map((item, i) => (
-              <div key={i} style={{ flex: 1, background: "rgba(255,255,255,0.06)", borderRadius: 14, padding: "14px 16px", textAlign: "center" }}>
-                <div style={{ color: "white", fontSize: "1.6rem", fontWeight: 800 }}>{item.val}</div>
-                <div style={{ color: "rgba(255,255,255,0.4)", fontSize: ".78rem", marginTop: 4 }}>{item.label}</div>
+              <div key={i} style={{ flex: 1, background: T.surface, borderRadius: 14, padding: "14px 16px", textAlign: "center" }}>
+                <div style={{ color: T.text, fontSize: "1.6rem", fontWeight: 800 }}>{item.val}</div>
+                <div style={{ color: T.textSub, fontSize: ".78rem", marginTop: 4 }}>{item.label}</div>
               </div>
             ))}
           </div>
@@ -999,7 +1014,8 @@ export default function PomodoroPage() {
           const ANIMAL_NAMES: Record<string,string> = {
             capybara:"Kapibara", koala:"Koala", penguin:"Penguen", cat:"Kedi",
             bear:"Ayı", caterpillar:"Tırtıl", butterfly:"Kelebek",
-            snail:"Salyangoz", turtle:"Kaplumbağa", chick:"Civciv", rabbit:"Tavşan"
+            snail:"Salyangoz", turtle:"Kaplumbağa", chick:"Civciv", rabbit:"Tavşan",
+            horse:"At", bee:"Arı", canary:"Kanarya", eagle:"Kartal", lion:"Aslan",
           };
           const name = ANIMAL_NAMES[animalId] ?? "Arkadaşın";
           const msgs1 = [`${name} seni özledi! 😢 ${diff} gündür burada değildin.`, `Neredeydin? ${name} her gün bekledi! 🥺`];
@@ -1086,31 +1102,72 @@ export default function PomodoroPage() {
   // ─── Ambient ses ──────────────────────────────────────────────────────────
   const startAmbient = useCallback(async (id: string) => {
     try {
-      // iOS/iPadOS: her seferinde yeni context oluştur (suspend sorununu önler)
+      // Mevcut context'i kapat
       if (audioCtxRef.current) {
         try { await audioCtxRef.current.close(); } catch {}
         audioCtxRef.current = null;
         ambientGainRef.current = null;
       }
+
+      // Eski audio elementini temizle
+      const oldAudio = document.getElementById("ambient-audio-ios") as HTMLAudioElement | null;
+      if (oldAudio) { oldAudio.pause(); oldAudio.srcObject = null; oldAudio.remove(); }
+
       if (id === "off") return;
 
       const AC = window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new AC();
       audioCtxRef.current = ctx;
 
-      // iOS: kullanıcı dokunuşu sonrası context hâlâ suspended olabilir
-      if (ctx.state === "suspended") {
-        await ctx.resume();
+      // ── iOS Sessiz Mod Çözümü ─────────────────────────────────────────────
+      // iOS, AudioContext sesini sessiz modda keser AMA <audio> elementini kesmez.
+      // Çözüm: Web Audio çıkışını MediaStreamDestination'a bağla,
+      // oradan bir <audio> elementine ver. <audio> "medya" sayıldığı için
+      // sessiz mod onu etkilemiyor (radyonun çalışmasının sebebi de bu).
+      //
+      // EK: iOS AudioSession'ı "playback" moduna almak için önce boş bir
+      // <audio> oynatıyoruz — bu, sistemi "bu sayfa ses çalıyor" moduna geçiriyor.
+
+      // 1) Kısa sessiz base64 mp3 ile AudioSession'ı "playback" moduna al
+      const SILENT_MP3 = "data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAJAAAAAAAAAAAAnHIGmEAAAAAAAAAAAAAAAAA//tQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
+      const unlockAudio = document.createElement("audio");
+      unlockAudio.src = SILENT_MP3;
+      unlockAudio.volume = 0.001; // neredeyse sessiz
+      (unlockAudio as any).playsInline = true;
+      try { await unlockAudio.play(); } catch {}
+      unlockAudio.pause();
+      unlockAudio.remove();
+
+      // 2) Context'i resume et
+      if (ctx.state === "suspended") await ctx.resume();
+
+      // 3) Ambient ses üret
+      const gainNode = createAmbientNode(ctx, id);
+      ambientGainRef.current = gainNode;
+
+      if (!gainNode) return;
+
+      // 4) MediaStreamDestination → <audio> zinciri
+      // Bu iOS'ta "medya sesi" olarak algılanır, sessiz modu bypass eder
+      if ((ctx as any).createMediaStreamDestination) {
+        const streamDest = (ctx as any).createMediaStreamDestination();
+        gainNode.connect(streamDest);
+        // ctx.destination'a da bağla (diğer cihazlar için)
+        gainNode.connect(ctx.destination);
+
+        const audioEl = document.createElement("audio");
+        audioEl.id = "ambient-audio-ios";
+        audioEl.srcObject = streamDest.stream;
+        (audioEl as any).playsInline = true;
+        audioEl.volume = 1.0;
+        document.body.appendChild(audioEl);
+
+        try {
+          await audioEl.play();
+        } catch {
+          // Autoplay engellendi — Web Audio yine de çalıyor
+        }
       }
-
-      // iOS silent buffer unlock trick
-      const silentBuf = ctx.createBuffer(1, 1, 22050);
-      const silentSrc = ctx.createBufferSource();
-      silentSrc.buffer = silentBuf;
-      silentSrc.connect(ctx.destination);
-      silentSrc.start(0);
-
-      ambientGainRef.current = createAmbientNode(ctx, id);
     } catch (e) { console.warn("Audio error:", e); }
   }, []);
 
@@ -1530,7 +1587,7 @@ export default function PomodoroPage() {
 
         {/* ── SINAV ── */}
         {tab === "sinav" && (
-          <SinavTab />
+          <SinavTab T={T} isDark={isDark} />
         )}
 
       </div>
