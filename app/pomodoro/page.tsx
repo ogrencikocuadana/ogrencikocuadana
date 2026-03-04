@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 
 // ─── Tipler ───────────────────────────────────────────────────────────────────
 interface Session {
@@ -286,9 +286,15 @@ const ANIMALS = [
 
 // ─── Kitap ────────────────────────────────────────────────────────────────────
 // Günlük toplam dakika → kitap yüksekliği (min 50, max 120)
-function DailyBook({ date, minutes, index }: { date: string; minutes: number; index: number }) {
+function DailyBook({ date, minutes, index, sessionCount }: { date: string; minutes: number; index: number; sessionCount: number }) {
+  const [open, setOpen] = useState(false);
+  const [pinned, setPinned] = useState(false); // tıkla = sabitlensin
+  const [popupPos, setPopupPos] = useState({ x: 0, y: 0 });
+  const bookRef = useRef<HTMLDivElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const h = Math.min(120, Math.max(50, Math.round(minutes / 3)));
-  const w = 20;
+  const w = 22;
   const palettes = [
     ["#1e3a8a","#2d4fa0"],["#c2410c","#d4510f"],["#065f46","#0a7a5c"],
     ["#4c1d95","#6b2cb5"],["#7c2d12","#9a3a18"],["#1e40af","#2563eb"],
@@ -296,35 +302,147 @@ function DailyBook({ date, minutes, index }: { date: string; minutes: number; in
   ];
   const [bg, spine] = palettes[index % palettes.length];
   const d = new Date(date + "T12:00:00");
-  const dayLabel = d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
+  const dayLabel = d.toLocaleDateString("tr-TR", { weekday: "short", day: "numeric", month: "short" });
+  const shortDay = d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
   const hours = Math.floor(minutes / 60);
   const mins  = minutes % 60;
-  const durLabel = hours > 0 ? `${hours}s ${mins}dk` : `${mins}dk`;
+  const durLabel = hours > 0 ? `${hours} sa${mins > 0 ? " " + mins + " dk" : ""}` : `${mins} dk`;
+
+  const scheduleClose = () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = setTimeout(() => {
+      setPinned(false);
+      setOpen(false);
+    }, 320); // kitap ile popup arasındaki boşluğu geçerken kapanmasın
+  };
+
+  const cancelClose = () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+  };
+
+  const handleMouseEnterBook = () => {
+    cancelClose();
+    if (bookRef.current) {
+      const rect = bookRef.current.getBoundingClientRect();
+      setPopupPos({ x: rect.left + rect.width / 2, y: rect.top - 14 });
+    }
+    setOpen(true);
+  };
+
+  const handleClick = () => {
+    cancelClose();
+    if (pinned) {
+      setPinned(false);
+      setOpen(false);
+    } else {
+      if (bookRef.current) {
+        const rect = bookRef.current.getBoundingClientRect();
+        setPopupPos({ x: rect.left + rect.width / 2, y: rect.top - 14 });
+      }
+      setPinned(true);
+      setOpen(true);
+    }
+  };
+
   return (
-    <div
-      title={`${dayLabel} — ${durLabel}`}
-      style={{ width: w, height: h, position: "relative", cursor: "default", transition: "transform 0.25s", transformOrigin: "bottom center", flexShrink: 0 }}
-      onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = "translateY(-10px)"}
-      onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = "translateY(0)"}
-    >
-      {/* Kitap gövdesi */}
-      <div style={{ position: "absolute", inset: 0, background: bg, borderRadius: "2px 4px 4px 2px", boxShadow: "inset -3px 0 6px rgba(0,0,0,0.2), 2px 2px 8px rgba(0,0,0,0.3)" }} />
-      {/* Sırt */}
-      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 5, background: spine, borderRadius: "2px 0 0 2px" }} />
-      {/* Süre — dikey yazı */}
-      <div style={{
-        position: "absolute", top: "50%", left: "50%",
-        transform: "translate(-50%, -50%) rotate(-90deg)",
-        fontSize: 7, fontWeight: 700, color: "rgba(255,255,255,0.75)",
-        whiteSpace: "nowrap", letterSpacing: ".5px",
-      }}>{durLabel}</div>
-      {/* Tarih — alt */}
-      <div style={{
-        position: "absolute", bottom: 4, left: "50%",
-        transform: "translateX(-50%) rotate(-90deg)",
-        fontSize: 6, color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap",
-      }}>{dayLabel}</div>
-    </div>
+    <>
+      {/* Popup — position:fixed ile overflow kırpmasından bağımsız */}
+      {open && (
+        <div
+          onMouseEnter={cancelClose}
+          onMouseLeave={pinned ? undefined : scheduleClose}
+          style={{
+            position: "fixed",
+            left: popupPos.x,
+            top: popupPos.y,
+            transform: "translateX(-50%) translateY(-100%)",
+            zIndex: 9999,
+            minWidth: 148,
+            pointerEvents: "auto",
+          }}
+        >
+          <div style={{
+            background: "rgba(10,6,24,0.98)",
+            border: `1px solid ${spine}bb`,
+            borderRadius: 13,
+            padding: "11px 15px",
+            boxShadow: `0 12px 36px rgba(0,0,0,0.65), 0 0 0 1px ${spine}22`,
+            color: "#fff",
+            lineHeight: 1.55,
+          }}>
+            <div style={{
+              fontWeight: 800, fontSize: ".8rem",
+              marginBottom: 8, paddingBottom: 7,
+              borderBottom: `1px solid ${spine}44`,
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5,
+            }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span>📅</span> {dayLabel}
+              </span>
+              {pinned && (
+                <span
+                  onClick={(e) => { e.stopPropagation(); setPinned(false); setOpen(false); }}
+                  style={{ cursor: "pointer", color: "rgba(255,255,255,0.4)", fontSize: ".75rem", lineHeight: 1, padding: "0 2px" }}
+                  title="Kapat"
+                >✕</span>
+              )}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 18 }}>
+                <span style={{ color: "rgba(255,255,255,0.42)", fontSize: ".7rem" }}>Süre</span>
+                <span style={{ fontWeight: 800, fontSize: ".83rem", color: "#a78bfa" }}>{durLabel}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 18 }}>
+                <span style={{ color: "rgba(255,255,255,0.42)", fontSize: ".7rem" }}>Oturum</span>
+                <span style={{ fontWeight: 800, fontSize: ".83rem", color: "#34d399" }}>{sessionCount}×</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 18 }}>
+                <span style={{ color: "rgba(255,255,255,0.42)", fontSize: ".7rem" }}>Ort.</span>
+                <span style={{ fontWeight: 800, fontSize: ".83rem", color: "#60a5fa" }}>{Math.round(minutes / sessionCount)} dk</span>
+              </div>
+            </div>
+          </div>
+          {/* Aşağı ok */}
+          <div style={{
+            width: 0, height: 0, margin: "0 auto",
+            borderLeft: "7px solid transparent",
+            borderRight: "7px solid transparent",
+            borderTop: `7px solid ${spine}bb`,
+          }} />
+        </div>
+      )}
+
+      {/* Kitap */}
+      <div
+        ref={bookRef}
+        style={{ position: "relative", flexShrink: 0, cursor: "pointer" }}
+        onMouseEnter={handleMouseEnterBook}
+        onMouseLeave={pinned ? undefined : scheduleClose}
+        onClick={handleClick}
+      >
+        <div style={{
+          width: w, height: h, position: "relative",
+          transition: "transform 0.22s cubic-bezier(0.34,1.56,0.64,1)",
+          transformOrigin: "bottom center",
+          transform: open ? "translateY(-10px)" : "translateY(0)",
+        }}>
+          <div style={{
+            position: "absolute", inset: 0, background: bg,
+            borderRadius: "2px 4px 4px 2px",
+            boxShadow: `inset -3px 0 6px rgba(0,0,0,0.2), 3px 3px 10px rgba(0,0,0,0.35)${open ? ", 0 0 0 2px " + spine : ""}`,
+            transition: "box-shadow 0.2s",
+          }} />
+          <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 5, background: spine, borderRadius: "2px 0 0 2px" }} />
+          <div style={{
+            position: "absolute", top: "50%", left: "50%",
+            transform: "translate(-50%, -50%) rotate(-90deg)",
+            fontSize: 8, fontWeight: 800, color: "rgba(255,255,255,0.88)",
+            whiteSpace: "nowrap", letterSpacing: ".3px",
+            textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+          }}>{shortDay}</div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -352,39 +470,94 @@ function Book({ session, index }: { session: Session; index: number }) {
 function GoalCard({ todayMin, goalMin, animal, onPress, T, isDark }: { todayMin: number; goalMin: number; animal: string; onPress: () => void; T: Theme; isDark: boolean }) {
   const pct = goalMin > 0 ? Math.min(100, (todayMin / goalMin) * 100) : 0;
   const goalMet = pct >= 100;
-  const motivText = goalMet ? "Hedefine ulaştın! 🎉" : pct >= 75 ? "Neredeyse bitti! 💪" : pct >= 50 ? "Harika gidiyorsun!" : pct >= 25 ? "İyi başlangıç!" : todayMin > 0 ? "Devam et!" : "Bugün çalışmaya başla!";
+
+  // Segment sayısı — milestone hissi verir
+  const SEGMENTS = 10;
+  const filledSegments = Math.round((pct / 100) * SEGMENTS);
+
+  const motivText = goalMet
+    ? "Hedefine ulaştın! 🎉"
+    : pct >= 75 ? "Neredeyse bitti! 💪"
+    : pct >= 50 ? "Harika gidiyorsun!"
+    : pct >= 25 ? "İyi başlangıç!"
+    : todayMin > 0 ? "Devam et!"
+    : "Bugün çalışmaya başla!";
+
+  const accentColor = goalMet ? "#4A9E8E" : pct >= 75 ? "#f59e0b" : "#9B6FE8";
 
   return (
-    <div onClick={onPress} style={{ borderRadius: 20, marginBottom: 20, overflow: "hidden", border: "1px solid rgba(155,111,232,0.2)", cursor: "pointer", background: isDark ? "linear-gradient(135deg, rgba(155,111,232,0.12), rgba(74,107,232,0.08))" : "linear-gradient(135deg, rgba(155,111,232,0.08), rgba(74,107,232,0.05))" }}>
-      <div style={{ display: "flex", alignItems: "center", padding: "16px", gap: 14 }}>
-        {/* Maskot */}
-        <div style={{ width: 70, height: 70, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <AnimalImg id={animal} size={64} />
+    <div
+      onClick={onPress}
+      style={{
+        borderRadius: 20, marginBottom: 20, overflow: "hidden",
+        border: `1px solid ${goalMet ? "rgba(74,158,142,0.35)" : "rgba(155,111,232,0.2)"}`,
+        cursor: "pointer",
+        background: isDark
+          ? `linear-gradient(135deg, ${goalMet ? "rgba(74,158,142,0.1)" : "rgba(155,111,232,0.1)"}, rgba(74,107,232,0.06))`
+          : `linear-gradient(135deg, ${goalMet ? "rgba(74,158,142,0.07)" : "rgba(155,111,232,0.06)"}, rgba(74,107,232,0.04))`,
+        transition: "border-color 0.5s, background 0.5s",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", padding: "14px 16px", gap: 14 }}>
+        {/* Maskot — hedef tutunca zıplar */}
+        <div style={{
+          width: 64, height: 64, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          animation: goalMet ? "goal-bounce 0.6s ease" : "none",
+        }}>
+          <AnimalImg id={animal} size={58} />
         </div>
-        {/* Sağ içerik */}
+
+        {/* İçerik */}
         <div style={{ flex: 1, minWidth: 0 }}>
           {goalMin === 0 ? (
             <>
-              <div style={{ color: T.text, fontWeight: 700, fontSize: ".9rem", marginBottom: 4 }}>Günlük Hedef</div>
-              <div style={{ color: T.textSub, fontSize: ".78rem", marginBottom: 8 }}>Hedef belirleyerek motivasyonunu artır</div>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#9B6FE8", fontSize: ".78rem", fontWeight: 600 }}>
+              <div style={{ color: T.text, fontWeight: 700, fontSize: ".88rem", marginBottom: 3 }}>Günlük Hedef</div>
+              <div style={{ color: T.textSub, fontSize: ".76rem", marginBottom: 10 }}>Hedef belirleyerek motivasyonunu artır</div>
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                background: "rgba(155,111,232,0.15)", border: "1px solid rgba(155,111,232,0.3)",
+                borderRadius: 8, padding: "4px 10px",
+                color: "#9B6FE8", fontSize: ".76rem", fontWeight: 700,
+              }}>
                 <span>+</span><span>Hedef Belirle</span>
               </div>
             </>
           ) : (
             <>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ color: T.text, fontWeight: 700, fontSize: ".9rem" }}>Günlük Hedef</span>
-                <span style={{ color: T.textSub, fontSize: ".72rem" }}>✏️</span>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ color: T.text, fontWeight: 700, fontSize: ".88rem" }}>Günlük Hedef</span>
+                <span style={{ color: T.textSub, fontSize: ".72rem" }}>✏️ düzenle</span>
               </div>
-              <div style={{ fontSize: ".85rem", marginBottom: 6 }}>
-                <span style={{ color: T.text, fontWeight: 700 }}>{fmtMin(todayMin)}</span>
-                <span style={{ color: T.textSub }}> / {fmtMin(goalMin)}</span>
+
+              {/* Süre göstergesi */}
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 8 }}>
+                <span style={{ color: accentColor, fontWeight: 800, fontSize: "1.15rem", transition: "color 0.5s" }}>
+                  {fmtMin(todayMin)}
+                </span>
+                <span style={{ color: T.textMuted, fontSize: ".78rem" }}>/ {fmtMin(goalMin)}</span>
+                {goalMet && <span style={{ fontSize: ".75rem", marginLeft: 2 }}>✓</span>}
               </div>
-              <div style={{ height: 6, background: T.border, borderRadius: 3, overflow: "hidden", marginBottom: 5 }}>
-                <div style={{ height: "100%", width: `${pct}%`, background: goalMet ? "#4A9E8E" : "#9B6FE8", borderRadius: 3, transition: "width 0.8s cubic-bezier(.4,0,.2,1)" }} />
+
+              {/* Segmentli progress bar */}
+              <div style={{ display: "flex", gap: 3, marginBottom: 6 }}>
+                {Array.from({ length: SEGMENTS }).map((_, i) => (
+                  <div key={i} style={{
+                    flex: 1, height: 5, borderRadius: 3,
+                    background: i < filledSegments
+                      ? (goalMet ? "#4A9E8E" : i < 7 ? "#9B6FE8" : "#f59e0b")
+                      : (isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"),
+                    transition: `background 0.3s ease ${i * 0.04}s`,
+                    transform: i < filledSegments && goalMet ? "scaleY(1.3)" : "scaleY(1)",
+                    transformOrigin: "center",
+                  }} />
+                ))}
               </div>
-              <div style={{ color: "#9B6FE8", fontSize: ".72rem", fontWeight: 600 }}>{motivText}</div>
+
+              {/* Motivasyon + yüzde */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ color: accentColor, fontSize: ".72rem", fontWeight: 600, transition: "color 0.5s" }}>{motivText}</div>
+                <div style={{ color: T.textMuted, fontSize: ".7rem", fontWeight: 700 }}>{Math.round(pct)}%</div>
+              </div>
             </>
           )}
         </div>
@@ -773,16 +946,16 @@ const COMPANION_MESSAGES = {
   done:  ["Muhteşemsin! 🎉", "Tebrikler, harika iş!", "Bunu hak ettin! ⭐"],
 };
 
-function AnimalCompanion({ animalId, phase, isDark }: { animalId: string; phase: "idle"|"work"|"rest"; isDark: boolean }) {
+const AnimalCompanion = memo(function AnimalCompanion({ animalId, phase, isDark }: { animalId: string; phase: "idle"|"work"|"rest"; isDark: boolean }) {
   const [bubble, setBubble] = useState<string | null>(null);
   const [showBubble, setShowBubble] = useState(false);
   const [isStudying, setIsStudying] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const getMsg = (p: string) => {
+  const getMsg = useCallback((p: string) => {
     const msgs = COMPANION_MESSAGES[p as keyof typeof COMPANION_MESSAGES] ?? COMPANION_MESSAGES.idle;
     return msgs[Math.floor(Math.random() * msgs.length)];
-  };
+  }, []);
 
   // Faz değişince mesaj göster
   useEffect(() => {
@@ -908,13 +1081,17 @@ function AnimalCompanion({ animalId, phase, isDark }: { animalId: string; phase:
       </div>
     </div>
   );
-}
+});
 
 
 // ─── Kütüphane Sekmesi ────────────────────────────────────────────────────────
 function LibraryTab({ sessions, T, isDark }: { sessions: Session[]; T: Theme; isDark: boolean }) {
   const dayMap: Record<string, number> = {};
-  sessions.forEach(s => { dayMap[s.date] = (dayMap[s.date] ?? 0) + s.actualDuration; });
+  const daySessionCount: Record<string, number> = {};
+  sessions.forEach(s => {
+    dayMap[s.date] = (dayMap[s.date] ?? 0) + s.actualDuration;
+    daySessionCount[s.date] = (daySessionCount[s.date] ?? 0) + 1;
+  });
   const dailyBooks = Object.entries(dayMap).sort(([a], [b]) => a.localeCompare(b));
   const totalMin = sessions.reduce((a, s) => a + s.actualDuration, 0);
 
@@ -922,7 +1099,7 @@ function LibraryTab({ sessions, T, isDark }: { sessions: Session[]; T: Theme; is
     <div className="fade-in">
       <div style={{ marginBottom: 20, textAlign: "center" }}>
         <h2 style={{ color: T.text, fontSize: "1.3rem", fontWeight: 800, margin: "0 0 6px" }}>📚 Sanal Kütüphanem</h2>
-        <p style={{ color: T.textSub, fontSize: ".82rem", margin: 0 }}>Her kitap bir günü temsil eder · üzerine gel, süreyi gör</p>
+        <p style={{ color: T.textSub, fontSize: ".82rem", margin: 0 }}>Her kitap bir günü temsil eder · üzerine gel veya tıkla</p>
       </div>
       {dailyBooks.length === 0 ? (
         <div style={{ textAlign: "center", padding: "80px 0", color: T.textMuted }}>
@@ -932,10 +1109,10 @@ function LibraryTab({ sessions, T, isDark }: { sessions: Session[]; T: Theme; is
         </div>
       ) : (
         <>
-          <div style={{ background: T.surface, borderRadius: 20, padding: "32px 24px 0", border: `1px solid ${T.border}`, overflowX: "auto" }}>
+          <div style={{ background: T.surface, borderRadius: 20, padding: "48px 24px 0", border: `1px solid ${T.border}`, overflowX: "auto" }}>
             <div style={{ display: "flex", alignItems: "flex-end", gap: 6, minHeight: 130, paddingBottom: 12, minWidth: "max-content" }}>
               {dailyBooks.map(([date, minutes], i) => (
-                <DailyBook key={date} date={date} minutes={minutes} index={i} />
+                <DailyBook key={date} date={date} minutes={minutes} index={i} sessionCount={daySessionCount[date] ?? 1} />
               ))}
             </div>
             <div style={{ height: 10, background: "linear-gradient(90deg,#8b6914,#c8941a,#8b6914)", borderRadius: "0 0 4px 4px", boxShadow: "0 4px 12px rgba(0,0,0,0.4)" }} />
@@ -1290,28 +1467,35 @@ export default function PomodoroPage() {
     <main style={{ minHeight: "100vh", background: T.bg, fontFamily: "system-ui, sans-serif", position: "relative" }}>
       {goalMet && <CelebrationBg />}
       <style>{`
-        @keyframes pulse-ring { 0%,100%{transform:scale(1);opacity:.6} 50%{transform:scale(1.08);opacity:1} }
-        @keyframes fade-in { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes pulse-ring { 0%,100%{transform:scale(1);opacity:.5} 50%{transform:scale(1.1);opacity:.9} }
+        @keyframes fade-in { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
         @keyframes confetti-fall { 0%{transform:translateY(-20px) rotate(0deg);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
         @keyframes celebrate-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0)} 50%{box-shadow:0 0 40px 10px rgba(16,185,129,0.3)} }
-        @keyframes streak-bounce { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+        @keyframes streak-bounce { 0%,100%{transform:scale(1) rotate(-2deg)} 50%{transform:scale(1.18) rotate(2deg)} }
         @keyframes countdown-pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.06);opacity:.85} }
-        .fade-in { animation: fade-in 0.4s ease forwards; }
+        @keyframes goal-bounce { 0%{transform:translateY(0)} 30%{transform:translateY(-10px)} 60%{transform:translateY(-4px)} 80%{transform:translateY(-7px)} 100%{transform:translateY(0)} }
+        @keyframes book-popup-in { from{opacity:0;transform:translateX(-50%) translateY(calc(-100% + 8px))} to{opacity:1;transform:translateX(-50%) translateY(-100%)} }
+        @keyframes popup-in { from{opacity:0;transform:translateX(-50%) translateY(6px) scale(0.9)} to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)} }
+        @keyframes phase-glow { 0%,100%{opacity:0.6} 50%{opacity:1} }
+        .fade-in { animation: fade-in 0.35s cubic-bezier(0.16,1,0.3,1) forwards; }
         .tab-btn { border:none;cursor:pointer;transition:all 0.2s;font-weight:600;border-radius:10px;padding:10px 14px;font-size:.8rem; }
         .mode-btn { border:2px solid;cursor:pointer;transition:all 0.25s;border-radius:14px;padding:10px 12px;text-align:center;background:none; }
         .mode-btn:hover { transform:translateY(-2px); }
-        .action-btn { border:none;cursor:pointer;transition:all 0.2s;border-radius:14px;font-weight:700;font-size:1rem;padding:14px 30px; }
-        .action-btn:hover { filter:brightness(1.1);transform:translateY(-1px); }
+        .action-btn { border:none;cursor:pointer;transition:all 0.18s cubic-bezier(0.34,1.56,0.64,1);border-radius:14px;font-weight:700;font-size:1rem;padding:14px 30px; }
+        .action-btn:hover { filter:brightness(1.12);transform:translateY(-2px) scale(1.02); }
+        .action-btn:active { transform:translateY(0) scale(0.97); }
         .ambient-btn { border:1px solid ${T.border};background:${T.surface};cursor:pointer;border-radius:12px;padding:10px 14px;color:${T.textSub};font-size:.8rem;font-weight:600;transition:all 0.2s;display:flex;flex-direction:column;align-items:center;gap:4px; }
-        .ambient-btn:hover { border-color:${T.isDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.2)"}; background:${T.surface2}; }
+        .ambient-btn:hover { border-color:${T.isDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.2)"}; background:${T.surface2}; transform:translateY(-1px); }
         .ambient-btn.active { border-color:#9B6FE8;background:#9B6FE818;color:${T.text}; }
         input[type=range] { accent-color:#9B6FE8;width:100%; }
-        .mode-card { cursor:pointer; border-radius:20px; border:1px solid ${T.border}; overflow:hidden; transition:all 0.2s; }
-        .mode-card:hover { transform:translateY(-2px); }
-        .tool-card { cursor:pointer; border-radius:20px; border:1px solid ${T.border}; overflow:hidden; transition:all 0.2s; flex:1; }
-        .tool-card:hover { transform:translateY(-2px); }
+        .mode-card { cursor:pointer; border-radius:20px; border:1px solid ${T.border}; overflow:hidden; transition:all 0.22s cubic-bezier(0.34,1.56,0.64,1); }
+        .mode-card:hover { transform:translateY(-3px) scale(1.01); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+        .mode-card:active { transform:translateY(0) scale(0.98); }
+        .tool-card { cursor:pointer; border-radius:20px; border:1px solid ${T.border}; overflow:hidden; transition:all 0.22s cubic-bezier(0.34,1.56,0.64,1); flex:1; }
+        .tool-card:hover { transform:translateY(-3px) scale(1.01); box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
+        .tool-card:active { transform:translateY(0) scale(0.97); }
         .bottom-nav-btn { display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;background:none;border:none;padding:8px 16px;transition:all 0.2s;flex:1; }
-        .bottom-nav-btn:hover { opacity:0.8; }
+        .bottom-nav-btn:hover { opacity:0.85; transform:translateY(-1px); }
         @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
         @keyframes float { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-5px)} }
         @keyframes writing { 0%,100%{transform:rotate(-10deg)} 50%{transform:rotate(10deg)} }
@@ -1335,11 +1519,19 @@ export default function PomodoroPage() {
           </button>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
             {streak > 0 && (
-              <div style={{ background: "rgba(232,69,74,0.15)", border: "1px solid rgba(232,69,74,0.35)", borderRadius: 12, padding: "6px 14px", display: "flex", alignItems: "center", gap: 6, animation: streak >= 7 ? "streak-bounce 2s ease-in-out infinite" : "none" }}>
-                <span style={{ fontSize: "1.2rem" }}>🔥</span>
+              <div style={{
+                background: streak >= 30 ? "linear-gradient(135deg,rgba(251,191,36,0.2),rgba(245,158,11,0.12))" : streak >= 7 ? "linear-gradient(135deg,rgba(232,69,74,0.18),rgba(251,113,55,0.1))" : "rgba(232,69,74,0.12)",
+                border: `1px solid ${streak >= 30 ? "rgba(251,191,36,0.5)" : streak >= 7 ? "rgba(232,69,74,0.5)" : "rgba(232,69,74,0.3)"}`,
+                borderRadius: 12, padding: "6px 14px", display: "flex", alignItems: "center", gap: 6,
+                animation: streak >= 7 ? "streak-bounce 2s ease-in-out infinite" : "none",
+                transition: "all 0.5s ease",
+              }}>
+                <span style={{ fontSize: "1.2rem" }}>{streak >= 30 ? "🏆" : streak >= 14 ? "💎" : "🔥"}</span>
                 <div>
-                  <div style={{ color: "#E8454A", fontWeight: 800, fontSize: "1rem", lineHeight: 1 }}>{streak}</div>
-                  <div style={{ color: "rgba(232,69,74,0.6)", fontSize: ".65rem" }}>gün seri</div>
+                  <div style={{ color: streak >= 30 ? "#fbbf24" : "#E8454A", fontWeight: 800, fontSize: "1rem", lineHeight: 1, transition: "color 0.5s" }}>{streak}</div>
+                  <div style={{ color: streak >= 30 ? "rgba(251,191,36,0.65)" : "rgba(232,69,74,0.6)", fontSize: ".65rem" }}>
+                    {streak >= 30 ? "efsane!" : streak >= 14 ? "süper seri" : streak >= 7 ? "haftalık" : "gün seri"}
+                  </div>
                 </div>
               </div>
             )}
@@ -1414,27 +1606,75 @@ export default function PomodoroPage() {
 
             {/* Timer dairesi */}
             <div style={{ position: "relative", width: 220, height: 220 }}>
-              {phase === "work" && <div style={{ position: "absolute", inset: -16, borderRadius: "50%", background: `radial-gradient(circle, ${mode.accent}33 0%, transparent 70%)`, animation: "pulse-ring 2s ease-in-out infinite" }} />}
+              {/* Phase glow ring */}
+              {phase !== "idle" && (
+                <div style={{
+                  position: "absolute", inset: -16, borderRadius: "50%",
+                  background: `radial-gradient(circle, ${phase === "rest" ? "#4A9E8E" : mode.accent}2a 0%, transparent 70%)`,
+                  animation: "pulse-ring 2.2s ease-in-out infinite",
+                }} />
+              )}
               {goalMet && <div style={{ position: "absolute", inset: -8, borderRadius: "50%", animation: "celebrate-pulse 1.5s ease-in-out infinite" }} />}
+
+              {/* Track + progress ring */}
               <svg width="220" height="220" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
-                <circle cx="110" cy="110" r="90" fill="none" stroke={isDark ? T.surface : "rgba(0,0,0,0.08)"} strokeWidth="10" />
-                <circle cx="110" cy="110" r="90" fill="none" stroke={phase === "rest" ? "#4A9E8E" : mode.accent} strokeWidth="10" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset} style={{ transition: "stroke-dashoffset 0.5s ease" }} />
+                <circle cx="110" cy="110" r="90" fill="none" stroke={isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"} strokeWidth="12" />
+                <circle
+                  cx="110" cy="110" r="90" fill="none"
+                  stroke={phase === "rest" ? "#4A9E8E" : mode.accent}
+                  strokeWidth="12" strokeLinecap="round"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={dashOffset}
+                  style={{ transition: "stroke-dashoffset 0.5s ease, stroke 0.6s ease" }}
+                />
               </svg>
-              <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                <div style={{ fontSize: "2.8rem", fontWeight: 800, color: T.text, letterSpacing: "-2px", fontVariantNumeric: "tabular-nums" }}>
+
+              {/* Inner face */}
+              <div style={{
+                position: "absolute", inset: 0,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                gap: 2,
+              }}>
+                {/* Phase chip */}
+                {phase !== "idle" && (
+                  <div style={{
+                    fontSize: ".65rem", fontWeight: 800, letterSpacing: ".08em",
+                    color: phase === "rest" ? "#4A9E8E" : mode.accent,
+                    background: phase === "rest" ? "rgba(74,158,142,0.12)" : `${mode.accent}18`,
+                    borderRadius: 6, padding: "2px 8px", marginBottom: 4,
+                    transition: "all 0.5s ease",
+                  }}>
+                    {phase === "work" ? "ODAK" : "MOLA"}
+                  </div>
+                )}
+                <div style={{
+                  fontSize: "2.8rem", fontWeight: 800, color: T.text,
+                  letterSpacing: "-2px", fontVariantNumeric: "tabular-nums",
+                  lineHeight: 1,
+                }}>
                   {phase === "idle" ? fmtTime(mode.work * 60) : fmtTime(seconds)}
                 </div>
-                <div style={{ fontSize: ".78rem", color: T.textSub, marginTop: 4, fontWeight: 600 }}>
-                  {phase === "idle" ? "Başlamaya hazır" : phase === "work" ? "🔥 Odak zamanı" : "☕ Mola zamanı"}
+                <div style={{ fontSize: ".75rem", color: T.textSub, marginTop: 6, fontWeight: 600 }}>
+                  {phase === "idle" ? "başlamaya hazır" : phase === "work" ? "🔥 odak zamanı" : "☕ mola zamanı"}
                 </div>
               </div>
             </div>
 
             {/* Butonlar */}
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-              {phase === "idle" && <button className="action-btn" onClick={startWork} style={{ background: mode.accent, color: T.text, boxShadow: `0 8px 24px ${mode.accent}55`, letterSpacing:".03em" }}>▶ Başla</button>}
-              {phase === "work" && <><button className="action-btn" onClick={reset} style={{ background: T.surface, color: T.textSub, border:`1px solid ${T.border}` }}>✕ İptal</button><button className="action-btn" onClick={completeWork} style={{ background: "#4A9E8E", color: T.text, boxShadow:"0 8px 24px #4A9E8E44" }}>✓ Tamamla</button></>}
-              {phase === "rest" && <><button className="action-btn" onClick={reset} style={{ background: T.surface, color: T.textSub, border:`1px solid ${T.border}` }}>Atla</button><button className="action-btn" onClick={startWork} style={{ background: mode.accent, color: T.text, boxShadow:`0 8px 24px ${mode.accent}55` }}>▶ Yeni Ders</button></>}
+              {phase === "idle" && <button className="action-btn" onClick={startWork} style={{ background: mode.accent, color: "#fff", boxShadow: `0 8px 28px ${mode.accent}60`, letterSpacing:".04em", minWidth: 130 }}>▶ Başla</button>}
+              {phase === "work" && (
+                <>
+                  <button className="action-btn" onClick={reset} style={{ background: T.surface, color: T.textSub, border:`1px solid ${T.border}` }}>✕ İptal</button>
+                  <button className="action-btn" onClick={completeWork} style={{ background: "#4A9E8E", color: "#fff", boxShadow:"0 8px 28px #4A9E8E55", minWidth: 140 }}>✓ Tamamla</button>
+                </>
+              )}
+              {phase === "rest" && (
+                <>
+                  <button className="action-btn" onClick={reset} style={{ background: T.surface, color: T.textSub, border:`1px solid ${T.border}` }}>Atla</button>
+                  <button className="action-btn" onClick={startWork} style={{ background: mode.accent, color: "#fff", boxShadow:`0 8px 28px ${mode.accent}60`, minWidth: 140 }}>▶ Yeni Ders</button>
+                </>
+              )}
             </div>
 
             {/* Araçlar — idle modda göster */}
@@ -1647,41 +1887,76 @@ export default function PomodoroPage() {
 
       {/* ── HEDEF MODAL ── */}
       {showGoalSetup && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
-          onClick={e => { if (e.target===e.currentTarget) setShowGoalSetup(false); }}>
-          <div style={{ background:"#0f1f4f", borderRadius:20, padding:28, maxWidth:440, width:"100%", border:"1px solid rgba(255,255,255,0.15)" }}>
-            <h3 style={{ color:T.text, fontSize:"1.1rem", fontWeight:800, margin:"0 0 22px", textAlign:"center" }}>🎯 Günlük Hedef Belirle</h3>
-            <div style={{ marginBottom:22 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}>
-                <label style={{ color:"rgba(255,255,255,0.6)", fontSize:".78rem", fontWeight:600 }}>GÜNLÜK ÇALIŞMA HEDEFİ</label>
-                <span style={{ color:T.text, fontWeight:800 }}>{tempGoal} dk</span>
+        <div
+          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", padding:16, backdropFilter:"blur(6px)" }}
+          onClick={e => { if (e.target===e.currentTarget) setShowGoalSetup(false); }}
+        >
+          <div style={{ background: T.modalBg, borderRadius:24, padding:28, maxWidth:440, width:"100%", border:`1px solid ${T.border}`, boxShadow:"0 24px 64px rgba(0,0,0,0.5)" }}>
+            {/* Başlık */}
+            <div style={{ textAlign:"center", marginBottom:24 }}>
+              <div style={{ fontSize:"2rem", marginBottom:6 }}>🎯</div>
+              <h3 style={{ color:T.text, fontSize:"1.1rem", fontWeight:800, margin:0 }}>Günlük Hedef Belirle</h3>
+              <p style={{ color:T.textSub, fontSize:".78rem", margin:"4px 0 0" }}>Kendine günlük çalışma hedefi koy</p>
+            </div>
+
+            {/* Süre seçimi */}
+            <div style={{ marginBottom:20 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                <label style={{ color:T.textSub, fontSize:".75rem", fontWeight:700, letterSpacing:".06em" }}>GÜNLÜK ÇALIŞMA HEDEFİ</label>
+                <span style={{ color:"#9B6FE8", fontWeight:800, fontSize:"1rem" }}>{fmtMin(tempGoal)}</span>
               </div>
               <input type="range" min={30} max={480} step={10} value={tempGoal} onChange={e=>setTempGoal(+e.target.value)} />
-              <div style={{ display:"flex", justifyContent:"space-between", marginTop:10, gap:6 }}>
-                {[60,120,180,240,300].map(v=>(
-                  <button key={v} onClick={()=>setTempGoal(v)} style={{ flex:1, background:tempGoal===v?"#9B6FE830":T.surface, border:`1px solid ${tempGoal===v?"#9B6FE880":T.border}`, borderRadius:8, padding:"5px 0", color:tempGoal===v?"#9B6FE8":T.textSub, fontSize:".72rem", cursor:"pointer", fontWeight:600 }}>{v}dk</button>
+              {/* Hızlı seçim */}
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6, marginTop:10 }}>
+                {[60,90,120,180,240].map(v=>(
+                  <button key={v} onClick={()=>setTempGoal(v)} style={{
+                    background: tempGoal===v ? "rgba(155,111,232,0.2)" : T.surface2,
+                    border: `1px solid ${tempGoal===v ? "#9B6FE8" : T.border}`,
+                    borderRadius:8, padding:"6px 0", cursor:"pointer",
+                    color: tempGoal===v ? "#9B6FE8" : T.textSub,
+                    fontSize:".7rem", fontWeight:700,
+                    transition:"all 0.15s",
+                  }}>{fmtMin(v)}</button>
                 ))}
               </div>
             </div>
-            <div style={{ marginBottom:24 }}>
-              <label style={{ color:"rgba(255,255,255,0.6)", fontSize:".78rem", fontWeight:600, display:"block", marginBottom:12 }}>TEMSİLCİ HAYVANINI SEÇ</label>
-              <div style={{ display:"flex", gap:8, justifyContent:"center", flexWrap:"wrap" }}>
+
+            {/* Hayvan seçimi */}
+            <div style={{ marginBottom:22 }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+                <label style={{ color:T.textSub, fontSize:".75rem", fontWeight:700, letterSpacing:".06em" }}>TEMSİLCİ HAYVAN</label>
+                <span style={{ color:T.textSub, fontSize:".75rem" }}>
+                  {ANIMALS.find(a=>a.id===tempAnimal)?.name} ✓
+                </span>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(8,1fr)", gap:6 }}>
                 {ANIMALS.map(a=>(
                   <button key={a.id} onClick={()=>setTempAnimal(a.id)} title={a.name}
-                    style={{ width:52, height:52, padding:6, border:`2px solid ${tempAnimal===a.id?"#a78bfa":"rgba(255,255,255,0.15)"}`, background:tempAnimal===a.id?"rgba(167,139,250,0.15)":T.surface2, cursor:"pointer", borderRadius:12, transition:"all 0.2s", display:"flex", alignItems:"center", justifyContent:"center" }}
+                    style={{
+                      aspectRatio:"1", padding:5, display:"flex", alignItems:"center", justifyContent:"center",
+                      border: `2px solid ${tempAnimal===a.id ? "#a78bfa" : T.border}`,
+                      background: tempAnimal===a.id ? "rgba(167,139,250,0.18)" : T.surface2,
+                      cursor:"pointer", borderRadius:10,
+                      transition:"all 0.15s cubic-bezier(0.34,1.56,0.64,1)",
+                      transform: tempAnimal===a.id ? "scale(1.12)" : "scale(1)",
+                    }}
                   >
-                    <AnimalImg id={a.id} size={34} />
+                    <AnimalImg id={a.id} size={28} />
                   </button>
                 ))}
               </div>
-              <p style={{ color:T.textSub, fontSize:".72rem", textAlign:"center", marginTop:8 }}>
-                {ANIMALS.find(a=>a.id===tempAnimal)?.name} seçildi
-              </p>
             </div>
+
+            {/* Kaydet / İptal */}
             <div style={{ display:"flex", gap:10 }}>
-              <button onClick={()=>setShowGoalSetup(false)} style={{ flex:1, background:T.surface, border:"none", borderRadius:12, padding:13, color:T.text, fontWeight:600, cursor:"pointer" }}>İptal</button>
-              <button onClick={()=>{ const g={minutes:tempGoal,animal:tempAnimal}; setDailyGoal(g); saveGoal(g); setShowGoalSetup(false); }}
-                style={{ flex:2, background:"#3b82f6", border:"none", borderRadius:12, padding:13, color:T.text, fontWeight:700, cursor:"pointer" }}>Kaydet</button>
+              <button
+                onClick={()=>setShowGoalSetup(false)}
+                style={{ flex:1, background:T.surface, border:`1px solid ${T.border}`, borderRadius:12, padding:13, color:T.text, fontWeight:600, cursor:"pointer", fontSize:".9rem" }}
+              >İptal</button>
+              <button
+                onClick={()=>{ const g={minutes:tempGoal,animal:tempAnimal}; setDailyGoal(g); saveGoal(g); setShowGoalSetup(false); }}
+                style={{ flex:2, background:"linear-gradient(135deg,#3b82f6,#7c3aed)", border:"none", borderRadius:12, padding:13, color:"#fff", fontWeight:700, cursor:"pointer", fontSize:".9rem", boxShadow:"0 6px 20px rgba(59,130,246,0.35)" }}
+              >Kaydet</button>
             </div>
           </div>
         </div>
