@@ -1084,6 +1084,153 @@ const AnimalCompanion = memo(function AnimalCompanion({ animalId, phase, isDark 
 });
 
 
+// ─── Rapor Paylaşım Butonu ────────────────────────────────────────────────────
+function ReportShareButton({ todayMin, todaySessions, weekMin, totalSessions, streak, isDark, T }: {
+  todayMin: number; todaySessions: number; weekMin: number;
+  totalSessions: number; streak: number; isDark: boolean; T: Theme;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  const buildCanvas = (): Promise<HTMLCanvasElement> => new Promise((resolve) => {
+    const canvas = document.createElement("canvas");
+    const W = 540, H = 960;
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext("2d")!;
+
+    // Arka plan
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, "#0f1f4f");
+    bg.addColorStop(0.6, "#1e3a8a");
+    bg.addColorStop(1, "#1a0a30");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+    // Dekoratif daireler
+    ctx.beginPath(); ctx.arc(W + 50, -50, 200, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(249,115,22,0.1)"; ctx.fill();
+    ctx.beginPath(); ctx.arc(-50, H + 50, 180, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(99,102,241,0.12)"; ctx.fill();
+
+    // Nokta grid
+    ctx.fillStyle = "rgba(255,255,255,0.025)";
+    for (let x = 20; x < W; x += 32) for (let y = 20; y < H; y += 32) {
+      ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI * 2); ctx.fill();
+    }
+
+    const rr = (x: number, y: number, w: number, h: number, r: number) => {
+      ctx.beginPath();
+      ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+      ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+      ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+      ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+    };
+
+    // Üst başlık
+    ctx.fillStyle = "rgba(249,115,22,0.18)"; rr(W/2-100,130,200,34,17); ctx.fill();
+    ctx.fillStyle = "#fdba74"; ctx.font = "bold 13px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("✦  İSTATİSTİKLERİM  ✦", W/2, 153);
+
+    // Tarih
+    const months = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+    const d = new Date();
+    const dateStr = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    ctx.fillStyle = "rgba(147,197,253,0.6)"; ctx.font = "14px sans-serif";
+    ctx.fillText(dateStr, W/2, 190);
+
+    // Stat kartları
+    const stats = [
+      { label: "Bugün", val: todayMin > 0 ? (todayMin >= 60 ? `${Math.floor(todayMin/60)}sa ${todayMin%60}dk` : `${todayMin}dk`) : "0dk", sub: `${todaySessions} oturum`, color: "#E8454A" },
+      { label: "Bu Hafta", val: weekMin > 0 ? (weekMin >= 60 ? `${Math.floor(weekMin/60)}sa` : `${weekMin}dk`) : "0dk", sub: "çalışma süresi", color: "#4A9E8E" },
+      { label: "Toplam", val: `${totalSessions}`, sub: "oturum", color: "#4A6BE8" },
+      { label: "Seri", val: streak > 0 ? `${streak} 🔥` : "0", sub: "günlük seri", color: "#f97316" },
+    ];
+
+    const cardW = 220, cardH = 110, gap = 20;
+    const startX = (W - (cardW * 2 + gap)) / 2;
+    const startY = 240;
+
+    stats.forEach((s, i) => {
+      const col = i % 2, row = Math.floor(i / 2);
+      const x = startX + col * (cardW + gap);
+      const y = startY + row * (cardH + gap);
+      ctx.fillStyle = "rgba(255,255,255,0.07)"; rr(x, y, cardW, cardH, 16); ctx.fill();
+      ctx.strokeStyle = `${s.color}44`; ctx.lineWidth = 1.5; rr(x, y, cardW, cardH, 16); ctx.stroke();
+      ctx.fillStyle = s.color; ctx.font = "bold 11px sans-serif"; ctx.textAlign = "left";
+      ctx.fillText(s.label.toUpperCase(), x + 16, y + 24);
+      ctx.fillStyle = "white"; ctx.font = `bold 32px sans-serif`; ctx.textAlign = "center";
+      ctx.fillText(s.val, x + cardW/2, y + 68);
+      ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.font = "12px sans-serif";
+      ctx.fillText(s.sub, x + cardW/2, y + 90);
+    });
+
+    // Streak mesajı
+    if (streak >= 3) {
+      const msg = streak >= 30 ? "Efsane seri! 🏆" : streak >= 14 ? "İnanılmaz! 💎" : streak >= 7 ? "Bir hafta! 🌟" : "Harika gidiyorsun!";
+      ctx.fillStyle = "rgba(255,255,255,0.08)"; rr(W/2-130, 720, 260, 44, 12); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText(msg, W/2, 748);
+    }
+
+    // Alt logo
+    ctx.fillStyle = "rgba(255,255,255,0.05)"; rr(W/2-140, H-160, 280, 72, 16); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.88)"; ctx.font = "bold 17px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("ogrencikocuadana.com", W/2, H-130);
+    ctx.fillStyle = "rgba(147,197,253,0.55)"; ctx.font = "13px sans-serif";
+    ctx.fillText("LGS & YKS Öğrenci Koçluğu", W/2, H-108);
+
+    resolve(canvas);
+  });
+
+  const handleShare = async () => {
+    setLoading(true);
+    try {
+      const canvas = await buildCanvas();
+      const fileName = `istatistikler-${new Date().toISOString().slice(0,10)}.png`;
+      if (navigator.canShare) {
+        try {
+          const blob = await new Promise<Blob>((res, rej) =>
+            canvas.toBlob(b => b ? res(b) : rej(new Error("blob")), "image/png")
+          );
+          const file = new File([blob], fileName, { type: "image/png" });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: "Pomodoro İstatistiklerim" });
+            return;
+          }
+        } catch (e) {
+          if ((e as DOMException).name === "AbortError") return;
+        }
+      }
+      // Fallback: indir
+      const link = document.createElement("a");
+      link.download = fileName;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleShare}
+      disabled={loading}
+      style={{
+        width: "100%", marginTop: 18,
+        padding: "14px 20px",
+        background: "linear-gradient(135deg, #1e3a8a, #2563eb)",
+        color: "white", border: "none", borderRadius: 14,
+        fontWeight: 700, fontSize: "0.92rem", cursor: loading ? "wait" : "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+        opacity: loading ? 0.7 : 1,
+        boxShadow: "0 4px 16px rgba(30,58,138,0.3)",
+        transition: "all 0.2s",
+      }}
+    >
+      <span>📤</span>
+      {loading ? "Hazırlanıyor..." : "İstatistiklerimi Paylaş"}
+    </button>
+  );
+}
+
 // ─── Paylaşım Modalı ──────────────────────────────────────────────────────────
 function ShareModal({ minutes, streak, isDark, T, onClose }: {
   minutes: number; streak: number; isDark: boolean; T: Theme; onClose: () => void;
@@ -1217,18 +1364,28 @@ function ShareModal({ minutes, streak, isDark, T, onClose }: {
     ctx.closePath();
   }
 
-  const handleDownload = () => {
+  const shareOrDownload = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const fileName = `pomodoro-${dateStr.replace(/ /g, "-")}.png`;
+    if (navigator.canShare) {
+      try {
+        const blob = await new Promise<Blob>((res, rej) =>
+          canvas.toBlob(b => b ? res(b) : rej(new Error("blob failed")), "image/png")
+        );
+        const file = new File([blob], fileName, { type: "image/png" });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: "Pomodoro İstatistiklerim" });
+          return;
+        }
+      } catch (e) {
+        if ((e as DOMException).name === "AbortError") return;
+      }
+    }
     const link = document.createElement("a");
-    link.download = `pomodoro-${dateStr.replace(/ /g, "-")}.png`;
+    link.download = fileName;
     link.href = canvas.toDataURL("image/png");
     link.click();
-  };
-
-  const handleWhatsApp = () => {
-    const text = `Bugün ${timeStr.trim()} çalıştım! 📚${streak > 0 ? ` ${streak} günlük serim devam ediyor 🔥` : ""}\n\nPomodoro aracı: https://ogrencikocuadana.com/pomodoro`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
   return (
@@ -1272,7 +1429,7 @@ function ShareModal({ minutes, streak, isDark, T, onClose }: {
         {/* Butonlar */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <button
-            onClick={handleDownload}
+            onClick={shareOrDownload}
             disabled={!generated}
             style={{
               width: "100%", padding: "13px 20px",
@@ -1283,19 +1440,7 @@ function ShareModal({ minutes, streak, isDark, T, onClose }: {
               opacity: generated ? 1 : 0.6,
             }}
           >
-            <span>⬇️</span> Instagram için İndir
-          </button>
-          <button
-            onClick={handleWhatsApp}
-            style={{
-              width: "100%", padding: "13px 20px",
-              background: "#25D366",
-              color: "white", border: "none", borderRadius: 12,
-              fontWeight: 700, fontSize: "0.95rem", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            }}
-          >
-            <span>💬</span> WhatsApp'ta Paylaş
+            <span>📤</span> Paylaş / İndir
           </button>
           <button
             onClick={onClose}
@@ -2047,6 +2192,17 @@ export default function PomodoroPage() {
                 ))}
               </div>
             </div>
+
+            {/* İstatistik paylaş */}
+            <ReportShareButton
+              todayMin={todayMin}
+              todaySessions={todaySessions.length}
+              weekMin={weekMin}
+              totalSessions={sessions.length}
+              streak={streak}
+              isDark={isDark}
+              T={T}
+            />
 
             {/* Verileri temizle */}
             <div style={{ marginTop: 24, textAlign: "center" }}>
