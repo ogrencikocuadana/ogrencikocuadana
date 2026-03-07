@@ -17,15 +17,17 @@ const playfair = Playfair_Display({
 });
 
 export const metadata = {
-  title: "Öğrenci Koçu Adana | Akademik Performans ve Psikolojik Dayanıklılık Modeli",
+  title: "Öğrenci Koçu Adana | LGS & YKS Koçu | Akademik Performans ve Psikolojik Dayanıklılık",
   description:
-    "Adana'da LGS ve YKS öğrencilerine özel bireysel akademik performans koçluğu ve psikolojik dayanıklılık eğitimi. Haftalık takip, deneme analizi ve veli raporlama sistemi.",
+    "Adana'nın LGS koçu ve YKS koçu. LGS ve YKS öğrencilerine özel bireysel akademik koçluk, psikolojik dayanıklılık eğitimi, haftalık takip ve deneme analizi. Online ve yüz yüze.",
   metadataBase: new URL("https://ogrencikocuadana.com"),
   alternates: {
     canonical: "https://ogrencikocuadana.com",
   },
   keywords: [
     "öğrenci koçu adana",
+    "lgs koçu adana",
+    "yks koçu adana",
     "adana lgs koçu",
     "adana yks koçu",
     "akademik koçluk adana",
@@ -49,11 +51,13 @@ export const metadata = {
     "adana psikolojik dayanıklılık eğitimi",
     "adana deneme analizi",
     "adana veli raporlama sistemi",
+    "online lgs koçu",
+    "online yks koçu",
   ],
   openGraph: {
-    title: "Öğrenci Koçu Adana | Akademik Performans ve Psikolojik Dayanıklılık Modeli",
+    title: "Öğrenci Koçu Adana | LGS & YKS Koçu",
     description:
-      "Adana'da LGS ve YKS öğrencilerine özel bireysel akademik performans koçluğu ve psikolojik dayanıklılık eğitimi.",
+      "Adana'nın LGS koçu ve YKS koçu. Bireysel akademik koçluk, psikolojik dayanıklılık eğitimi. Online ve yüz yüze.",
     url: "https://ogrencikocuadana.com",
     siteName: "Öğrenci Koçu Adana",
     locale: "tr_TR",
@@ -63,15 +67,15 @@ export const metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Öğrenci Koçu Adana",
+        alt: "Öğrenci Koçu Adana — LGS ve YKS Koçu",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Öğrenci Koçu Adana | Akademik Performans ve Psikolojik Dayanıklılık Modeli",
+    title: "Öğrenci Koçu Adana | LGS & YKS Koçu",
     description:
-      "Adana'da LGS ve YKS öğrencilerine özel bireysel akademik performans koçluğu ve psikolojik dayanıklılık eğitimi.",
+      "Adana'nın LGS koçu ve YKS koçu. Bireysel akademik koçluk, psikolojik dayanıklılık eğitimi. Online ve yüz yüze.",
     images: ["/og-image.png"],
   },
   robots: {

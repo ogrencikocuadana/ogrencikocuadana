@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, CSSProperties, ReactNode, FormEvent } from "react";
+import ReviewsCarousel from "./components/ReviewsCarousel";
 
 // ─── Tip Tanımları ──────────────────────────────────────────────────────────
 interface IconProps { className?: string; style?: CSSProperties; filled?: boolean; }
@@ -598,35 +599,7 @@ export default function OgrenciKocuAdana() {
               <p style={{ fontSize: "1.05rem", color: "#4b5563", maxWidth: 560, margin: "0 auto" }}>Sistemi deneyimleyenlerin gözünden</p>
             </div>
           </div>
-          <style>{`@keyframes scroll-left{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}.scroll-track{animation:scroll-left 32s linear infinite}.scroll-track:hover{animation-play-state:paused}`}</style>
-          {(() => {
-            const reviews = [
-              { type: "Veli", name: "Ayşe K.", role: "8. Sınıf Velisi", color: "#1e3a8a", bg: "#eff6ff", border: "#bfdbfe", text: "Kızımın LGS sürecinde çok karamsardık. Sisteme dahil olduktan sonra hem akademik hem de psikolojik olarak inanılmaz bir değişim yaşadı. Haftalık raporlar bizi çok rahatlattı." },
-              { type: "Öğrenci", name: "Emirhan T.", role: "YKS Öğrencisi", color: "#c2410c", bg: "#fff7ed", border: "#fed7aa", text: "Daha önce ne çalışacağımı bilmiyordum, motivasyonum sürekli düşüyordu. Şimdi her haftanın planı belli, deneme analizlerim yapılıyor. Net ortalamam 3 ayda ciddi arttı." },
-              { type: "Veli", name: "Melek A.", role: "12. Sınıf Velisi", color: "#1e3a8a", bg: "#eff6ff", border: "#bfdbfe", text: "Kızım sınav kaygısı yüzünden denemede bildiğini yapamıyordu. Psikolojik dayanıklılık eğitimiyle bu sorunun üstesinden geldi. Şimdi çok daha sakin ve odaklı." },
-              { type: "Öğrenci", name: "Zeynep S.", role: "LGS Öğrencisi", color: "#c2410c", bg: "#fff7ed", border: "#fed7aa", text: "Hızlı okuma eğitimi benim için çok faydalı oldu. Artık metinleri çok daha hızlı okuyup anlıyorum. Türkçe netlerim fark edilir şekilde yükseldi." },
-              { type: "Veli", name: "Fatma Y.", role: "8. Sınıf Velisi", color: "#1e3a8a", bg: "#eff6ff", border: "#bfdbfe", text: "30 öğrenci kapasitesi olduğunu duyunca önce tereddüt ettim ama bu sınırlı kontenjanın neden olduğunu şimdi çok iyi anlıyorum. Bireysel ilgi gerçekten fark yaratıyor." },
-              { type: "Öğrenci", name: "Burak D.", role: "YKS Öğrencisi", color: "#c2410c", bg: "#fff7ed", border: "#fed7aa", text: "Telefon bağımlılığı ve zaman yönetimi konusundaki seminerler hayatımı değiştirdi. Artık çok daha verimli çalışıyorum ve boş zamanlarımı doğru kullanıyorum." },
-            ];
-            const doubled = [...reviews, ...reviews];
-            return (
-              <div style={{ display: "flex", overflow: "hidden", userSelect: "none" }}>
-                <div className="scroll-track" style={{ display: "flex", gap: 22, padding: "8px 0", width: "max-content" }}>
-                  {doubled.map((item, i) => (
-                    <div key={i} style={{ width: 340, flexShrink: 0, background: item.bg, borderRadius: 18, padding: 26, border: `2px solid ${item.border}`, display: "flex", flexDirection: "column", gap: 14, boxShadow: "0 4px 16px rgba(0,0,0,0.05)" }}>
-                      <div style={{ display: "flex", gap: 3 }}>{Array.from({ length: 5 }).map((_, s) => (<svg key={s} width="16" height="16" fill="#f97316" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>))}</div>
-                      <p style={{ color: "#374151", lineHeight: 1.7, margin: 0, fontSize: "0.9rem", flexGrow: 1 }}>&ldquo;{item.text}&rdquo;</p>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 12, borderTop: `1px solid ${item.border}` }}>
-                        <div style={{ width: 38, height: 38, background: item.color, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ color: "white", fontWeight: 700, fontSize: "0.95rem" }}>{item.name[0]}</span></div>
-                        <div><div style={{ fontWeight: 700, color: "#0f1f4f", fontSize: "0.88rem" }}>{item.name}</div><div style={{ fontSize: "0.75rem", color: item.color, fontWeight: 500 }}>{item.role}</div></div>
-                        <div style={{ marginLeft: "auto", fontSize: "0.68rem", fontWeight: 700, background: item.border, color: item.color, padding: "3px 10px", borderRadius: 9999 }}>{item.type}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
+          <ReviewsCarousel />
         </section>
 
         {/* ══════════════════════ CTA ══════════════════════ */}
