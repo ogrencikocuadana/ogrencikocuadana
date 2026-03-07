@@ -1084,6 +1084,236 @@ const AnimalCompanion = memo(function AnimalCompanion({ animalId, phase, isDark 
 });
 
 
+// ─── Paylaşım Modalı ──────────────────────────────────────────────────────────
+function ShareModal({ minutes, streak, isDark, T, onClose }: {
+  minutes: number; streak: number; isDark: boolean; T: Theme; onClose: () => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [generated, setGenerated] = useState(false);
+
+  const hours = Math.floor(minutes / 60);
+  const mins  = minutes % 60;
+  const timeStr = hours > 0 ? `${hours} sa ${mins > 0 ? mins + " dk" : ""}` : `${minutes} dk`;
+  const dateStr = getTurkishDate();
+
+  // Canvas kart oluştur
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // 1080x1920 story formatı — 0.5x render
+    const W = 540, H = 960;
+    canvas.width  = W;
+    canvas.height = H;
+
+    // Arka plan gradient
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, "#0f1f4f");
+    bg.addColorStop(0.5, "#1e3a8a");
+    bg.addColorStop(1, "#1e1040");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Dekoratif daire — sağ üst
+    ctx.beginPath();
+    ctx.arc(W + 60, -60, 220, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(249,115,22,0.12)";
+    ctx.fill();
+
+    // Dekoratif daire — sol alt
+    ctx.beginPath();
+    ctx.arc(-60, H + 60, 200, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(99,102,241,0.15)";
+    ctx.fill();
+
+    // Nokta grid deseni
+    ctx.fillStyle = "rgba(255,255,255,0.03)";
+    for (let x = 20; x < W; x += 32) {
+      for (let y = 20; y < H; y += 32) {
+        ctx.beginPath();
+        ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Üst rozet — "BUGÜN TAMAMLANDI"
+    const rozetY = 160;
+    ctx.fillStyle = "rgba(249,115,22,0.2)";
+    roundRect(ctx, W/2 - 110, rozetY - 18, 220, 36, 18);
+    ctx.fill();
+    ctx.fillStyle = "#fdba74";
+    ctx.font = "bold 13px -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("✦  BUGÜN TAMAMLANDI  ✦", W/2, rozetY + 5);
+
+    // Ana süre
+    ctx.fillStyle = "white";
+    ctx.font = `bold ${minutes >= 60 ? 88 : 96}px -apple-system, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillText(timeStr.trim(), W/2, H/2 - 60);
+
+    // "çalıştım"
+    ctx.font = "300 28px -apple-system, sans-serif";
+    ctx.fillStyle = "rgba(191,219,254,0.9)";
+    ctx.fillText("çalıştım 📚", W/2, H/2 - 10);
+
+    // Ayırıcı çizgi
+    const grad = ctx.createLinearGradient(80, 0, W - 80, 0);
+    grad.addColorStop(0, "transparent");
+    grad.addColorStop(0.5, "rgba(255,255,255,0.2)");
+    grad.addColorStop(1, "transparent");
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(80, H/2 + 40);
+    ctx.lineTo(W - 80, H/2 + 40);
+    ctx.stroke();
+
+    // Streak bilgisi
+    if (streak > 0) {
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      roundRect(ctx, W/2 - 90, H/2 + 65, 180, 52, 14);
+      ctx.fill();
+      const streakIcon = streak >= 30 ? "🏆" : streak >= 7 ? "💎" : "🔥";
+      ctx.font = "bold 22px -apple-system, sans-serif";
+      ctx.fillStyle = streak >= 7 ? "#fdba74" : "#f87171";
+      ctx.fillText(`${streakIcon}  ${streak} günlük seri`, W/2, H/2 + 100);
+    }
+
+    // Tarih
+    ctx.font = "16px -apple-system, sans-serif";
+    ctx.fillStyle = "rgba(147,197,253,0.7)";
+    ctx.fillText(dateStr, W/2, H/2 + 155);
+
+    // Alt logo alanı
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    roundRect(ctx, W/2 - 140, H - 160, 280, 72, 16);
+    ctx.fill();
+
+    ctx.font = "bold 18px -apple-system, sans-serif";
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fillText("ogrencikocuadana.com", W/2, H - 130);
+
+    ctx.font = "13px -apple-system, sans-serif";
+    ctx.fillStyle = "rgba(147,197,253,0.6)";
+    ctx.fillText("LGS & YKS Öğrenci Koçluğu", W/2, H - 108);
+
+    setGenerated(true);
+  }, []);
+
+  function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  const handleDownload = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement("a");
+    link.download = `pomodoro-${dateStr.replace(/ /g, "-")}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
+
+  const handleWhatsApp = () => {
+    const text = `Bugün ${timeStr.trim()} çalıştım! 📚${streak > 0 ? ` ${streak} günlük serim devam ediyor 🔥` : ""}\n\nPomodoro aracı: https://ogrencikocuadana.com/pomodoro`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        background: "rgba(0,0,0,0.75)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 16,
+        backdropFilter: "blur(6px)",
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: isDark ? "#1a1a2e" : "white",
+          borderRadius: 24, padding: "28px 24px",
+          maxWidth: 380, width: "100%",
+          border: `1px solid ${T.border}`,
+          boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+        }}
+      >
+        {/* Başlık */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div>
+            <div style={{ color: T.text, fontWeight: 800, fontSize: "1.1rem" }}>🎉 Harika iş!</div>
+            <div style={{ color: T.textSub, fontSize: "0.82rem", marginTop: 2 }}>Arkadaşlarınla paylaş</div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: T.textMuted, fontSize: "1.4rem", lineHeight: 1, padding: 4 }}>×</button>
+        </div>
+
+        {/* Canvas önizleme */}
+        <div style={{ borderRadius: 16, overflow: "hidden", marginBottom: 20, boxShadow: "0 8px 32px rgba(0,0,0,0.3)", aspectRatio: "9/16", maxHeight: 280, display: "flex", alignItems: "center", justifyContent: "center", background: "#0f1f4f" }}>
+          <canvas
+            ref={canvasRef}
+            style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+          />
+        </div>
+
+        {/* Butonlar */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <button
+            onClick={handleDownload}
+            disabled={!generated}
+            style={{
+              width: "100%", padding: "13px 20px",
+              background: "linear-gradient(135deg, #1e3a8a, #2563eb)",
+              color: "white", border: "none", borderRadius: 12,
+              fontWeight: 700, fontSize: "0.95rem", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              opacity: generated ? 1 : 0.6,
+            }}
+          >
+            <span>⬇️</span> Instagram için İndir
+          </button>
+          <button
+            onClick={handleWhatsApp}
+            style={{
+              width: "100%", padding: "13px 20px",
+              background: "#25D366",
+              color: "white", border: "none", borderRadius: 12,
+              fontWeight: 700, fontSize: "0.95rem", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            }}
+          >
+            <span>💬</span> WhatsApp'ta Paylaş
+          </button>
+          <button
+            onClick={onClose}
+            style={{
+              width: "100%", padding: "11px 20px",
+              background: "transparent",
+              color: T.textSub, border: `1px solid ${T.border}`, borderRadius: 12,
+              fontWeight: 600, fontSize: "0.88rem", cursor: "pointer",
+            }}
+          >
+            Şimdi değil
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Kütüphane Sekmesi ────────────────────────────────────────────────────────
 function LibraryTab({ sessions, T, isDark }: { sessions: Session[]; T: Theme; isDark: boolean }) {
   const dayMap: Record<string, number> = {};
@@ -1154,6 +1384,7 @@ export default function PomodoroPage() {
   const [tempAnimal, setTempAnimal]   = useState("capybara");
   const [ambientId, setAmbientId]     = useState("off");
   const [streak, setStreak]           = useState(0);
+  const [showShare, setShowShare]     = useState(false);
 
   const intervalRef   = useRef<ReturnType<typeof setInterval>|null>(null);
   const workStartRef  = useRef<number>(0);
@@ -1409,6 +1640,7 @@ export default function PomodoroPage() {
     sendNotification("Ders tamamlandı! 🎉", `${mode.work} dakika çalıştın. Mola zamanı!`);
     const now = Date.now(); phaseEndRef.current = now + mode.rest * 60 * 1000;
     setPhase("rest"); setSeconds(mode.rest * 60);
+    setShowShare(true);
   }, [mode.work, mode.rest, recordSession, playBeep, sendNotification]);
 
   useEffect(() => {
@@ -1425,6 +1657,7 @@ export default function PomodoroPage() {
           sendNotification("Ders tamamlandı! 🎉", `${mode.work} dakika çalıştın. Mola zamanı!`);
           const now = Date.now(); phaseEndRef.current = now + mode.rest * 60 * 1000;
           setPhase("rest"); setSeconds(mode.rest * 60);
+          setShowShare(true);
         } else {
           playBeep("rest_end");
           sendNotification("Mola bitti! ⏰", "Tekrar çalışmaya hazır mısın?");
@@ -1465,6 +1698,15 @@ export default function PomodoroPage() {
 
   return (
     <main style={{ minHeight: "100vh", background: T.bg, fontFamily: "system-ui, sans-serif", position: "relative" }}>
+      {showShare && (
+        <ShareModal
+          minutes={mode.work}
+          streak={streak}
+          isDark={isDark}
+          T={T}
+          onClose={() => setShowShare(false)}
+        />
+      )}
       {goalMet && <CelebrationBg />}
       <style>{`
         @keyframes pulse-ring { 0%,100%{transform:scale(1);opacity:.5} 50%{transform:scale(1.1);opacity:.9} }
