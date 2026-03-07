@@ -1,19 +1,26 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const sections = ["sistemimiz", "paketler", "İletişim"];
 
+const ARACLAR = [
+  { label: "🍅 Pomodoro Timer", href: "/pomodoro", desc: "Odaklı çalışma tekniği" },
+  { label: "🎯 Net Hesaplama", href: "/net-hesaplama", desc: "LGS, TYT, AYT puan hesabı" },
+];
+
 export default function Navbar() {
   const [active, setActive] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [araclarOpen, setAraclarOpen] = useState(false);
+  const araclarRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const isHomePage = pathname === "/";
+  const isAraclarActive = ARACLAR.some(a => pathname.startsWith(a.href));
 
-  // Scroll spy + navbar gölge efekti
   const handleScroll = useCallback(() => {
     setScrolled(window.scrollY > 12);
     if (!isHomePage) return;
@@ -34,11 +41,21 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
 
-  // Menü açıkken scroll kilitle
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
+
+  // Dropdown dışına tıklayınca kapat
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (araclarRef.current && !araclarRef.current.contains(e.target as Node)) {
+        setAraclarOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const handleLogoClick = () => {
     if (isHomePage) window.scrollTo({ top: 0, behavior: "smooth" });
@@ -58,12 +75,6 @@ export default function Navbar() {
       label: "Blog",
       href: "/blog",
       isActive: pathname.startsWith("/blog"),
-      isLink: true,
-    },
-    {
-      label: "Pomodoro",
-      href: "/pomodoro",
-      isActive: pathname === "/pomodoro",
       isLink: true,
     },
   ];
@@ -125,6 +136,63 @@ export default function Navbar() {
                 </a>
               )
             ))}
+
+            {/* Araçlar dropdown */}
+            <div ref={araclarRef} style={{ position: "relative" }}>
+              <button
+                onClick={() => setAraclarOpen(v => !v)}
+                className={`relative py-1 flex items-center gap-1 transition-colors duration-200 ${
+                  isAraclarActive ? "text-slate-900" : "text-slate-500 hover:text-slate-900"
+                }`}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.875rem", fontWeight: 500, fontFamily: "inherit" }}
+              >
+                Araçlar
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
+                  style={{ transition: "transform 0.2s", transform: araclarOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+                <span
+                  className="absolute left-0 -bottom-1 h-[2px] bg-slate-900 rounded-full transition-all duration-300"
+                  style={{ width: isAraclarActive ? "calc(100% - 18px)" : "0%" }}
+                />
+              </button>
+
+              {araclarOpen && (
+                <div style={{
+                  position: "absolute", top: "calc(100% + 16px)", left: "50%",
+                  transform: "translateX(-50%)",
+                  background: "white", borderRadius: 16,
+                  border: "1px solid rgba(226,232,240,0.8)",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+                  minWidth: 230, overflow: "hidden",
+                  animation: "fadeSlideIn 0.15s ease",
+                  zIndex: 100,
+                }}>
+                  <style>{`@keyframes fadeSlideIn { from { opacity:0; transform:translateX(-50%) translateY(-6px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }`}</style>
+                  {ARACLAR.map((arac, i) => (
+                    <Link
+                      key={arac.href}
+                      href={arac.href}
+                      onClick={() => setAraclarOpen(false)}
+                      style={{ textDecoration: "none", display: "block" }}
+                    >
+                      <div style={{
+                        padding: "12px 18px",
+                        background: pathname === arac.href ? "#f8fafc" : "white",
+                        borderBottom: i < ARACLAR.length - 1 ? "1px solid #f1f5f9" : "none",
+                        transition: "background 0.15s",
+                      }}
+                        onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+                        onMouseLeave={e => (e.currentTarget.style.background = pathname === arac.href ? "#f8fafc" : "white")}
+                      >
+                        <div style={{ fontWeight: 600, color: "#0f172a", fontSize: "0.88rem" }}>{arac.label}</div>
+                        <div style={{ color: "#94a3b8", fontSize: "0.75rem", marginTop: 2 }}>{arac.desc}</div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Masaüstü CTA */}
@@ -158,7 +226,7 @@ export default function Navbar() {
         style={{ transform: menuOpen ? "translateY(0)" : "translateY(-8px)" }}
       >
         <nav className="flex flex-col">
-          {navLinks.map((link, i) => (
+          {navLinks.map((link) => (
             link.isLink ? (
               <Link
                 key={link.href}
@@ -169,9 +237,7 @@ export default function Navbar() {
                 }`}
               >
                 {link.label}
-                {link.isActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />
-                )}
+                {link.isActive && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
               </Link>
             ) : (
               <a
@@ -183,12 +249,47 @@ export default function Navbar() {
                 }`}
               >
                 {link.label}
-                {link.isActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />
-                )}
+                {link.isActive && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
               </a>
             )
           ))}
+
+          {/* Mobil Araçlar */}
+          <div style={{ borderBottom: "1px solid #f1f5f9" }}>
+            <button
+              onClick={() => setAraclarOpen(v => !v)}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                width: "100%", background: "none", border: "none",
+                padding: "16px 0", cursor: "pointer",
+              }}
+            >
+              <span style={{ fontSize: "1.125rem", fontWeight: isAraclarActive ? 600 : 500, color: isAraclarActive ? "#0f172a" : "#4b5563" }}>
+                Araçlar
+              </span>
+              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
+                style={{ transition: "transform 0.2s", transform: araclarOpen ? "rotate(180deg)" : "rotate(0deg)", color: "#94a3b8" }}>
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            {araclarOpen && (
+              <div style={{ paddingLeft: 12, paddingBottom: 8 }}>
+                {ARACLAR.map((arac) => (
+                  <Link
+                    key={arac.href}
+                    href={arac.href}
+                    onClick={closeMenu}
+                    style={{ textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0" }}
+                  >
+                    <span style={{ fontSize: "1rem", fontWeight: pathname === arac.href ? 600 : 400, color: pathname === arac.href ? "#0f172a" : "#6b7280" }}>
+                      {arac.label}
+                    </span>
+                    {pathname === arac.href && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </nav>
 
         <a
