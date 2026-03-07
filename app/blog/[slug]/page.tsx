@@ -4,6 +4,7 @@ import { getPostBySlug, posts } from "../../data/posts";
 import { Metadata } from "next";
 import ReadingProgress from "../../components/ReadingProgress";
 import PostNavigation from "../../components/PostNavigation";
+import ShareButtons from "../../components/ShareButtons";
 
 export async function generateStaticParams() {
   return posts.map((p) => ({ slug: p.slug }));
@@ -249,6 +250,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             Ücretsiz Ön Görüşme Planla →
           </Link>
         </div>
+
+        {/* ── Paylaşım butonları ── */}
+        <ShareButtons title={post!.title} slug={slug} />
 
         {/* ── Önceki / Sonraki navigasyon ── */}
         <PostNavigation prevPost={prevPost} nextPost={nextPost} />
