@@ -136,7 +136,7 @@ const SINAV_KONFIG: Record<SinavTur, { label: string; toplamSure: number; dersle
   },
   LGS: {
     label: "LGS",
-    toplamSure: 90,
+    toplamSure: 155,
     dersler: [
       { key: "turkce", label: "Türkçe",        soru: 20, sure: 22, hedefRef: {} },
       { key: "mat",    label: "Matematik",      soru: 20, sure: 24, hedefRef: {} },
