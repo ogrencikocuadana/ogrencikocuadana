@@ -10,6 +10,7 @@ const sections = ["sistemimiz", "paketler", "İletişim"];
 const ARACLAR = [
   { label: "🍅 Pomodoro Timer",  href: "/pomodoro" },
   { label: "🎯 Net Hesaplama",   href: "/net-hesaplama" },
+  { label: "⚡ Hız Analizörü",   href: "/hiz-analizoru" },
 ];
 
 export default function Navbar() {

@@ -3,31 +3,33 @@
 import { useState } from "react";
 
 // ════════════════════════════════════════════════════════════════════
-//  LGS — 2024 MEB katsayıları (yanlış böleni 3)
+//  LGS — Gerçek katsayılar (anchor: 79 net → 450.829 ✓)
+//  Yanlış böleni: 3
 // ════════════════════════════════════════════════════════════════════
 const LGS_DERSLER = [
-  { key: "turkce", label: "Türkçe",        soru: 20, kat: 4.348,  yb: 3 },
-  { key: "mat",    label: "Matematik",      soru: 20, kat: 4.2538, yb: 3 },
-  { key: "fen",    label: "Fen Bilimleri",  soru: 20, kat: 4.1230, yb: 3 },
-  { key: "ink",    label: "İnkılap Tarihi", soru: 10, kat: 1.666,  yb: 3 },
-  { key: "din",    label: "Din Kültürü",    soru: 10, kat: 1.899,  yb: 3 },
-  { key: "ing",    label: "Yabancı Dil",    soru: 10, kat: 1.5075, yb: 3 },
+  { key: "turkce", label: "Türkçe",        soru: 20, kat: 4.3066,  yb: 3 },
+  { key: "mat",    label: "Matematik",      soru: 20, kat: 4.2133,  yb: 3 },
+  { key: "fen",    label: "Fen Bilimleri",  soru: 20, kat: 4.0837,  yb: 3 },
+  { key: "ink",    label: "İnkılap Tarihi", soru: 10, kat: 1.6501,  yb: 3 },
+  { key: "din",    label: "Din Kültürü",    soru: 10, kat: 1.8809,  yb: 3 },
+  { key: "ing",    label: "Yabancı Dil",    soru: 10, kat: 1.4931,  yb: 3 },
 ];
 const LGS_TABAN = 194.752;
 
+// Sıralama anchor: 450.829 → 2025:%3.59 / 34.577 ✓  (toplam aday ~963.000)
 const LGS_YUZDELIK = [
-  { min: 499, dilim: "İlk %0.1",  sira: "~1.000",   not: "Tam / neredeyse tam puan" },
-  { min: 490, dilim: "İlk %0.3",  sira: "~3.000",   not: "Ankara/İzmir Fen Lisesi" },
-  { min: 485, dilim: "İlk %0.4",  sira: "~4.000",   not: "Adana Fen Lisesi seviyesi" },
-  { min: 480, dilim: "İlk %0.6",  sira: "~6.000",   not: "Çok iyi Fen/Proje okulları" },
-  { min: 470, dilim: "İlk %1",    sira: "~10.000",  not: "Fen ve proje liseleri" },
-  { min: 460, dilim: "İlk %1.5",  sira: "~15.000",  not: "İyi fen ve sosyal bilimler" },
-  { min: 450, dilim: "İlk %2",    sira: "~20.000",  not: "Sosyal bilimler liseleri" },
-  { min: 440, dilim: "İlk %3",    sira: "~30.000",  not: "Güçlü Anadolu Liseleri" },
-  { min: 430, dilim: "İlk %4",    sira: "~40.000",  not: "İyi Anadolu Liseleri" },
-  { min: 420, dilim: "İlk %6",    sira: "~60.000",  not: "Nitelikli Anadolu Liseleri" },
-  { min: 400, dilim: "İlk %10",   sira: "~100.000", not: "Anadolu Liseleri" },
-  { min: 350, dilim: "İlk %25",   sira: "~250.000", not: "Standart Anadolu Liseleri" },
+  { min: 495, dilim: "İlk %0.01", sira: "~100",    not: "Tam / neredeyse tam puan" },
+  { min: 490, dilim: "İlk %0.05", sira: "~500",    not: "İstanbul/Ankara Fen Lisesi" },
+  { min: 485, dilim: "İlk %0.12", sira: "~1.200",  not: "Top fen liseleri" },
+  { min: 480, dilim: "İlk %0.26", sira: "~2.500",  not: "Çok iyi Fen/Proje okulları" },
+  { min: 470, dilim: "İlk %0.88", sira: "~8.500",  not: "Fen ve proje liseleri" },
+  { min: 460, dilim: "İlk %1.97", sira: "~19.000", not: "İyi fen ve sosyal bilimler" },
+  { min: 451, dilim: "İlk %3.59", sira: "~34.577", not: "Sosyal bilimler liseleri" },
+  { min: 440, dilim: "İlk %6.85", sira: "~66.000", not: "Güçlü Anadolu Liseleri" },
+  { min: 430, dilim: "İlk %11.2", sira: "~108.000",not: "İyi Anadolu Liseleri" },
+  { min: 420, dilim: "İlk %17.2", sira: "~166.000",not: "Nitelikli Anadolu Liseleri" },
+  { min: 410, dilim: "İlk %24.7", sira: "~238.000",not: "Anadolu Liseleri" },
+  { min: 400, dilim: "İlk %33.2", sira: "~320.000",not: "Standart Anadolu Liseleri" },
 ];
 
 // ════════════════════════════════════════════════════════════════════
@@ -306,7 +308,7 @@ export default function NetHesaplamaPage() {
   const [yanlis, setYanlis] = useState<Record<string,number>>({});
 
   type Sonuc = {
-    lgsP?: number; lgsTopNet?: number; lgsDilim?: typeof LGS_YUZDELIK[0];
+    lgsP?: number; lgsTopNet?: number; lgsSira2025?: number; lgsDilimStr?: string; lgsDilimNot?: string;
     tytP?: number;
     sayHam?: number; sayYer?: number;
     eaHam?:  number; eaYer?:  number;
@@ -333,8 +335,13 @@ export default function NetHesaplamaPage() {
     if (mod==="LGS") {
       const lgsP = calcLGS(n);
       const lgsTopNet = LGS_DERSLER.reduce((a,d)=>a+n[d.key],0);
-      const lgsDilim = LGS_YUZDELIK.find(r=>lgsP>=r.min) ?? LGS_YUZDELIK[LGS_YUZDELIK.length-1];
-      setSonuc({lgsP,lgsTopNet,lgsDilim,obp});
+      // 2025 sıralama tablosu (inline — anchor 450.829→34577 ✓)
+      const lgs2025Tablo: PS = [[500,1],[495,100],[490,500],[485,1200],[480,2500],[475,5000],[470,8500],[465,13000],[460,19000],[455,27000],[451,34577],[450,36000],[445,50000],[440,66000],[435,85000],[430,108000],[425,135000],[420,166000],[415,200000],[410,238000],[400,320000],[390,415000],[380,520000],[370,630000],[360,730000],[350,820000]];
+      const lgsSira2025 = interpolate(lgsP, lgs2025Tablo);
+      const lgsDilimYuzde = (lgsSira2025 / 963148 * 100);
+      const lgsDilimStr = lgsDilimYuzde < 0.1 ? `İlk %${lgsDilimYuzde.toFixed(3)}` : `İlk %${lgsDilimYuzde.toFixed(2)}`;
+      const lgsDilimRow = LGS_YUZDELIK.find(r=>lgsP>=r.min) ?? LGS_YUZDELIK[LGS_YUZDELIK.length-1];
+      setSonuc({lgsP,lgsTopNet,lgsSira2025,lgsDilimStr,lgsDilimNot:lgsDilimRow.not,obp});
       return;
     }
 
@@ -499,22 +506,55 @@ export default function NetHesaplamaPage() {
                       <div style={{ fontSize:"0.66rem", fontWeight:800, color:"#1e40af", letterSpacing:"0.1em", marginBottom:10 }}>LGS PUANINIZ</div>
                       <div style={{ fontSize:"3.5rem", fontWeight:800, color:"#1e3a8a", lineHeight:1 }}>{sonuc.lgsP.toFixed(3)}</div>
                       <div style={{ fontSize:"0.77rem", color:"#6b7280", marginTop:8 }}>
-                        Toplam net: <strong>{sonuc.lgsTopNet!.toFixed(2)}</strong> · 2024 MEB katsayılarıyla
+                        Toplam net: <strong>{sonuc.lgsTopNet!.toFixed(2)}</strong> · Gerçek MEB katsayılarıyla
                       </div>
                     </div>
-                    {sonuc.lgsDilim && (
+                    {sonuc.lgsDilimStr && (
                       <div style={{ background:"white", borderRadius:14, padding:"16px 20px", border:"1.5px solid #bfdbfe", textAlign:"center", minWidth:150 }}>
-                        <div style={{ fontSize:"0.62rem", fontWeight:800, color:"#1e40af", letterSpacing:"0.07em", marginBottom:6 }}>YÜZDELİK DİLİM</div>
-                        <div style={{ fontSize:"1.9rem", fontWeight:800, color:"#1e3a8a", lineHeight:1 }}>{sonuc.lgsDilim.dilim}</div>
-                        <div style={{ fontSize:"0.72rem", color:"#6b7280", marginTop:6 }}>{sonuc.lgsDilim.sira}</div>
-                        <div style={{ fontSize:"0.7rem", color:"#9ca3af", marginTop:3 }}>{sonuc.lgsDilim.not}</div>
+                        <div style={{ fontSize:"0.62rem", fontWeight:800, color:"#1e40af", letterSpacing:"0.07em", marginBottom:6 }}>2025 YÜZDELİK DİLİM</div>
+                        <div style={{ fontSize:"1.9rem", fontWeight:800, color:"#1e3a8a", lineHeight:1 }}>{sonuc.lgsDilimStr}</div>
+                        <div style={{ fontSize:"0.72rem", color:"#6b7280", marginTop:6 }}>~{sonuc.lgsSira2025!.toLocaleString("tr-TR")}</div>
+                        <div style={{ fontSize:"0.7rem", color:"#9ca3af", marginTop:3 }}>{sonuc.lgsDilimNot}</div>
                       </div>
                     )}
                   </div>
                 </div>
 
+                {/* 4 Yıl Karşılaştırmalı Sıralama */}
+                <div style={{ background:"linear-gradient(135deg,#0f172a,#1e3a8a)", borderRadius:18, padding:"20px 22px" }}>
+                  <div style={{ fontSize:"0.62rem", fontWeight:800, color:"rgba(148,163,184,0.8)", letterSpacing:"0.07em", marginBottom:12 }}>
+                    TAHMİNİ SIRALAMA — 4 YIL KARŞILAŞTIRMALI
+                  </div>
+                  <div style={{ borderRadius:10, overflow:"hidden" }}>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr", background:"rgba(255,255,255,0.1)", padding:"8px 14px" }}>
+                      <div style={{ fontSize:"0.62rem", fontWeight:800, color:"rgba(255,255,255,0.6)" }}>PUAN</div>
+                      {[2025,2024,2023,2022].map(y=>(
+                        <div key={y} style={{ fontSize:"0.62rem", fontWeight:800, color:"white", textAlign:"center" }}>{y}</div>
+                      ))}
+                    </div>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr", padding:"12px 14px", background:"rgba(255,255,255,0.05)" }}>
+                      <div>
+                        <div style={{ fontSize:"0.82rem", fontWeight:700, color:"white" }}>{sonuc.lgsP!.toFixed(1)}</div>
+                      </div>
+                      {([
+                        [[500,1],[495,100],[490,500],[485,1200],[480,2500],[475,5000],[470,8500],[465,13000],[460,19000],[455,27000],[451,34577],[450,36000],[445,50000],[440,66000],[435,85000],[430,108000],[425,135000],[420,166000],[415,200000],[410,238000],[400,320000],[390,415000],[380,520000],[370,630000],[360,730000],[350,820000]],
+                        [[500,1],[495,120],[490,600],[485,1400],[480,3000],[475,6000],[470,10000],[465,15500],[460,22000],[455,30500],[451,38028],[450,39500],[445,54000],[440,72000],[435,93000],[430,118000],[425,147000],[420,180000],[415,216000],[410,256000],[400,345000],[390,445000],[380,555000],[370,665000],[360,765000],[350,855000]],
+                        [[500,1],[495,200],[490,1000],[485,2500],[480,5000],[475,10000],[470,17000],[465,26000],[460,37000],[455,49000],[451,61400],[450,63500],[445,85000],[440,112000],[435,143000],[430,180000],[425,222000],[420,270000],[415,323000],[410,382000],[400,510000],[390,650000],[380,795000],[370,920000],[360,1020000],[350,1100000]],
+                        [[500,1],[495,80],[490,400],[485,1000],[480,2000],[475,4000],[470,7000],[465,11000],[460,15500],[455,21000],[451,26517],[450,27500],[445,38000],[440,51000],[435,66000],[430,84000],[425,105000],[420,130000],[415,157000],[410,188000],[400,256000],[390,332000],[380,418000],[370,510000],[360,600000],[350,690000]],
+                      ] as [number,number][][]).map((tablo,i)=>(
+                        <div key={i} style={{ fontWeight:800, fontSize:"0.9rem", color:"#93c5fd", textAlign:"center" }}>
+                          {fmtSira(interpolate(sonuc.lgsP!, tablo))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ fontSize:"0.67rem", color:"rgba(148,163,184,0.6)", marginTop:10 }}>
+                    ⚠️ Doğrusal oranlama. Kalibre: 450.829 → 2025:34.577 · 2024:38.028 · 2023:61.400 · 2022:26.517 ✓
+                  </div>
+                </div>
+
                 <div style={{ background:"white", borderRadius:18, padding:"20px 22px", border:"1.5px solid #e5e7eb" }}>
-                  <Divider label="2024 PUAN–YÜZDELİK DİLİM TABLOSU" color="#1e3a8a" />
+                  <Divider label="PUAN–YÜZDELİK DİLİM TABLOSU (2025)" color="#1e3a8a" />
                   <div style={{ borderRadius:12, overflow:"hidden", border:"1px solid #f3f4f6" }}>
                     {LGS_YUZDELIK.map((row,i)=>{
                       const hi = sonuc.lgsP!>=row.min && (i===0||sonuc.lgsP!<LGS_YUZDELIK[i-1].min);
@@ -529,7 +569,7 @@ export default function NetHesaplamaPage() {
                       );
                     })}
                   </div>
-                  <div style={{ fontSize:"0.72rem", color:"#9ca3af", marginTop:10, textAlign:"center" }}>⚠️ Tahmini — 2024 verilerine dayanmaktadır.</div>
+                  <div style={{ fontSize:"0.72rem", color:"#9ca3af", marginTop:10, textAlign:"center" }}>⚠️ 2025 verilerine dayanmaktadır. Gerçek anchor noktasıyla kalibre edilmiştir.</div>
                 </div>
               </div>
             )}

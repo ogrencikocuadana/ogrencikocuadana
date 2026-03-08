@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 
+import StudyBanner from "../components/StudyBanner";
+
+  
+    
+
 // ─── Tipler ───────────────────────────────────────────────────────────────────
 interface Session {
   id: string; date: string; plannedDuration: number; actualDuration: number; completedAt: string;
@@ -2063,6 +2068,9 @@ export default function PomodoroPage() {
                 </>
               )}
             </div>
+
+            {/* Sanal Kütüphane Banner */}
+            <StudyBanner isActive={phase === "work"} />
 
             {/* Araçlar — idle modda göster */}
             {phase === "idle" && (
