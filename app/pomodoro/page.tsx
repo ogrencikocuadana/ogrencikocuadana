@@ -11,6 +11,10 @@ import StudyBanner from "../components/StudyBanner";
 interface Session {
   id: string; date: string; plannedDuration: number; actualDuration: number; completedAt: string;
   subject?: string;
+  focusScore?: number;       // 0-100 hesaplanan skor
+  phoneChecks?: number;      // 0=hiç, 1=1-2, 2=3-5, 3=5+
+  mentalFocus?: number;      // 1-10 slider
+  completionRate?: number;   // 0-100 yüzde
 }
 interface DailyGoal { minutes: number; animal: string; }
 interface Task {
@@ -712,6 +716,213 @@ function DigitalDisplay({ value, size = 40, isDark = true }: { value: string; si
       {value.split("").map((ch, i) => (
         <SevenSeg key={i} char={ch} size={size} />
       ))}
+    </div>
+  );
+}
+
+// ─── Odak Skoru Modalı ───────────────────────────────────────────────────────
+const PHONE_OPTIONS = [
+  { val: 0, label: "Hiç bakmadım", icon: "🏆" },
+  { val: 1, label: "1-2 kez",      icon: "👍" },
+  { val: 2, label: "3-5 kez",      icon: "😬" },
+  { val: 3, label: "5+ kez",       icon: "😅" },
+];
+
+function calcFocusScore(phone: number, mental: number, completion: number): number {
+  const phonePenalty = [0, 10, 30, 50][phone] ?? 0;
+  const mentalNorm   = (mental / 10) * 100;
+  const raw = (completion * 0.6) + (mentalNorm * 0.4) - phonePenalty;
+  return Math.round(Math.max(0, Math.min(100, raw)));
+}
+
+function scoreColor(score: number): string {
+  if (score >= 80) return "#4A9E8E";
+  if (score >= 60) return "#4A6BE8";
+  if (score >= 40) return "#f59e0b";
+  return "#E8454A";
+}
+
+function FocusModal({ T, isDark, animalId, onSave, onSkip }: {
+  T: Theme; isDark: boolean; animalId: string;
+  onSave: (phone: number, mental: number, completion: number) => void;
+  onSkip: () => void;
+}) {
+  const [phone,      setPhone]      = useState(0);
+  const [mental,     setMental]     = useState(7);
+  const [completion, setCompletion] = useState(80);
+
+  const preview = calcFocusScore(phone, mental, completion);
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.82)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding:20, backdropFilter:"blur(8px)", overflowY:"auto" }}>
+      <div style={{ background:T.modalBg, borderRadius:24, padding:"28px 24px", maxWidth:400, width:"100%", border:`1px solid ${T.border}`, boxShadow:"0 24px 64px rgba(0,0,0,0.6)" }}>
+
+        {/* Başlık */}
+        <div style={{ textAlign:"center", marginBottom:22 }}>
+          <AnimalImg id={animalId} size={56} />
+          <h3 style={{ color:T.text, fontSize:"1.05rem", fontWeight:800, margin:"10px 0 4px" }}>Oturum Tamamlandı! 🎉</h3>
+          <p style={{ color:T.textSub, fontSize:".8rem", margin:0 }}>3 soruyu yanıtla, odak skorunu hesaplayalım</p>
+        </div>
+
+        {/* SORU 1 — Telefon */}
+        <div style={{ marginBottom:20 }}>
+          <div style={{ color:T.textSub, fontSize:".72rem", fontWeight:700, letterSpacing:".07em", marginBottom:10 }}>📱 TELEFONA KAÇ KEZ BAKTIN?</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+            {PHONE_OPTIONS.map(opt => (
+              <button key={opt.val} onClick={() => setPhone(opt.val)} style={{
+                background: phone === opt.val ? "rgba(155,111,232,0.2)" : T.surface,
+                border: `1px solid ${phone === opt.val ? "#9B6FE8" : T.border}`,
+                borderRadius:12, padding:"10px 8px", cursor:"pointer",
+                display:"flex", alignItems:"center", gap:8, transition:"all 0.15s",
+              }}>
+                <span style={{ fontSize:"1.2rem" }}>{opt.icon}</span>
+                <span style={{ color: phone === opt.val ? "#9B6FE8" : T.textSub, fontSize:".8rem", fontWeight: phone === opt.val ? 700 : 400 }}>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* SORU 2 — Zihinsel Durum */}
+        <div style={{ marginBottom:20 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+            <div style={{ color:T.textSub, fontSize:".72rem", fontWeight:700, letterSpacing:".07em" }}>🧠 DİKKATİNİ PUANLAYALIM</div>
+            <span style={{ color:"#9B6FE8", fontWeight:800, fontSize:".9rem" }}>{mental}/10</span>
+          </div>
+          <input type="range" min={1} max={10} step={1} value={mental} onChange={e => setMental(+e.target.value)} style={{ width:"100%", accentColor:"#9B6FE8" }} />
+          <div style={{ display:"flex", justifyContent:"space-between", marginTop:4 }}>
+            <span style={{ color:T.textMuted, fontSize:".65rem" }}>Çok dağınıktı</span>
+            <span style={{ color:T.textMuted, fontSize:".65rem" }}>Tam odakta</span>
+          </div>
+        </div>
+
+        {/* SORU 3 — Çıktı Hedefi */}
+        <div style={{ marginBottom:24 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+            <div style={{ color:T.textSub, fontSize:".72rem", fontWeight:700, letterSpacing:".07em" }}>🎯 HEDEFİNE NE KADAR ULAŞTIN?</div>
+            <span style={{ color:"#9B6FE8", fontWeight:800, fontSize:".9rem" }}>%{completion}</span>
+          </div>
+          <input type="range" min={0} max={100} step={5} value={completion} onChange={e => setCompletion(+e.target.value)} style={{ width:"100%", accentColor:"#9B6FE8" }} />
+          <div style={{ display:"flex", justifyContent:"space-between", marginTop:4 }}>
+            <span style={{ color:T.textMuted, fontSize:".65rem" }}>%0 — Hiç</span>
+            <span style={{ color:T.textMuted, fontSize:".65rem" }}>%100 — Tam</span>
+          </div>
+        </div>
+
+        {/* Önizleme skoru */}
+        <div style={{ background: `${scoreColor(preview)}18`, border:`1px solid ${scoreColor(preview)}44`, borderRadius:14, padding:"14px 18px", marginBottom:18, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div style={{ color:T.textSub, fontSize:".78rem", fontWeight:700, letterSpacing:".06em" }}>ODAK SKORU</div>
+          <div style={{ color:scoreColor(preview), fontSize:"2rem", fontWeight:800, lineHeight:1 }}>{preview}</div>
+        </div>
+
+        {/* Kaydet / Atla */}
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={onSkip} style={{ flex:1, background:T.surface, border:`1px solid ${T.border}`, borderRadius:12, padding:12, color:T.textSub, cursor:"pointer", fontSize:".85rem", fontWeight:600 }}>Atla</button>
+          <button onClick={() => onSave(phone, mental, completion)} style={{ flex:2, background:`linear-gradient(135deg,#3b82f6,#7c3aed)`, border:"none", borderRadius:12, padding:12, color:"#fff", cursor:"pointer", fontSize:".9rem", fontWeight:700, boxShadow:"0 6px 20px rgba(59,130,246,0.35)" }}>
+            Kaydet → {preview} puan
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Sınav Geri Sayım Bileşeni ───────────────────────────────────────────────
+const EXAM_DATES = [
+  { label: "LGS",  datetime: new Date("2026-06-14T09:30:00"), color: "#7c3aed", accent: "#a78bfa", icon: "📐" },
+  { label: "TYT",  datetime: new Date("2026-06-20T10:15:00"), color: "#0e7490", accent: "#22d3ee", icon: "📋" },
+  { label: "AYT",  datetime: new Date("2026-06-21T10:15:00"), color: "#065f46", accent: "#34d399", icon: "🎯" },
+];
+
+function calcRemaining(target: Date) {
+  const diff = target.getTime() - Date.now();
+  if (diff <= 0) return null;
+  const totalSec = Math.floor(diff / 1000);
+  const days    = Math.floor(totalSec / 86400);
+  const hours   = Math.floor((totalSec % 86400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const seconds = totalSec % 60;
+  return { days, hours, minutes, seconds };
+}
+
+function ExamCountdown({ T, isDark }: { T: Theme; isDark: boolean }) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
+      {EXAM_DATES.map(e => {
+        const rem     = calcRemaining(e.datetime);
+        const isPast  = !rem;
+        const isClose = rem ? rem.days <= 30 : false;
+
+        return (
+          <div key={e.label} style={{
+            background: isDark
+              ? `linear-gradient(135deg, ${e.color}22, ${e.color}10)`
+              : `linear-gradient(135deg, ${e.color}10, ${e.color}06)`,
+            border: `1px solid ${isClose ? e.accent : e.color}${isClose ? "66" : "33"}`,
+            borderRadius: 14, padding: "12px 16px",
+            boxShadow: isClose ? `0 0 14px ${e.accent}20` : "none",
+            transition: "border-color 0.5s, box-shadow 0.5s",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              {/* Sol: ikon + etiket */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: "1.2rem" }}>{e.icon}</span>
+                <div>
+                  <div style={{ color: e.accent, fontWeight: 800, fontSize: ".88rem" }}>{e.label}</div>
+                  <div style={{ color: T.textMuted, fontSize: ".65rem" }}>
+                    {e.datetime.toLocaleDateString("tr-TR", { day: "numeric", month: "long" })} · {e.datetime.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sağ: geri sayım */}
+              {isPast ? (
+                <div style={{ color: T.textMuted, fontSize: ".8rem", fontWeight: 700 }}>Tamamlandı ✓</div>
+              ) : (
+                <div style={{ display: "flex", gap: 6, alignItems: "flex-end" }}>
+                  {[
+                    { val: rem.days,    unit: "gün"  },
+                    { val: rem.hours,   unit: "sa"   },
+                    { val: rem.minutes, unit: "dk"   },
+                    { val: rem.seconds, unit: "sn"   },
+                  ].map(({ val, unit }) => (
+                    <div key={unit} style={{ textAlign: "center", minWidth: 28 }}>
+                      <div style={{
+                        color: unit === "sn" ? T.textSub : e.accent,
+                        fontWeight: 800,
+                        fontSize: unit === "gün" ? "1.3rem" : unit === "sn" ? ".85rem" : "1rem",
+                        lineHeight: 1,
+                        fontVariantNumeric: "tabular-nums",
+                      }}>
+                        {String(val).padStart(2, "0")}
+                      </div>
+                      <div style={{ color: T.textMuted, fontSize: ".58rem", marginTop: 1 }}>{unit}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Son 30 gün: ince progress bar */}
+            {isClose && rem && (
+              <div style={{ marginTop: 10, height: 3, borderRadius: 2, background: `${e.color}30`, overflow: "hidden" }}>
+                <div style={{
+                  height: "100%",
+                  width: `${100 - (rem.days / 30) * 100}%`,
+                  background: e.accent,
+                  borderRadius: 2,
+                  transition: "width 1s linear",
+                }} />
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1781,11 +1992,12 @@ export default function PomodoroPage() {
   const [tempAnimal, setTempAnimal]   = useState("capybara");
   const [ambientId, setAmbientId]     = useState("off");
   const [streak, setStreak]           = useState(0);
-  const [showShare, setShowShare]     = useState(false);
   const [selectedSubject, setSelectedSubject]       = useState<string>("Matematik");
   const [customSubjects, setCustomSubjects]         = useState<string[]>([]);
   const [customSubjectInput, setCustomSubjectInput] = useState("");
   const [showSubjectPicker, setShowSubjectPicker]   = useState(false);
+  const [showFocusModal, setShowFocusModal]         = useState(false);
+  const pendingSessionId = useRef<string | null>(null);
 
   const intervalRef   = useRef<ReturnType<typeof setInterval>|null>(null);
   const workStartRef  = useRef<number>(0);
@@ -1860,6 +2072,30 @@ export default function PomodoroPage() {
   }, []);
   const saveTasks = useCallback((list: Task[]) => {
     try { localStorage.setItem(TASKS_KEY, JSON.stringify(list)); } catch {}
+  }, []);
+
+  const saveFocusScore = useCallback((
+    sessionId: string,
+    phoneChecks: number,
+    mentalFocus: number,
+    completionRate: number,
+  ) => {
+    // Formül: (tamamlanma×0.5) + (zihinsel_odak×0.3) - (telefon_cezası×0.2)
+    // Telefon cezası: 0→0, 1→10, 2→30, 3→50 (0,1-2,3-5,5+)
+    const phonePenalty = [0, 10, 30, 50][phoneChecks] ?? 0;
+    const mentalNorm   = (mentalFocus / 10) * 100;
+    const raw = (completionRate * 0.6) + (mentalNorm * 0.4) - phonePenalty;
+    const focusScore   = Math.round(Math.max(0, Math.min(100, raw)));
+    setShowFocusModal(false);
+    pendingSessionId.current = null;
+    setSessions(prev => {
+      const u = prev.map(s => s.id === sessionId
+        ? { ...s, focusScore, phoneChecks, mentalFocus, completionRate }
+        : s
+      );
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(u)); } catch {}
+      return u;
+    });
   }, []);
 
   const addTask = useCallback((text: string, subject: string) => {
@@ -2012,6 +2248,8 @@ export default function PomodoroPage() {
     const actualDuration = forcedActual ?? Math.max(1, Math.round((Date.now() - startedAt) / 60000));
     const s: Session = { id: Date.now().toString(), date: todayStr(), plannedDuration, actualDuration, completedAt: new Date().toISOString(), subject };
     setSessions(prev => { const u = [...prev, s]; saveSessions(u); updateStreak(u); return u; });
+    pendingSessionId.current = s.id;
+    setTimeout(() => setShowFocusModal(true), 600);
   }, [saveSessions, updateStreak]);
 
   // ─── Sayfa geri gelince çalışma kaydını koru ──────────────────────────────
@@ -2067,7 +2305,6 @@ export default function PomodoroPage() {
     sendNotification("Ders tamamlandı! 🎉", `${mode.work} dakika çalıştın. Mola zamanı!`);
     const now = Date.now(); phaseEndRef.current = now + mode.rest * 60 * 1000;
     setPhase("rest"); setSeconds(mode.rest * 60);
-    setShowShare(true);
   }, [mode.work, mode.rest, recordSession, playBeep, sendNotification, selectedSubject]);
 
   useEffect(() => {
@@ -2084,7 +2321,6 @@ export default function PomodoroPage() {
           sendNotification("Ders tamamlandı! 🎉", `${mode.work} dakika çalıştın. Mola zamanı!`);
           const now = Date.now(); phaseEndRef.current = now + mode.rest * 60 * 1000;
           setPhase("rest"); setSeconds(mode.rest * 60);
-          setShowShare(true);
         } else {
           playBeep("rest_end");
           sendNotification("Mola bitti! ⏰", "Tekrar çalışmaya hazır mısın?");
@@ -2125,15 +2361,6 @@ export default function PomodoroPage() {
 
   return (
     <main style={{ minHeight: "100vh", background: T.bg, fontFamily: "system-ui, sans-serif", position: "relative" }}>
-      {showShare && (
-        <ShareModal
-          minutes={mode.work}
-          streak={streak}
-          isDark={isDark}
-          T={T}
-          onClose={() => setShowShare(false)}
-        />
-      )}
       {goalMet && <CelebrationBg />}
       <style>{`
         @keyframes pulse-ring { 0%,100%{transform:scale(1);opacity:.5} 50%{transform:scale(1.1);opacity:.9} }
@@ -2222,6 +2449,9 @@ export default function PomodoroPage() {
         {/* ── TIMER ── */}
         {tab === "timer" && (
           <div className="fade-in" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 22 }}>
+
+            {/* ── SINAV GERİ SAYIMI ── */}
+            <ExamCountdown T={T} isDark={isDark} />
 
             {/* Çalışma modu başlığı */}
             <div style={{ color: T.textSub, fontSize: ".72rem", fontWeight: 700, letterSpacing: "1.5px", marginBottom: 4, width: "100%" }}>ÇALIŞMA MODU</div>
@@ -2530,6 +2760,75 @@ export default function PomodoroPage() {
               </div>
             </div>
 
+            {/* ── ODAK SKORU ── */}
+            {(() => {
+              const scored = sessions.filter(s => s.focusScore !== undefined);
+              if (scored.length === 0) return null;
+
+              const todayScored = todaySessions.filter(s => s.focusScore !== undefined);
+              const todayAvg    = todayScored.length > 0
+                ? Math.round(todayScored.reduce((a,s) => a + (s.focusScore ?? 0), 0) / todayScored.length)
+                : null;
+              const allAvg = Math.round(scored.reduce((a,s) => a + (s.focusScore ?? 0), 0) / scored.length);
+
+              const last7 = Array.from({length:7}, (_,i) => {
+                const d = new Date(); d.setDate(d.getDate()-6+i);
+                return d.toISOString().slice(0,10);
+              });
+
+              return (
+                <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:20, padding:22, marginTop:18 }}>
+                  <div style={{ color:T.textSub, fontSize:".78rem", fontWeight:700, letterSpacing:".05em", marginBottom:18 }}>🎯 ODAK SKORU</div>
+
+                  {/* Ortalama kartlar */}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:20 }}>
+                    {[
+                      { label:"BUGÜN",          val:todayAvg },
+                      { label:"TÜM ZAMANLAR",   val:allAvg   },
+                    ].map(({ label, val }) => (
+                      <div key={label} style={{ background:T.surface2, borderRadius:14, padding:"14px 16px", textAlign:"center" }}>
+                        <div style={{ color:T.textSub, fontSize:".68rem", fontWeight:700, letterSpacing:".06em", marginBottom:8 }}>{label}</div>
+                        {val !== null ? (
+                          <>
+                            <div style={{ color:scoreColor(val), fontSize:"1.9rem", fontWeight:800, lineHeight:1, marginBottom:6 }}>{val}</div>
+                            <div style={{ height:4, borderRadius:2, background:T.surface, overflow:"hidden" }}>
+                              <div style={{ height:"100%", width:`${val}%`, background:scoreColor(val), borderRadius:2, transition:"width 0.6s ease" }} />
+                            </div>
+                          </>
+                        ) : (
+                          <div style={{ color:T.textMuted, fontSize:".8rem" }}>Henüz yok</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Haftalık trend */}
+                  <div style={{ color:T.textSub, fontSize:".72rem", fontWeight:700, letterSpacing:".06em", marginBottom:10 }}>HAFTALIK ODAK TRENDİ</div>
+                  <div style={{ display:"flex", gap:6, alignItems:"flex-end", height:72 }}>
+                    {last7.map(ds => {
+                      const daySc  = sessions.filter(s => s.date === ds && s.focusScore !== undefined);
+                      const avg    = daySc.length > 0
+                        ? Math.round(daySc.reduce((a,s) => a + (s.focusScore ?? 0), 0) / daySc.length)
+                        : null;
+                      const barH   = avg !== null ? Math.max((avg / 100) * 56, 6) : 0;
+                      const dLabel = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"][
+                        new Date(ds+"T12:00:00").getDay() === 0 ? 6 : new Date(ds+"T12:00:00").getDay()-1
+                      ];
+                      const isToday = ds === today;
+                      const col    = avg !== null ? scoreColor(avg) : T.surface2;
+                      return (
+                        <div key={ds} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+                          {avg !== null && <div style={{ color:col, fontSize:".6rem", fontWeight:700 }}>{avg}</div>}
+                          <div style={{ width:"100%", borderRadius:4, background: avg !== null ? col : T.surface2, height: barH || 4, transition:"height 0.4s ease", opacity: avg !== null ? 1 : 0.3 }} />
+                          <span style={{ color:isToday?T.text:T.textMuted, fontSize:".62rem", fontWeight:isToday?700:400 }}>{dLabel}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── DERS DAĞILIMI ── */}
             {(() => {
               // Bu haftanın ders dağılımı
@@ -2741,6 +3040,20 @@ export default function PomodoroPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* ── ODAK SKORU MODAL ── */}
+      {showFocusModal && pendingSessionId.current && (
+        <FocusModal
+          T={T}
+          isDark={isDark}
+          animalId={dailyGoal.animal}
+          onSave={(phone, mental, completion) => {
+            saveFocusScore(pendingSessionId.current!, phone, mental, completion);
+            setTab("report");
+          }}
+          onSkip={() => { setShowFocusModal(false); pendingSessionId.current = null; }}
+        />
       )}
 
       {/* ── DERS SEÇİCİ MODAL ── */}
