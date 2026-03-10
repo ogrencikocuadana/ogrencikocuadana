@@ -10,8 +10,57 @@ import StudyBanner from "../components/StudyBanner";
 // ─── Tipler ───────────────────────────────────────────────────────────────────
 interface Session {
   id: string; date: string; plannedDuration: number; actualDuration: number; completedAt: string;
+  subject?: string;
 }
 interface DailyGoal { minutes: number; animal: string; }
+interface Task {
+  id: string; date: string; text: string; subject: string; done: boolean; createdAt: string;
+}
+
+// ─── Ders Listesi ─────────────────────────────────────────────────────────────
+const SUBJECT_GROUPS = [
+  {
+    group: "TYT",
+    color: "#0e7490",
+    accent: "#22d3ee",
+    subjects: ["Türkçe", "Matematik", "Geometri", "Tarih", "Coğrafya", "Felsefe", "Din", "Fizik", "Kimya", "Biyoloji"],
+  },
+  {
+    group: "AYT / SAY",
+    color: "#4A6BE8",
+    accent: "#818cf8",
+    subjects: ["AYT Mat", "AYT Geometri", "Fizik", "Kimya", "Biyoloji"],
+  },
+  {
+    group: "AYT / EA",
+    color: "#c2410c",
+    accent: "#fb923c",
+    subjects: ["AYT Mat", "AYT Geometri", "Edebiyat", "Tarih 1", "Coğrafya 1"],
+  },
+  {
+    group: "AYT / SÖZ",
+    color: "#065f46",
+    accent: "#34d399",
+    subjects: ["Edebiyat", "Tarih 1", "Coğrafya 1", "Tarih 2", "Coğrafya 2", "Felsefe", "DKAB"],
+  },
+  {
+    group: "LGS",
+    color: "#7c3aed",
+    accent: "#a78bfa",
+    subjects: ["Türkçe", "Matematik", "Fen Bilimleri", "T.C. İnkılap Tarihi", "Din Kültürü", "İngilizce"],
+  },
+];
+
+// Tüm benzersiz dersler (flat liste, UI'da kullanılır)
+const ALL_SUBJECTS = Array.from(new Set(SUBJECT_GROUPS.flatMap(g => g.subjects)));
+
+// Ders → renk (ilk eşleşen grubun rengi)
+function subjectColor(name: string): string {
+  for (const g of SUBJECT_GROUPS) {
+    if (g.subjects.includes(name)) return g.accent;
+  }
+  return "#9B6FE8"; // özel ders
+}
 
 // ─── Sabitler ─────────────────────────────────────────────────────────────────
 const PRESET_MODES = [
@@ -215,6 +264,7 @@ const STORAGE_KEY   = "pomodoro_sessions_v2";
 const GOAL_KEY      = "pomodoro_goal_v1";
 const STREAK_KEY    = "pomodoro_streak_v1";
 const LAST_SEEN_KEY = "pomodoro_last_seen_v1";
+const TASKS_KEY     = "pomodoro_tasks_v1";
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 function getTurkishDay() { return ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"][new Date().getDay()]; }
@@ -662,6 +712,202 @@ function DigitalDisplay({ value, size = 40, isDark = true }: { value: string; si
       {value.split("").map((ch, i) => (
         <SevenSeg key={i} char={ch} size={size} />
       ))}
+    </div>
+  );
+}
+
+// ─── Görevler Sekmesi ────────────────────────────────────────────────────────
+function TasksTab({
+  tasks, onAdd, onToggle, onDelete, selectedSubject, customSubjects, T, isDark,
+}: {
+  tasks: Task[];
+  onAdd: (text: string, subject: string) => void;
+  onToggle: (id: string) => void;
+  onDelete: (id: string) => void;
+  selectedSubject: string;
+  customSubjects: string[];
+  T: Theme;
+  isDark: boolean;
+}) {
+  const [newText, setNewText]       = useState("");
+  const [newSubject, setNewSubject] = useState(selectedSubject);
+  const [showPicker, setShowPicker] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const pending   = tasks.filter(t => !t.done);
+  const completed = tasks.filter(t => t.done);
+  const allSubjects = [...Array.from(new Set(SUBJECT_GROUPS.flatMap(g => g.subjects))), ...customSubjects];
+
+  const handleAdd = () => {
+    const text = newText.trim();
+    if (!text) return;
+    onAdd(text, newSubject);
+    setNewText("");
+    inputRef.current?.focus();
+  };
+
+  return (
+    <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* Başlık */}
+      <div>
+        <h2 style={{ color: T.text, fontSize: "1.3rem", fontWeight: 800, margin: "0 0 4px" }}>📝 Bugünün Görevleri</h2>
+        <p style={{ color: T.textSub, fontSize: ".82rem", margin: 0 }}>
+          {pending.length > 0 ? `${pending.length} bekliyor · ${completed.length} tamamlandı` : completed.length > 0 ? "Tüm görevler tamamlandı! 🎉" : "Henüz görev yok. Ekle ve başla!"}
+        </p>
+      </div>
+
+      {/* Görev ekleme kutusu */}
+      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 18, padding: 18 }}>
+        {/* Ders seçici */}
+        <button
+          onClick={() => setShowPicker(v => !v)}
+          style={{
+            display: "flex", alignItems: "center", gap: 7, marginBottom: 12,
+            background: `${subjectColor(newSubject)}18`,
+            border: `1px solid ${subjectColor(newSubject)}55`,
+            borderRadius: 10, padding: "6px 12px", cursor: "pointer",
+          }}
+        >
+          <div style={{ width: 8, height: 8, borderRadius: 4, background: subjectColor(newSubject) }} />
+          <span style={{ color: subjectColor(newSubject), fontWeight: 700, fontSize: ".8rem" }}>{newSubject}</span>
+          <span style={{ color: T.textMuted, fontSize: ".75rem" }}>▾</span>
+        </button>
+
+        {/* Mini ders picker */}
+        {showPicker && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12, padding: "10px 0", borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}` }}>
+            {allSubjects.map(s => (
+              <button key={s} onClick={() => { setNewSubject(s); setShowPicker(false); }}
+                style={{
+                  background: newSubject === s ? `${subjectColor(s)}22` : T.surface2,
+                  border: `1px solid ${newSubject === s ? subjectColor(s) : T.border}`,
+                  borderRadius: 8, padding: "5px 10px", cursor: "pointer",
+                  color: newSubject === s ? subjectColor(s) : T.textSub,
+                  fontSize: ".76rem", fontWeight: newSubject === s ? 700 : 400,
+                }}
+              >{s}</button>
+            ))}
+          </div>
+        )}
+
+        {/* Görev giriş alanı */}
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            ref={inputRef}
+            value={newText}
+            onChange={e => setNewText(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") handleAdd(); }}
+            placeholder="Görev yaz... (ör. Türev soruları çöz)"
+            style={{
+              flex: 1, background: T.surface2, border: `1px solid ${T.border}`,
+              borderRadius: 10, padding: "11px 14px", color: T.text,
+              fontSize: ".88rem", outline: "none", fontFamily: "inherit",
+            }}
+          />
+          <button
+            onClick={handleAdd}
+            disabled={!newText.trim()}
+            style={{
+              background: newText.trim() ? "#9B6FE8" : T.surface2,
+              border: "none", borderRadius: 10, padding: "11px 18px",
+              color: newText.trim() ? "#fff" : T.textMuted,
+              fontWeight: 700, cursor: newText.trim() ? "pointer" : "default",
+              fontSize: ".88rem", transition: "all 0.2s", flexShrink: 0,
+            }}
+          >+ Ekle</button>
+        </div>
+      </div>
+
+      {/* Bekleyen görevler */}
+      {pending.length > 0 && (
+        <div>
+          <div style={{ color: T.textSub, fontSize: ".72rem", fontWeight: 700, letterSpacing: ".08em", marginBottom: 10 }}>BEKLEYEN · {pending.length}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {pending.map(task => (
+              <div key={task.id} style={{
+                display: "flex", alignItems: "center", gap: 12,
+                background: T.surface, border: `1px solid ${T.border}`,
+                borderRadius: 14, padding: "13px 16px",
+                transition: "all 0.2s",
+              }}>
+                {/* Checkbox */}
+                <button
+                  onClick={() => onToggle(task.id)}
+                  style={{
+                    width: 22, height: 22, borderRadius: 11, flexShrink: 0,
+                    border: `2px solid ${subjectColor(task.subject)}`,
+                    background: "transparent", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "all 0.15s",
+                  }}
+                />
+                {/* Ders etiketi + metin */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: 3, background: subjectColor(task.subject), flexShrink: 0 }} />
+                    <span style={{ color: subjectColor(task.subject), fontSize: ".7rem", fontWeight: 700 }}>{task.subject}</span>
+                  </div>
+                  <span style={{ color: T.text, fontSize: ".88rem", fontWeight: 500 }}>{task.text}</span>
+                </div>
+                {/* Sil */}
+                <button
+                  onClick={() => onDelete(task.id)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: T.textMuted, fontSize: "1rem", padding: 4, flexShrink: 0, lineHeight: 1 }}
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tamamlanan görevler */}
+      {completed.length > 0 && (
+        <div>
+          <div style={{ color: T.textSub, fontSize: ".72rem", fontWeight: 700, letterSpacing: ".08em", marginBottom: 10 }}>TAMAMLANDI · {completed.length}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {completed.map(task => (
+              <div key={task.id} style={{
+                display: "flex", alignItems: "center", gap: 12,
+                background: T.surface2, border: `1px solid ${T.borderSoft}`,
+                borderRadius: 14, padding: "13px 16px", opacity: 0.6,
+              }}>
+                {/* Checkbox dolu */}
+                <button
+                  onClick={() => onToggle(task.id)}
+                  style={{
+                    width: 22, height: 22, borderRadius: 11, flexShrink: 0,
+                    border: `2px solid #4A9E8E`,
+                    background: "#4A9E8E", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#fff", fontSize: ".75rem",
+                  }}
+                >✓</button>
+                {/* Metin üzeri çizili */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                    <span style={{ color: T.textMuted, fontSize: ".7rem" }}>{task.subject}</span>
+                  </div>
+                  <span style={{ color: T.textMuted, fontSize: ".88rem", textDecoration: "line-through" }}>{task.text}</span>
+                </div>
+                {/* Sil */}
+                <button
+                  onClick={() => onDelete(task.id)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: T.textMuted, fontSize: "1rem", padding: 4, flexShrink: 0, lineHeight: 1 }}
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Boş durum */}
+      {tasks.length === 0 && (
+        <div style={{ textAlign: "center", padding: "40px 20px" }}>
+          <div style={{ fontSize: "3rem", marginBottom: 12 }}>📋</div>
+          <p style={{ color: T.textSub, fontSize: ".9rem", margin: 0 }}>Bugün için görev ekle,<br />ne çalışacağını planla!</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -1521,10 +1767,11 @@ export default function PomodoroPage() {
   const [phase, setPhase]             = useState<"idle"|"work"|"rest">("idle");
   const [seconds, setSeconds]         = useState(0);
   const [sessions, setSessions]       = useState<Session[]>([]);
-  const [tab, setTab]                 = useState<"timer"|"library"|"report"|"sinav">("timer");
+  const [tab, setTab]                 = useState<"timer"|"library"|"report"|"sinav"|"tasks">("timer");
   const [loaded, setLoaded]           = useState(false);
   const [isDark, setIsDark]           = useState(true);
   const T = isDark ? DARK_THEME : LIGHT_THEME;
+  const [tasks, setTasks]             = useState<Task[]>([]);
   const [absenceMsg, setAbsenceMsg]   = useState<{days: number; msg: string} | null>(null);
   const [customWork, setCustomWork]   = useState(30);
   const [customRest, setCustomRest]   = useState(5);
@@ -1535,6 +1782,10 @@ export default function PomodoroPage() {
   const [ambientId, setAmbientId]     = useState("off");
   const [streak, setStreak]           = useState(0);
   const [showShare, setShowShare]     = useState(false);
+  const [selectedSubject, setSelectedSubject]       = useState<string>("Matematik");
+  const [customSubjects, setCustomSubjects]         = useState<string[]>([]);
+  const [customSubjectInput, setCustomSubjectInput] = useState("");
+  const [showSubjectPicker, setShowSubjectPicker]   = useState(false);
 
   const intervalRef   = useRef<ReturnType<typeof setInterval>|null>(null);
   const workStartRef  = useRef<number>(0);
@@ -1554,6 +1805,17 @@ export default function PomodoroPage() {
       const loadedSessions: Session[] = raw ? JSON.parse(raw) : [];
       if (raw) setSessions(loadedSessions);
       const g = localStorage.getItem(GOAL_KEY); if (g) setDailyGoal(JSON.parse(g));
+      // Özel dersler
+      const cs = localStorage.getItem("pomodoro_custom_subjects_v1");
+      if (cs) setCustomSubjects(JSON.parse(cs));
+      // Görevler — sadece bugünün görevlerini yükle
+      const tr = localStorage.getItem(TASKS_KEY);
+      if (tr) {
+        const allTasks: Task[] = JSON.parse(tr);
+        const todayTasks = allTasks.filter(t => t.date === todayStr());
+        setTasks(todayTasks);
+        localStorage.setItem(TASKS_KEY, JSON.stringify(todayTasks));
+      }
       // Sayfa açılışında streak'i taze hesapla (cache eski gün yansıtabilir)
       if (loadedSessions.length > 0) {
         setTimeout(() => updateStreak(loadedSessions), 50);
@@ -1596,6 +1858,22 @@ export default function PomodoroPage() {
   const saveGoal = useCallback((g: DailyGoal) => {
     try { localStorage.setItem(GOAL_KEY, JSON.stringify(g)); } catch {}
   }, []);
+  const saveTasks = useCallback((list: Task[]) => {
+    try { localStorage.setItem(TASKS_KEY, JSON.stringify(list)); } catch {}
+  }, []);
+
+  const addTask = useCallback((text: string, subject: string) => {
+    const t: Task = { id: Date.now().toString(), date: todayStr(), text, subject, done: false, createdAt: new Date().toISOString() };
+    setTasks(prev => { const u = [...prev, t]; saveTasks(u); return u; });
+  }, [saveTasks]);
+
+  const toggleTask = useCallback((id: string) => {
+    setTasks(prev => { const u = prev.map(t => t.id === id ? { ...t, done: !t.done } : t); saveTasks(u); return u; });
+  }, [saveTasks]);
+
+  const deleteTask = useCallback((id: string) => {
+    setTasks(prev => { const u = prev.filter(t => t.id !== id); saveTasks(u); return u; });
+  }, [saveTasks]);
 
   // ─── Streak hesaplama ─────────────────────────────────────────────────────
   const updateStreak = useCallback((list: Session[]) => {
@@ -1730,9 +2008,9 @@ export default function PomodoroPage() {
   }, []);
 
   // ─── Oturum kaydet ────────────────────────────────────────────────────────
-  const recordSession = useCallback((plannedDuration: number, startedAt: number, forcedActual?: number) => {
+  const recordSession = useCallback((plannedDuration: number, startedAt: number, forcedActual?: number, subject?: string) => {
     const actualDuration = forcedActual ?? Math.max(1, Math.round((Date.now() - startedAt) / 60000));
-    const s: Session = { id: Date.now().toString(), date: todayStr(), plannedDuration, actualDuration, completedAt: new Date().toISOString() };
+    const s: Session = { id: Date.now().toString(), date: todayStr(), plannedDuration, actualDuration, completedAt: new Date().toISOString(), subject };
     setSessions(prev => { const u = [...prev, s]; saveSessions(u); updateStreak(u); return u; });
   }, [saveSessions, updateStreak]);
 
@@ -1781,17 +2059,16 @@ export default function PomodoroPage() {
 
   const completeWork = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
-    // workStartRef'i sıfırla — aynı oturum iki kez kaydedilmesin
     const startedAt = workStartRef.current;
     workStartRef.current = 0;
-    if (startedAt === 0) return; // zaten tamamlandı, tekrar basıldı
-    recordSession(mode.work, startedAt);
+    if (startedAt === 0) return;
+    recordSession(mode.work, startedAt, undefined, selectedSubject);
     playBeep("work_end");
     sendNotification("Ders tamamlandı! 🎉", `${mode.work} dakika çalıştın. Mola zamanı!`);
     const now = Date.now(); phaseEndRef.current = now + mode.rest * 60 * 1000;
     setPhase("rest"); setSeconds(mode.rest * 60);
     setShowShare(true);
-  }, [mode.work, mode.rest, recordSession, playBeep, sendNotification]);
+  }, [mode.work, mode.rest, recordSession, playBeep, sendNotification, selectedSubject]);
 
   useEffect(() => {
     if (phase === "idle") { if (intervalRef.current) clearInterval(intervalRef.current); return; }
@@ -1802,7 +2079,7 @@ export default function PomodoroPage() {
         if (phase === "work") {
           const startedAt = workStartRef.current;
           workStartRef.current = 0;
-          if (startedAt > 0) recordSession(mode.work, startedAt);
+          if (startedAt > 0) recordSession(mode.work, startedAt, undefined, selectedSubject);
           playBeep("work_end");
           sendNotification("Ders tamamlandı! 🎉", `${mode.work} dakika çalıştın. Mola zamanı!`);
           const now = Date.now(); phaseEndRef.current = now + mode.rest * 60 * 1000;
@@ -1816,7 +2093,7 @@ export default function PomodoroPage() {
       } else { setSeconds(remaining); }
     }, 500);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [phase, mode.work, mode.rest, recordSession, playBeep, sendNotification]);
+  }, [phase, mode.work, mode.rest, recordSession, playBeep, sendNotification, selectedSubject]);
 
   // ─── Hesaplamalar ─────────────────────────────────────────────────────────
   const today    = todayStr();
@@ -2052,6 +2329,44 @@ export default function PomodoroPage() {
               </div>
             </div>
 
+            {/* Ders Seçici — sadece idle fazında */}
+            {phase === "idle" && (
+              <div style={{ width: "100%", maxWidth: 520 }}>
+                <div style={{ color: T.textSub, fontSize: ".72rem", fontWeight: 700, letterSpacing: "1.5px", marginBottom: 10 }}>BUGÜN NE ÇALIŞACAKSIN?</div>
+                <button
+                  onClick={() => setShowSubjectPicker(true)}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                    background: T.surface, border: `1px solid ${subjectColor(selectedSubject)}55`,
+                    borderRadius: 14, padding: "14px 18px", cursor: "pointer",
+                    boxShadow: `0 0 0 0px ${subjectColor(selectedSubject)}33`,
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = subjectColor(selectedSubject); }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `${subjectColor(selectedSubject)}55`; }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 5, background: subjectColor(selectedSubject), flexShrink: 0 }} />
+                    <span style={{ color: T.text, fontWeight: 700, fontSize: ".95rem" }}>{selectedSubject}</span>
+                  </div>
+                  <span style={{ color: T.textMuted, fontSize: ".8rem" }}>değiştir ›</span>
+                </button>
+              </div>
+            )}
+
+            {/* Çalışılan ders — work/rest fazında göster */}
+            {phase !== "idle" && selectedSubject && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8,
+                background: `${subjectColor(selectedSubject)}15`,
+                border: `1px solid ${subjectColor(selectedSubject)}40`,
+                borderRadius: 10, padding: "7px 14px",
+              }}>
+                <div style={{ width: 8, height: 8, borderRadius: 4, background: subjectColor(selectedSubject) }} />
+                <span style={{ color: subjectColor(selectedSubject), fontWeight: 700, fontSize: ".82rem" }}>{selectedSubject}</span>
+              </div>
+            )}
+
             {/* Butonlar */}
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
               {phase === "idle" && <button className="action-btn" onClick={startWork} style={{ background: mode.accent, color: "#fff", boxShadow: `0 8px 28px ${mode.accent}60`, letterSpacing:".04em", minWidth: 130 }}>▶ Başla</button>}
@@ -2138,6 +2453,20 @@ export default function PomodoroPage() {
           </div>
         )}
 
+        {/* ── GÖREVLER ── */}
+        {tab === "tasks" && (
+          <TasksTab
+            tasks={tasks}
+            onAdd={addTask}
+            onToggle={toggleTask}
+            onDelete={deleteTask}
+            selectedSubject={selectedSubject}
+            customSubjects={customSubjects}
+            T={T}
+            isDark={isDark}
+          />
+        )}
+
         {/* ── KÜTÜPHANe ── */}
         {tab === "library" && (
           <LibraryTab sessions={sessions} T={T} isDark={isDark} />
@@ -2201,6 +2530,128 @@ export default function PomodoroPage() {
               </div>
             </div>
 
+            {/* ── DERS DAĞILIMI ── */}
+            {(() => {
+              // Bu haftanın ders dağılımı
+              const subjectMap: Record<string, number> = {};
+              sessions.forEach(s => { const k = s.subject ?? "Diğer"; subjectMap[k] = (subjectMap[k] ?? 0) + s.actualDuration; });
+              const sorted = Object.entries(subjectMap).sort((a,b) => b[1]-a[1]);
+              const total  = sorted.reduce((a,b) => a + b[1], 0);
+              if (sorted.length === 0) return null;
+
+              // Haftalık ders trendi (son 7 gün × ders)
+              const last7 = Array.from({length:7}, (_,i) => { const d=new Date(); d.setDate(d.getDate()-6+i); return d.toISOString().slice(0,10); });
+              const top3  = sorted.slice(0,3).map(([name]) => name);
+
+              return (
+                <>
+                  {/* Ders bazlı toplam */}
+                  <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:20, padding:22, marginTop:18 }}>
+                    <div style={{ color:T.textSub, fontSize:".78rem", fontWeight:700, letterSpacing:".05em", marginBottom:16 }}>📚 DERS DAĞILIMI (TÜM ZAMANLAR)</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                      {sorted.map(([name, mins]) => {
+                        const pct = total > 0 ? (mins/total)*100 : 0;
+                        const col = subjectColor(name);
+                        return (
+                          <div key={name}>
+                            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+                              <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                                <div style={{ width:8, height:8, borderRadius:4, background:col, flexShrink:0 }} />
+                                <span style={{ color:T.text, fontSize:".83rem", fontWeight:600 }}>{name}</span>
+                              </div>
+                              <span style={{ color:T.textSub, fontSize:".78rem" }}>{fmtMin(mins)} · {Math.round(pct)}%</span>
+                            </div>
+                            <div style={{ height:6, borderRadius:3, background:T.surface2, overflow:"hidden" }}>
+                              <div style={{ height:"100%", width:`${pct}%`, background:col, borderRadius:3, transition:"width 0.6s ease" }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Günlük pasta benzeri özet */}
+                  <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:20, padding:22, marginTop:14 }}>
+                    <div style={{ color:T.textSub, fontSize:".78rem", fontWeight:700, letterSpacing:".05em", marginBottom:16 }}>📅 BUGÜNKÜ DERS DAĞILIMI</div>
+                    {(() => {
+                      const todayMap: Record<string,number> = {};
+                      todaySessions.forEach(s => { const k = s.subject ?? "Diğer"; todayMap[k] = (todayMap[k]??0) + s.actualDuration; });
+                      const todaySorted = Object.entries(todayMap).sort((a,b)=>b[1]-a[1]);
+                      if (todaySorted.length === 0) return <p style={{ color:T.textMuted, fontSize:".82rem", margin:0, textAlign:"center" }}>Bugün henüz oturum yok.</p>;
+                      const todayTotal = todaySorted.reduce((a,b)=>a+b[1],0);
+                      return (
+                        <>
+                          {/* Segmentli bar */}
+                          <div style={{ display:"flex", height:14, borderRadius:8, overflow:"hidden", marginBottom:12, gap:2 }}>
+                            {todaySorted.map(([name, mins]) => (
+                              <div key={name} style={{ flex:mins, background:subjectColor(name), transition:"flex 0.5s ease" }} title={`${name}: ${mins}dk`} />
+                            ))}
+                          </div>
+                          {/* Lejant */}
+                          <div style={{ display:"flex", flexWrap:"wrap", gap:10 }}>
+                            {todaySorted.map(([name, mins]) => (
+                              <div key={name} style={{ display:"flex", alignItems:"center", gap:6 }}>
+                                <div style={{ width:8, height:8, borderRadius:4, background:subjectColor(name) }} />
+                                <span style={{ color:T.textSub, fontSize:".78rem" }}>{name} <strong style={{ color:T.text }}>{mins}dk</strong></span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Haftalık ders trendi */}
+                  {top3.length > 0 && (
+                    <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:20, padding:22, marginTop:14 }}>
+                      <div style={{ color:T.textSub, fontSize:".78rem", fontWeight:700, letterSpacing:".05em", marginBottom:6 }}>📈 HAFTALIK DERS TRENDİ (EN POPÜLER 3)</div>
+                      {/* Lejant */}
+                      <div style={{ display:"flex", gap:12, marginBottom:14, flexWrap:"wrap" }}>
+                        {top3.map(name => (
+                          <div key={name} style={{ display:"flex", alignItems:"center", gap:5 }}>
+                            <div style={{ width:8, height:8, borderRadius:4, background:subjectColor(name) }} />
+                            <span style={{ color:T.textSub, fontSize:".74rem" }}>{name}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Çubuk grafik — her gün için top3 dersleri ayrı renkle */}
+                      <div style={{ display:"flex", gap:6, alignItems:"flex-end", height:80 }}>
+                        {last7.map(ds => {
+                          const daySessions = sessions.filter(s => s.date === ds);
+                          const dayTotal    = daySessions.reduce((a,s)=>a+s.actualDuration,0);
+                          const maxDay      = Math.max(...last7.map(d2 => sessions.filter(s=>s.date===d2).reduce((a,s)=>a+s.actualDuration,0)), 1);
+                          const barH        = dayTotal > 0 ? Math.max((dayTotal/maxDay)*68, 6) : 0;
+                          const dLabel      = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"][new Date(ds+"T12:00:00").getDay() === 0 ? 6 : new Date(ds+"T12:00:00").getDay()-1];
+                          const isToday     = ds === today;
+
+                          // Derslerin gün içi dakikasını hesapla
+                          const topMins = top3.map(name => daySessions.filter(s=>(s.subject??"Diğer")===name).reduce((a,s)=>a+s.actualDuration,0));
+                          const otherMin = dayTotal - topMins.reduce((a,b)=>a+b,0);
+
+                          return (
+                            <div key={ds} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+                              <div style={{ width:"100%", display:"flex", flexDirection:"column-reverse", borderRadius:4, overflow:"hidden", height:barH, transition:"height 0.4s ease" }}>
+                                {dayTotal === 0
+                                  ? <div style={{ flex:1, background:T.surface2 }} />
+                                  : <>
+                                      {otherMin > 0 && <div style={{ flex:otherMin, background:"rgba(255,255,255,0.12)" }} />}
+                                      {top3.map((name,i) => topMins[i]>0 && (
+                                        <div key={name} style={{ flex:topMins[i], background:subjectColor(name) }} />
+                                      ))}
+                                    </>
+                                }
+                              </div>
+                              <span style={{ color:isToday?T.text:T.textMuted, fontSize:".62rem", fontWeight:isToday?700:400 }}>{dLabel}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
             {/* İstatistik paylaş */}
             <ReportShareButton
               todayMin={todayMin}
@@ -2251,6 +2702,7 @@ export default function PomodoroPage() {
       }}>
         {([
           { key: "timer",   icon: "🍅", label: "Timer"      },
+          { key: "tasks",   icon: "📝", label: "Görevler"   },
           { key: "library", icon: "📚", label: "Kütüphane"  },
           { key: "report",  icon: "📊", label: "Rapor"      },
           { key: "sinav",   icon: "🎓", label: "Sınav"      },
@@ -2287,6 +2739,128 @@ export default function PomodoroPage() {
             >
               Hadi Başlayalım! 🚀
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── DERS SEÇİCİ MODAL ── */}
+      {showSubjectPicker && (
+        <div
+          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center", padding:16, backdropFilter:"blur(6px)" }}
+          onClick={e => { if (e.target===e.currentTarget) setShowSubjectPicker(false); }}
+        >
+          <div style={{ background: T.modalBg, borderRadius:"24px 24px 20px 20px", padding:"24px 20px 32px", maxWidth:500, width:"100%", border:`1px solid ${T.border}`, boxShadow:"0 -8px 48px rgba(0,0,0,0.5)", maxHeight:"80vh", overflowY:"auto" }}>
+            {/* Başlık */}
+            <div style={{ textAlign:"center", marginBottom:20 }}>
+              <div style={{ width:36, height:4, borderRadius:2, background:T.border, margin:"0 auto 16px" }} />
+              <h3 style={{ color:T.text, fontSize:"1.05rem", fontWeight:800, margin:0 }}>📚 Hangi dersi çalışacaksın?</h3>
+            </div>
+
+            {/* Ders grupları */}
+            {SUBJECT_GROUPS.map(group => (
+              <div key={group.group} style={{ marginBottom:16 }}>
+                <div style={{ color:group.accent, fontSize:".68rem", fontWeight:800, letterSpacing:".1em", marginBottom:8 }}>{group.group}</div>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+                  {group.subjects.map(subj => {
+                    const isSelected = selectedSubject === subj;
+                    return (
+                      <button key={subj} onClick={() => { setSelectedSubject(subj); setShowSubjectPicker(false); }}
+                        style={{
+                          background: isSelected ? `${group.accent}22` : T.surface,
+                          border: `1px solid ${isSelected ? group.accent : T.border}`,
+                          borderRadius:10, padding:"7px 13px", cursor:"pointer",
+                          color: isSelected ? group.accent : T.textSub,
+                          fontSize:".8rem", fontWeight: isSelected ? 700 : 500,
+                          transition:"all 0.15s",
+                        }}
+                      >{subj}</button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Özel dersler */}
+            {customSubjects.length > 0 && (
+              <div style={{ marginBottom:16 }}>
+                <div style={{ color:"#9B6FE8", fontSize:".68rem", fontWeight:800, letterSpacing:".1em", marginBottom:8 }}>ÖZEL DERSLER</div>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+                  {customSubjects.map(subj => {
+                    const isSelected = selectedSubject === subj;
+                    return (
+                      <button key={subj} onClick={() => { setSelectedSubject(subj); setShowSubjectPicker(false); }}
+                        style={{
+                          background: isSelected ? "rgba(155,111,232,0.2)" : T.surface,
+                          border: `1px solid ${isSelected ? "#9B6FE8" : T.border}`,
+                          borderRadius:10, padding:"7px 13px", cursor:"pointer",
+                          color: isSelected ? "#9B6FE8" : T.textSub,
+                          fontSize:".8rem", fontWeight: isSelected ? 700 : 500,
+                          transition:"all 0.15s",
+                          display:"flex", alignItems:"center", gap:6,
+                        }}
+                      >
+                        {subj}
+                        <span
+                          onClick={e => {
+                            e.stopPropagation();
+                            const updated = customSubjects.filter(s => s !== subj);
+                            setCustomSubjects(updated);
+                            try { localStorage.setItem("pomodoro_custom_subjects_v1", JSON.stringify(updated)); } catch {}
+                            if (selectedSubject === subj) setSelectedSubject("Matematik");
+                          }}
+                          style={{ color:"rgba(239,68,68,0.6)", fontSize:".75rem", lineHeight:1 }}
+                        >✕</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Özel ders ekle */}
+            <div style={{ borderTop:`1px solid ${T.border}`, paddingTop:16, marginTop:4 }}>
+              <div style={{ color:T.textSub, fontSize:".72rem", fontWeight:700, letterSpacing:".06em", marginBottom:8 }}>ÖZEL DERS EKLE</div>
+              <div style={{ display:"flex", gap:8 }}>
+                <input
+                  value={customSubjectInput}
+                  onChange={e => setCustomSubjectInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && customSubjectInput.trim()) {
+                      const name = customSubjectInput.trim();
+                      if (!ALL_SUBJECTS.includes(name) && !customSubjects.includes(name)) {
+                        const updated = [...customSubjects, name];
+                        setCustomSubjects(updated);
+                        try { localStorage.setItem("pomodoro_custom_subjects_v1", JSON.stringify(updated)); } catch {}
+                      }
+                      setSelectedSubject(name);
+                      setCustomSubjectInput("");
+                      setShowSubjectPicker(false);
+                    }
+                  }}
+                  placeholder="ör. İngilizce, Felsefe..."
+                  style={{
+                    flex:1, background:T.surface, border:`1px solid ${T.border}`, borderRadius:10,
+                    padding:"10px 14px", color:T.text, fontSize:".88rem", outline:"none",
+                    fontFamily:"inherit",
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    const name = customSubjectInput.trim();
+                    if (!name) return;
+                    if (!ALL_SUBJECTS.includes(name) && !customSubjects.includes(name)) {
+                      const updated = [...customSubjects, name];
+                      setCustomSubjects(updated);
+                      try { localStorage.setItem("pomodoro_custom_subjects_v1", JSON.stringify(updated)); } catch {}
+                    }
+                    setSelectedSubject(name);
+                    setCustomSubjectInput("");
+                    setShowSubjectPicker(false);
+                  }}
+                  style={{ background:"#9B6FE8", border:"none", borderRadius:10, padding:"10px 16px", color:"#fff", fontWeight:700, cursor:"pointer", fontSize:".88rem" }}
+                >Ekle</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
