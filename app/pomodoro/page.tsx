@@ -225,7 +225,7 @@ function createAmbientNode(ctx: AudioContext, type: string): GainNode | null {
 }
 
 // ─── Tema sistemi ─────────────────────────────────────────────────────────────
-const THEME_KEY = "pomodoro_theme_v1";
+const THEME_KEY  = "pomodoro_theme_v1";
 
 const DARK_THEME = {
   bg:          "linear-gradient(160deg, #1a1630 0%, #1e1c3a 40%, #141f3a 80%, #16261e 100%)",
@@ -2459,15 +2459,17 @@ export default function PomodoroPage() {
             <div style={{ color: T.text, fontSize: "1.7rem", fontWeight: 800, lineHeight: 1.1 }}>{getTurkishDay()}</div>
             <div style={{ color: T.textSub, fontSize: ".82rem", marginTop: 3 }}>{getTurkishDate()}</div>
           </div>
-          {/* Tema butonu */}
-          <button
-            onClick={() => { const next = !isDark; setIsDark(next); try { localStorage.setItem(THEME_KEY, next ? "dark" : "light"); } catch {} }}
-            style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: "6px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "all 0.3s" }}
-          >
-            <span style={{ fontSize: "1.1rem" }}>{isDark ? "☀️" : "🌙"}</span>
-            <span style={{ color: T.text, fontWeight: 700, fontSize: ".78rem" }}>{isDark ? "Gündüz" : "Gece"}</span>
-          </button>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+          {/* Sağ: Tema butonu */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+            <button
+              onClick={() => { const next = !isDark; setIsDark(next); try { localStorage.setItem(THEME_KEY, next ? "dark" : "light"); } catch {} }}
+              style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: "6px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "all 0.3s" }}
+            >
+              <span style={{ fontSize: "1.1rem" }}>{isDark ? "☀️" : "🌙"}</span>
+              <span style={{ color: T.text, fontWeight: 700, fontSize: ".78rem" }}>{isDark ? "Gündüz" : "Gece"}</span>
+            </button>
+
+            {/* Streak + oturum badge'leri */}
             {streak > 0 && (
               <div style={{
                 background: streak >= 30 ? "linear-gradient(135deg,rgba(251,191,36,0.2),rgba(245,158,11,0.12))" : streak >= 7 ? "linear-gradient(135deg,rgba(232,69,74,0.18),rgba(251,113,55,0.1))" : "rgba(232,69,74,0.12)",
