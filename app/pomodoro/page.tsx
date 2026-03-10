@@ -720,6 +720,60 @@ function DigitalDisplay({ value, size = 40, isDark = true }: { value: string; si
   );
 }
 
+// ─── Mola Aktiviteleri ───────────────────────────────────────────────────────
+const BREAK_ACTIVITIES = [
+  { icon: "💧", text: "Bir bardak su iç. Beyin %75 su — dehidrasyon konsantrasyonu düşürür." },
+  { icon: "👁️", text: "Gözlerini kapat, 30 saniye dinlendir. Ekrana uzun bakış göz yorgunluğu yapar." },
+  { icon: "🌿", text: "Pencereden dışarıya bak. Uzağa bakmak göz kaslarını gevşetir." },
+  { icon: "🧘", text: "4 saniye nefes al, 4 tut, 4 ver. Üç kez tekrarla — kortizol düşer." },
+  { icon: "🚶", text: "Ayağa kalk, birkaç adım at. Oturarak çalışmak kan dolaşımını yavaşlatır." },
+  { icon: "🤸", text: "Boyun ve omuzlarını yavaşça gerin. Uzun oturuş kas gerginliği yaratır." },
+  { icon: "😊", text: "Sevdiğin birini düşün ya da kısa bir mesaj at. Pozitif duygu odaklanmayı artırır." },
+  { icon: "🎵", text: "Sevdiğin bir şarkıyı dinle. Müzik dopamin salgılar, sonraki oturuma taze başlarsın." },
+  { icon: "📓", text: "Az önce öğrendiklerinden birini aklından geçir. Aktif hatırlama kalıcı öğrenmeyi güçlendirir." },
+  { icon: "🍎", text: "Hafif bir şeyler atıştır — meyve veya kuruyemiş. Kan şekeri odaklanmayı etkiler." },
+  { icon: "🌬️", text: "Derin bir nefes al ve yavaşça bırak. Anlık stres için en hızlı çözüm bu." },
+  { icon: "✍️", text: "Bir sonraki oturumda ne çalışacağını not al. Zihin boşalır, odaklanma kolaylaşır." },
+];
+
+const BreakActivity = memo(function BreakActivity({ T, isDark }: { T: Theme; isDark: boolean }) {
+  const [activity] = useState(() => BREAK_ACTIVITIES[Math.floor(Math.random() * BREAK_ACTIVITIES.length)]);
+  const [done, setDone] = useState(false);
+
+  return (
+    <div style={{
+      width: "100%", maxWidth: 520,
+      background: isDark ? "rgba(74,158,142,0.08)" : "rgba(74,158,142,0.06)",
+      border: `1px solid ${done ? "#4A9E8E66" : "rgba(74,158,142,0.25)"}`,
+      borderRadius: 16, padding: "16px 18px",
+      transition: "all 0.4s ease",
+    }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <span style={{ fontSize: "1.6rem", flexShrink: 0, marginTop: 1 }}>{activity.icon}</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: "#4A9E8E", fontSize: ".68rem", fontWeight: 700, letterSpacing: ".08em", marginBottom: 5 }}>☕ MOLA AKTİVİTESİ</div>
+          <p style={{
+            color: done ? "#4A9E8E" : T.text,
+            fontSize: ".85rem", fontWeight: 500, margin: "0 0 12px", lineHeight: 1.5,
+            textDecoration: done ? "line-through" : "none",
+            transition: "all 0.3s",
+          }}>{activity.text}</p>
+          <button
+            onClick={() => setDone(d => !d)}
+            style={{
+              background: done ? "rgba(74,158,142,0.2)" : T.surface,
+              border: `1px solid ${done ? "#4A9E8E" : "rgba(74,158,142,0.3)"}`,
+              borderRadius: 8, padding: "5px 12px", cursor: "pointer",
+              color: done ? "#4A9E8E" : T.textSub,
+              fontSize: ".75rem", fontWeight: 700, transition: "all 0.2s",
+            }}
+          >{done ? "✓ Yapıldı!" : "Yaptım ✓"}</button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 // ─── Odak Skoru Modalı ───────────────────────────────────────────────────────
 const PHONE_OPTIONS = [
   { val: 0, label: "Hiç bakmadım", icon: "🏆" },
@@ -2613,6 +2667,11 @@ export default function PomodoroPage() {
                 </>
               )}
             </div>
+
+            {/* Mola Aktivitesi */}
+            {phase === "rest" && (
+              <BreakActivity T={T} isDark={isDark} />
+            )}
 
             {/* Sanal Kütüphane Banner */}
             <StudyBanner isActive={phase === "work"} />
