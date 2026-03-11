@@ -4,14 +4,11 @@
 // Blog yazıları için CMS/dosya sistemi ile dinamik genişletilebilir.
 
 import { MetadataRoute } from "next";
+import { posts } from "./data/posts";
 
 // Blog yazılarınız bir CMS veya MDX dosya sistemindeyse buraya entegre edin.
 // Şimdilik statik slug örnekleri mevcut:
-const blogPosts: { slug: string; lastModified: Date }[] = [
-  // { slug: "yks-calisma-plani", lastModified: new Date("2025-01-15") },
-  // { slug: "pomodoro-teknigi-nedir", lastModified: new Date("2025-02-01") },
-  // Blog yazısı ekledikçe buraya ekleyin veya dosya sisteminden okuyun
-];
+
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://ogrencikocuadana.com";
@@ -52,9 +49,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ];
 
   // ── Dinamik blog yazıları ────────────────────────────────────────────────────
-  const blogRoutes: MetadataRoute.Sitemap = blogPosts.map((post) => ({
+  const blogRoutes: MetadataRoute.Sitemap = posts.map((post) => ({
     url: `${baseUrl}/blog/${post.slug}`,
-    lastModified: post.lastModified,
+    lastModified: new Date(post.date),
     changeFrequency: "monthly" as const,
     priority: 0.6,
   }));
