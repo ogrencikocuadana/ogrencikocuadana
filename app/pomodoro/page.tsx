@@ -268,9 +268,16 @@ const STORAGE_KEY   = "pomodoro_sessions_v2";
 const GOAL_KEY      = "pomodoro_goal_v1";
 const STREAK_KEY    = "pomodoro_streak_v1";
 const LAST_SEEN_KEY = "pomodoro_last_seen_v1";
+const TIMER_KEY     = "pomodoro_timer_v1";
 const TASKS_KEY     = "pomodoro_tasks_v1";
 
-function todayStr() { return new Date().toISOString().slice(0, 10); }
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function dateStr(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
 function getTurkishDay() { return ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"][new Date().getDay()]; }
 function getTurkishDate() { const months=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"]; const d=new Date(); return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`; }
 function fmtMin(m: number) { if(m<60) return `${m} dk`; const h=Math.floor(m/60),r=m%60; return r>0?`${h} sa ${r} dk`:`${h} sa`; }
@@ -720,6 +727,807 @@ function DigitalDisplay({ value, size = 40, isDark = true }: { value: string; si
   );
 }
 
+// ─── Seviye Sistemi ───────────────────────────────────────────────────────────
+const PROFILE_KEY = "pomodoro_profile_v1";
+
+type ExamType = "lgs" | "yks" | "genel";
+
+interface UserProfile {
+  name: string;
+  examType: ExamType;
+  joinDate: string;
+}
+
+const EXAM_LABELS: Record<ExamType, string> = {
+  lgs:   "LGS",
+  yks:   "YKS (TYT/AYT)",
+  genel: "Genel / Diğer",
+};
+
+const LEVEL_TITLES: Record<ExamType, string[]> = {
+  lgs:   ["Aday", "Azimli", "Çalışkan", "Odak Ustası", "LGS Kartalı"],
+  yks:   ["Aday", "Azimli", "Çalışkan", "Odak Ustası", "YKS Kartalı"],
+  genel: ["Aday", "Azimli", "Çalışkan", "Odak Ustası", "Şampiyon"],
+};
+
+// Eşikler: toplam çalışma dakikası
+const LEVEL_THRESHOLDS = [0, 300, 1200, 3000, 6000]; // 0 / 5sa / 20sa / 50sa / 100sa
+const LEVEL_ICONS      = ["🌱", "📖", "💡", "🔥", "🏆"];
+const LEVEL_COLORS     = ["#6b7280", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444"];
+const LEVEL_DESCS      = [
+  "Yolculuk başlıyor — ilk adım en önemli adım.",
+  "Düzenli çalışma alışkanlığı kazanıyorsun.",
+  "Artık ciddi bir rakip sayılırsın.",
+  "Odak ve disiplin senin doğanın parçası.",
+  "Zirveye ulaştın. Hedefin göz önünde!",
+];
+
+function getLevel(totalMin: number) {
+  let lvl = 0;
+  for (let i = 0; i < LEVEL_THRESHOLDS.length; i++) {
+    if (totalMin >= LEVEL_THRESHOLDS[i]) lvl = i;
+  }
+  return lvl;
+}
+
+function getLevelProgress(totalMin: number) {
+  const lvl     = getLevel(totalMin);
+  const current = LEVEL_THRESHOLDS[lvl];
+  const next    = LEVEL_THRESHOLDS[lvl + 1];
+  if (!next) return 100;
+  return Math.round(((totalMin - current) / (next - current)) * 100);
+}
+
+// ─── Level Up Modal ───────────────────────────────────────────────────────────
+const LevelUpModal = memo(function LevelUpModal({
+  level, examType, T, isDark, onClose,
+}: { level: number; examType: ExamType; T: Theme; isDark: boolean; onClose: () => void }) {
+  const title = LEVEL_TITLES[examType][level];
+  const icon  = LEVEL_ICONS[level];
+  const color = LEVEL_COLORS[level];
+  const desc  = LEVEL_DESCS[level];
+
+  return (
+    <div style={{
+      position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:1000,
+      display:"flex", alignItems:"center", justifyContent:"center", padding:24,
+      backdropFilter:"blur(8px)",
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: isDark ? "linear-gradient(145deg, #1e1c3a, #141f3a)" : "#fff",
+        border:`2px solid ${color}`,
+        borderRadius:28, padding:"40px 32px", maxWidth:340, width:"100%", textAlign:"center",
+        boxShadow:`0 0 60px ${color}40, 0 24px 48px rgba(0,0,0,0.4)`,
+        animation:"scale-in 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+      }}>
+        {/* Parıltı halkası */}
+        <div style={{ position:"relative", width:100, height:100, margin:"0 auto 24px" }}>
+          <div style={{
+            position:"absolute", inset:-8, borderRadius:"50%",
+            background:`conic-gradient(${color}, transparent, ${color})`,
+            animation:"rotate-slow 3s linear infinite", opacity:0.6,
+          }} />
+          <div style={{
+            position:"absolute", inset:2, borderRadius:"50%",
+            background: isDark ? "#1e1c3a" : "#fff",
+          }} />
+          <div style={{
+            position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:"2.8rem",
+          }}>{icon}</div>
+        </div>
+
+        <div style={{ color, fontSize:".72rem", fontWeight:800, letterSpacing:".12em", marginBottom:8 }}>
+          SEVİYE ATLADI!
+        </div>
+        <div style={{ color:T.text, fontSize:"1.6rem", fontWeight:900, marginBottom:10, lineHeight:1.1 }}>
+          {title}
+        </div>
+        <div style={{ color:T.textSub, fontSize:".85rem", lineHeight:1.6, marginBottom:28 }}>
+          {desc}
+        </div>
+        <button onClick={onClose} style={{
+          background:`linear-gradient(135deg, ${color}, ${color}cc)`,
+          border:"none", borderRadius:14, padding:"13px 32px",
+          color:"#fff", fontWeight:800, fontSize:".9rem", cursor:"pointer",
+          boxShadow:`0 8px 24px ${color}50`,
+        }}>
+          Harika! 🎉
+        </button>
+      </div>
+    </div>
+  );
+});
+
+// ─── Profil Sekmesi ───────────────────────────────────────────────────────────
+function ProfileTab({
+  sessions, streak, T, isDark,
+}: { sessions: Session[]; streak: number; T: Theme; isDark: boolean }) {
+  const [profile, setProfile]     = useState<UserProfile>({ name:"", examType:"lgs", joinDate: new Date().toISOString().slice(0,10) });
+  const [editing, setEditing]     = useState(false);
+  const [draftName, setDraftName] = useState("");
+  const [draftExam, setDraftExam] = useState<ExamType>("lgs");
+  const [levelUpShow, setLevelUpShow] = useState(false);
+  const prevLevel = useRef(-1);
+
+  const totalMin  = useMemo(() => sessions.reduce((a,s) => a+s.actualDuration, 0), [sessions]);
+  const level     = getLevel(totalMin);
+  const lvlPct    = getLevelProgress(totalMin);
+  const title     = LEVEL_TITLES[profile.examType][level];
+  const icon      = LEVEL_ICONS[level];
+  const color     = LEVEL_COLORS[level];
+  const nextTitle = LEVEL_TITLES[profile.examType][level + 1];
+  const nextMin   = LEVEL_THRESHOLDS[level + 1];
+  const remaining = nextMin ? nextMin - totalMin : 0;
+
+  // localStorage yükle
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PROFILE_KEY);
+      if (saved) {
+        const p = JSON.parse(saved);
+        setProfile(p);
+        setDraftName(p.name);
+        setDraftExam(p.examType);
+        prevLevel.current = getLevel(sessions.reduce((a,s) => a+s.actualDuration, 0));
+      } else {
+        setEditing(true); // ilk açılışta düzenleme modu
+      }
+    } catch {}
+  }, []);
+
+  // Seviye atlama kontrolü
+  useEffect(() => {
+    if (prevLevel.current === -1) { prevLevel.current = level; return; }
+    if (level > prevLevel.current) {
+      setLevelUpShow(true);
+    }
+    prevLevel.current = level;
+  }, [level]);
+
+  const saveProfile = () => {
+    const p: UserProfile = { name: draftName.trim() || "Öğrenci", examType: draftExam, joinDate: profile.joinDate };
+    setProfile(p);
+    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch {}
+    setEditing(false);
+  };
+
+  // İstatistikler
+  const todayStr2 = new Date().toISOString().slice(0,10);
+  const weekStart2 = (() => { const d=new Date(); d.setDate(d.getDate()-d.getDay()+1); return d.toISOString().slice(0,10); })();
+  const stats = useMemo(() => {
+    const todayMin2 = sessions.filter(s=>s.date===todayStr2).reduce((a,s)=>a+s.actualDuration,0);
+    const weekMin2  = sessions.filter(s=>s.date>=weekStart2).reduce((a,s)=>a+s.actualDuration,0);
+    const totalSessions = sessions.length;
+    const avgFocus = sessions.filter(s=>s.focusScore!==undefined).length > 0
+      ? Math.round(sessions.filter(s=>s.focusScore!==undefined).reduce((a,s)=>a+(s.focusScore??0),0) / sessions.filter(s=>s.focusScore!==undefined).length)
+      : null;
+    const joinDays = Math.ceil((Date.now() - new Date(profile.joinDate).getTime()) / 86400000);
+    return { todayMin2, weekMin2, totalSessions, avgFocus, joinDays };
+  }, [sessions, profile.joinDate, todayStr2, weekStart2]);
+
+  const fmtHours = (m: number) => m >= 60 ? `${Math.floor(m/60)}s ${m%60}dk` : `${m}dk`;
+
+  return (
+    <div className="fade-in" style={{ display:"flex", flexDirection:"column", gap:16 }}>
+
+      {levelUpShow && (
+        <LevelUpModal level={level} examType={profile.examType} T={T} isDark={isDark} onClose={() => setLevelUpShow(false)} />
+      )}
+
+      {/* ── Profil Kartı ── */}
+      <div style={{
+        background: isDark
+          ? `linear-gradient(135deg, ${color}22, rgba(255,255,255,0.04))`
+          : `linear-gradient(135deg, ${color}15, rgba(255,255,255,0.9))`,
+        border:`1.5px solid ${color}50`,
+        borderRadius:24, padding:"28px 24px", textAlign:"center", position:"relative",
+      }}>
+        {/* Rozet ikonu */}
+        <div style={{
+          width:80, height:80, borderRadius:"50%", margin:"0 auto 16px",
+          background:`radial-gradient(circle, ${color}30, ${color}10)`,
+          border:`2px solid ${color}60`,
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:"2.4rem", boxShadow:`0 0 24px ${color}30`,
+        }}>{icon}</div>
+
+        {editing ? (
+          <div style={{ display:"flex", flexDirection:"column", gap:12, alignItems:"center" }}>
+            <input
+              value={draftName}
+              onChange={e => setDraftName(e.target.value)}
+              placeholder="İsmin nedir?"
+              maxLength={30}
+              style={{
+                background:T.surface, border:`1px solid ${color}60`, borderRadius:12,
+                padding:"10px 16px", color:T.text, fontSize:".95rem", fontWeight:700,
+                textAlign:"center", outline:"none", width:"100%", maxWidth:240,
+              }}
+            />
+            <div style={{ display:"flex", gap:8 }}>
+              {(["lgs","yks","genel"] as ExamType[]).map(et => (
+                <button key={et} onClick={() => setDraftExam(et)} style={{
+                  background: draftExam===et ? color : T.surface2,
+                  border:`1px solid ${draftExam===et ? color : T.border}`,
+                  borderRadius:10, padding:"7px 12px", cursor:"pointer",
+                  color: draftExam===et ? "#fff" : T.textSub, fontSize:".72rem", fontWeight:700,
+                }}>{EXAM_LABELS[et]}</button>
+              ))}
+            </div>
+            <button onClick={saveProfile} style={{
+              background:color, border:"none", borderRadius:12, padding:"10px 28px",
+              color:"#fff", fontWeight:800, cursor:"pointer", fontSize:".88rem",
+            }}>Kaydet</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ color:T.text, fontSize:"1.4rem", fontWeight:900, marginBottom:4 }}>
+              {profile.name || "Öğrenci"}
+            </div>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6, marginBottom:6 }}>
+              <span style={{ background:`${color}20`, border:`1px solid ${color}40`, borderRadius:20, padding:"3px 12px", color, fontSize:".75rem", fontWeight:700 }}>
+                {EXAM_LABELS[profile.examType]}
+              </span>
+            </div>
+            <div style={{ color, fontSize:"1.05rem", fontWeight:800, marginBottom:20 }}>{title}</div>
+
+            {/* Seviye ilerleme çubuğu */}
+            <div style={{ marginBottom:8 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                <span style={{ color:T.textMuted, fontSize:".68rem" }}>Seviye {level + 1}</span>
+                {nextTitle && <span style={{ color:T.textMuted, fontSize:".68rem" }}>→ {nextTitle}</span>}
+              </div>
+              <div style={{ height:8, borderRadius:4, background:T.surface2, overflow:"hidden" }}>
+                <div style={{
+                  height:"100%", width:`${lvlPct}%`, borderRadius:4,
+                  background:`linear-gradient(90deg, ${color}99, ${color})`,
+                  transition:"width 0.8s ease", boxShadow:`0 0 8px ${color}60`,
+                }} />
+              </div>
+              <div style={{ display:"flex", justifyContent:"space-between", marginTop:5 }}>
+                <span style={{ color:T.textMuted, fontSize:".65rem" }}>{fmtHours(totalMin)} çalışıldı</span>
+                {remaining > 0 && <span style={{ color:T.textMuted, fontSize:".65rem" }}>{fmtHours(remaining)} kaldı</span>}
+                {remaining === 0 && <span style={{ color, fontSize:".65rem", fontWeight:700 }}>🏆 Maksimum seviye!</span>}
+              </div>
+            </div>
+
+            <button onClick={() => { setDraftName(profile.name); setDraftExam(profile.examType); setEditing(true); }}
+              style={{ background:"none", border:`1px solid ${T.border}`, borderRadius:10, padding:"6px 16px", cursor:"pointer", color:T.textMuted, fontSize:".72rem", marginTop:8 }}>
+              ✏️ Düzenle
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* ── Tüm Seviyeler ── */}
+      <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:20, padding:20 }}>
+        <div style={{ color:T.textSub, fontSize:".72rem", fontWeight:700, letterSpacing:".07em", marginBottom:14 }}>📊 SEVİYE YOLU</div>
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          {LEVEL_TITLES[profile.examType].map((lvlTitle, i) => {
+            const reached  = level >= i;
+            const isCurrent = level === i;
+            const lColor   = LEVEL_COLORS[i];
+            const minNeeded = LEVEL_THRESHOLDS[i];
+            return (
+              <div key={i} style={{
+                display:"flex", alignItems:"center", gap:12, padding:"10px 14px",
+                background: isCurrent ? `${lColor}15` : reached ? T.surface2 : "transparent",
+                border:`1px solid ${isCurrent ? lColor+"60" : reached ? T.border : "transparent"}`,
+                borderRadius:14, transition:"all 0.3s",
+              }}>
+                <div style={{
+                  width:40, height:40, borderRadius:"50%", flexShrink:0,
+                  background: reached ? `${lColor}25` : T.surface2,
+                  border:`2px solid ${reached ? lColor : T.border}`,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:"1.3rem", filter: reached ? "none" : "grayscale(1) opacity(0.4)",
+                }}>{LEVEL_ICONS[i]}</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <span style={{ color: reached ? T.text : T.textMuted, fontWeight: isCurrent ? 800 : 600, fontSize:".88rem" }}>{lvlTitle}</span>
+                    {isCurrent && <span style={{ background:lColor, borderRadius:20, padding:"1px 8px", fontSize:".6rem", color:"#fff", fontWeight:700 }}>Şu an</span>}
+                    {reached && !isCurrent && <span style={{ color:lColor, fontSize:".7rem" }}>✓</span>}
+                  </div>
+                  <div style={{ color:T.textMuted, fontSize:".68rem", marginTop:2 }}>
+                    {minNeeded === 0 ? "Başlangıç" : `${minNeeded >= 60 ? `${Math.floor(minNeeded/60)} saat` : `${minNeeded} dk`} çalışma`}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── İstatistikler ── */}
+      <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:20, padding:20 }}>
+        <div style={{ color:T.textSub, fontSize:".72rem", fontWeight:700, letterSpacing:".07em", marginBottom:14 }}>📈 GENEL İSTATİSTİKLER</div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+          {[
+            { icon:"⏱️", label:"Toplam Çalışma",    val: fmtHours(totalMin) },
+            { icon:"🔥", label:"Güncel Seri",        val: `${streak} gün` },
+            { icon:"📅", label:"Bu Hafta",           val: fmtHours(stats.weekMin2) },
+            { icon:"☀️", label:"Bugün",              val: fmtHours(stats.todayMin2) },
+            { icon:"🎯", label:"Ort. Odak Skoru",    val: stats.avgFocus !== null ? `${stats.avgFocus}/100` : "—" },
+            { icon:"📚", label:"Toplam Oturum",      val: `${stats.totalSessions}` },
+          ].map((s,i) => (
+            <div key={i} style={{ background:T.surface2, borderRadius:14, padding:"14px 12px", display:"flex", alignItems:"center", gap:10 }}>
+              <span style={{ fontSize:"1.3rem" }}>{s.icon}</span>
+              <div>
+                <div style={{ color:T.text, fontWeight:800, fontSize:".95rem" }}>{s.val}</div>
+                <div style={{ color:T.textMuted, fontSize:".62rem" }}>{s.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+// ─── Orman Sistemi ────────────────────────────────────────────────────────────
+const FOREST_KEY = "pomodoro_forest_v1";
+const TOKEN_KEY  = "pomodoro_tokens_v1";
+
+interface ForestItem {
+  id: string;
+  typeId: string;
+  x: number; // % of canvas width
+  y: number; // % of canvas height
+}
+interface ForestData {
+  items: ForestItem[];
+  tokens: number;
+  totalEarned: number;
+}
+
+const FOREST_CATALOG = [
+  // ─── Ağaçlar ───
+  { id:"pine",     emoji:"🌲", label:"Çam",        cost:0,   unlockAt:0,   category:"tree",     desc:"Temel ağaç" },
+  { id:"tree",     emoji:"🌳", label:"Meşe",       cost:5,   unlockAt:10,  category:"tree",     desc:"10 token gerekli" },
+  { id:"palm",     emoji:"🌴", label:"Palmiye",    cost:8,   unlockAt:25,  category:"tree",     desc:"25 token gerekli" },
+  { id:"cherry",   emoji:"🌸", label:"Kiraz",      cost:12,  unlockAt:50,  category:"tree",     desc:"50 token gerekli" },
+  { id:"cactus",   emoji:"🌵", label:"Kaktüs",     cost:6,   unlockAt:20,  category:"tree",     desc:"20 token gerekli" },
+  { id:"seedling", emoji:"🌱", label:"Fidan",      cost:2,   unlockAt:5,   category:"tree",     desc:"5 token gerekli" },
+  // ─── Çiçekler ───
+  { id:"tulip",    emoji:"🌷", label:"Lale",       cost:4,   unlockAt:8,   category:"flower",   desc:"8 token gerekli" },
+  { id:"sunflower",emoji:"🌻", label:"Ayçiçeği",  cost:6,   unlockAt:15,  category:"flower",   desc:"15 token gerekli" },
+  { id:"rose",     emoji:"🌹", label:"Gül",        cost:8,   unlockAt:30,  category:"flower",   desc:"30 token gerekli" },
+  { id:"mushroom", emoji:"🍄", label:"Mantar",     cost:3,   unlockAt:6,   category:"flower",   desc:"6 token gerekli" },
+  // ─── Su ───
+  { id:"droplet",  emoji:"💧", label:"Göl",        cost:10,  unlockAt:20,  category:"water",    desc:"20 token gerekli" },
+  { id:"wave",     emoji:"🌊", label:"Nehir",      cost:15,  unlockAt:40,  category:"water",    desc:"40 token gerekli" },
+  { id:"fountain", emoji:"⛲", label:"Çeşme",      cost:20,  unlockAt:60,  category:"water",    desc:"60 token gerekli" },
+  // ─── Binalar ───
+  { id:"school",   emoji:"🏫", label:"Okul",       cost:25,  unlockAt:75,  category:"building", desc:"75 token gerekli" },
+  { id:"books",    emoji:"📚", label:"Kütüphane",  cost:30,  unlockAt:100, category:"building", desc:"100 token gerekli" },
+  { id:"house",    emoji:"🏡", label:"Kulübe",     cost:18,  unlockAt:50,  category:"building", desc:"50 token gerekli" },
+  // ─── Özel ───
+  { id:"rainbow",  emoji:"🌈", label:"Gökkuşağı",  cost:40,  unlockAt:150, category:"special",  desc:"150 token gerekli" },
+  { id:"star",     emoji:"⭐", label:"Yıldız",     cost:20,  unlockAt:80,  category:"special",  desc:"80 token gerekli" },
+  { id:"moon",     emoji:"🌙", label:"Ay",         cost:15,  unlockAt:60,  category:"special",  desc:"60 token gerekli" },
+  { id:"sun",      emoji:"☀️",  label:"Güneş",      cost:35,  unlockAt:120, category:"special",  desc:"120 token gerekli" },
+];
+
+const CATEGORY_LABELS: Record<string,string> = {
+  tree:"🌲 Ağaçlar", flower:"🌸 Çiçekler & Bitkiler", water:"💧 Su", building:"🏛️ Binalar", special:"✨ Özel"
+};
+
+function calcTokens(session: Session): number {
+  const base  = Math.floor(session.actualDuration / 5);          // her 5 dk = 1 token
+  const bonus = session.focusScore ? Math.floor(session.focusScore / 20) : 0; // odak 0-100 → 0-5 bonus
+  return Math.max(1, base + bonus);
+}
+
+function ForestTab({ sessions, T, isDark }: { sessions: Session[]; T: Theme; isDark: boolean }) {
+  const [forest, setForest] = useState<ForestData>({ items: [], tokens: 0, totalEarned: 0 });
+  const [selectedCatalog, setSelectedCatalog] = useState<string | null>(null);
+  const [dragging, setDragging] = useState<{ itemId: string; offsetX: number; offsetY: number } | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>("tree");
+  const [showShop, setShowShop] = useState(false);
+  const [lastEarned, setLastEarned] = useState<number | null>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const processedSessions = useRef<Set<string>>(new Set());
+
+  // localStorage'dan yükle
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(FOREST_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setForest(parsed);
+      }
+      // Hangi session'lar işlendi
+      const processed = localStorage.getItem("forest_processed_v1");
+      if (processed) processedSessions.current = new Set(JSON.parse(processed));
+    } catch {}
+  }, []);
+
+  // Session'lardan token hesapla
+  useEffect(() => {
+    if (sessions.length === 0) return;
+    let newTokens = 0;
+    const newProcessed = new Set(processedSessions.current);
+    sessions.forEach(s => {
+      if (!newProcessed.has(s.id) && s.actualDuration >= 5) {
+        newTokens += calcTokens(s);
+        newProcessed.add(s.id);
+      }
+    });
+    if (newTokens > 0) {
+      processedSessions.current = newProcessed;
+      try { localStorage.setItem("forest_processed_v1", JSON.stringify([...newProcessed])); } catch {}
+      setForest(prev => {
+        const updated = { ...prev, tokens: prev.tokens + newTokens, totalEarned: prev.totalEarned + newTokens };
+        try { localStorage.setItem(FOREST_KEY, JSON.stringify(updated)); } catch {}
+        return updated;
+      });
+      setLastEarned(newTokens);
+      setTimeout(() => setLastEarned(null), 3000);
+    }
+  }, [sessions]);
+
+  const saveForest = (data: ForestData) => {
+    try { localStorage.setItem(FOREST_KEY, JSON.stringify(data)); } catch {}
+  };
+
+  // Öğe satın al + yerleştir
+  const buyAndPlace = (typeId: string, x: number, y: number) => {
+    const item = FOREST_CATALOG.find(c => c.id === typeId);
+    if (!item || forest.tokens < item.cost) return;
+    const newItem: ForestItem = { id: Date.now().toString(), typeId, x, y };
+    const updated: ForestData = {
+      ...forest,
+      tokens: forest.tokens - item.cost,
+      items: [...forest.items, newItem],
+    };
+    setForest(updated);
+    saveForest(updated);
+    setSelectedCatalog(null);
+  };
+
+  // Sürükleme bırakma - pozisyon güncelle
+  const moveItem = (itemId: string, x: number, y: number) => {
+    const updated = { ...forest, items: forest.items.map(it => it.id === itemId ? { ...it, x, y } : it) };
+    setForest(updated);
+    saveForest(updated);
+  };
+
+  // Öğe sil
+  const removeItem = (itemId: string) => {
+    const it = forest.items.find(i => i.id === itemId);
+    const cat = it ? FOREST_CATALOG.find(c => c.id === it.typeId) : null;
+    const refund = cat ? Math.floor(cat.cost * 0.5) : 0;
+    const updated: ForestData = {
+      ...forest,
+      tokens: forest.tokens + refund,
+      items: forest.items.filter(i => i.id !== itemId),
+    };
+    setForest(updated);
+    saveForest(updated);
+  };
+
+  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!selectedCatalog || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    buyAndPlace(selectedCatalog, x, y);
+  };
+
+  const handleDragStart = (e: React.MouseEvent<HTMLDivElement>, itemId: string) => {
+    e.stopPropagation();
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const item = forest.items.find(i => i.id === itemId);
+    if (!item) return;
+    const elX = (item.x / 100) * rect.width + rect.left;
+    const elY = (item.y / 100) * rect.height + rect.top;
+    setDragging({ itemId, offsetX: e.clientX - elX, offsetY: e.clientY - elY });
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragging || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = Math.min(98, Math.max(2, ((e.clientX - dragging.offsetX - rect.left) / rect.width) * 100));
+    const y = Math.min(95, Math.max(2, ((e.clientY - dragging.offsetY - rect.top) / rect.height) * 100));
+    setForest(prev => ({ ...prev, items: prev.items.map(it => it.id === dragging.itemId ? { ...it, x, y } : it) }));
+  };
+
+  const handleCanvasMouseUp = () => {
+    if (dragging) {
+      saveForest(forest);
+      setDragging(null);
+    }
+  };
+
+  const unlockedIds = new Set(FOREST_CATALOG.filter(c => forest.totalEarned >= c.unlockAt).map(c => c.id));
+  const categories = [...new Set(FOREST_CATALOG.map(c => c.category))];
+
+  // Arka plan rengi/degrade
+  const bgStyle = isDark
+    ? "linear-gradient(180deg, #0a1628 0%, #0d2318 40%, #071a10 100%)"
+    : "linear-gradient(180deg, #87ceeb 0%, #a8d8a8 60%, #5a8a5a 100%)";
+
+  const groundColor = isDark ? "#1a3a1a" : "#4a7a4a";
+
+  return (
+    <div className="fade-in" style={{ display:"flex", flexDirection:"column", gap:14 }}>
+
+      {/* Token başlık */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div>
+          <h2 style={{ color:T.text, fontSize:"1.2rem", fontWeight:800, margin:0 }}>🌲 Dijital Ormanım</h2>
+          <p style={{ color:T.textSub, fontSize:".75rem", margin:"3px 0 0" }}>Çalış, token kazan, ormanını büyüt</p>
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          {lastEarned && (
+            <div style={{ background:"rgba(74,158,142,0.2)", border:"1px solid rgba(74,158,142,0.5)", borderRadius:10, padding:"4px 10px", fontSize:".75rem", color:"#4A9E8E", fontWeight:700, animation:"fade-in 0.3s ease" }}>
+              +{lastEarned} 🪙
+            </div>
+          )}
+          <div style={{ background:"rgba(245,158,11,0.15)", border:"1px solid rgba(245,158,11,0.4)", borderRadius:12, padding:"8px 14px", display:"flex", alignItems:"center", gap:6 }}>
+            <span style={{ fontSize:"1.2rem" }}>🪙</span>
+            <div>
+              <div style={{ color:"#f59e0b", fontWeight:800, fontSize:"1rem", lineHeight:1 }}>{forest.tokens}</div>
+              <div style={{ color:"rgba(245,158,11,0.6)", fontSize:".6rem" }}>token</div>
+            </div>
+          </div>
+          <button onClick={() => setShowShop(v => !v)} style={{
+            background: showShop ? "rgba(155,111,232,0.2)" : T.surface,
+            border:`1px solid ${showShop ? "#9B6FE8" : T.border}`,
+            borderRadius:12, padding:"8px 12px", cursor:"pointer",
+            color: showShop ? "#9B6FE8" : T.textSub, fontWeight:700, fontSize:".8rem",
+          }}>🛒 Mağaza</button>
+        </div>
+      </div>
+
+      {/* Token kazanma bilgisi */}
+      <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:12, padding:"10px 14px", display:"flex", gap:16 }}>
+        {[
+          { icon:"⏱️", text:"Her 5 dk = 1 🪙" },
+          { icon:"🎯", text:"Odak 80+ = +5 bonus 🪙" },
+          { icon:"🏷️", text:"Yerleştir, taşı, sat (%50 iade)" },
+        ].map((h,i) => (
+          <div key={i} style={{ display:"flex", alignItems:"center", gap:5, flex:1 }}>
+            <span style={{ fontSize:".9rem" }}>{h.icon}</span>
+            <span style={{ color:T.textSub, fontSize:".68rem" }}>{h.text}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* ORMAN SAHNESİ */}
+      <div
+        ref={canvasRef}
+        onClick={handleCanvasClick}
+        onMouseMove={handleCanvasMouseMove}
+        onMouseUp={handleCanvasMouseUp}
+        onMouseLeave={handleCanvasMouseUp}
+        style={{
+          position:"relative", width:"100%", height:320,
+          background: bgStyle,
+          borderRadius:20, overflow:"hidden",
+          border:`2px solid ${selectedCatalog ? "#9B6FE8" : T.border}`,
+          cursor: selectedCatalog ? "crosshair" : "default",
+          boxShadow: selectedCatalog ? "0 0 0 3px rgba(155,111,232,0.25)" : "none",
+          transition:"border-color 0.2s, box-shadow 0.2s",
+          userSelect:"none",
+        }}
+      >
+        {/* Gökyüzü yıldızları (dark mode) */}
+        {isDark && Array.from({length:20}, (_,i) => (
+          <div key={i} style={{ position:"absolute", width:2, height:2, borderRadius:1, background:"rgba(255,255,255,0.6)",
+            left:`${(i*37+11)%95}%`, top:`${(i*23+5)%45}%`,
+            animation:`pulse-ring ${1.5+(i%3)*0.5}s ease-in-out infinite`, opacity:0.5+Math.random()*0.5 }} />
+        ))}
+        {/* Bulutlar (light mode) */}
+        {!isDark && [15,45,70].map((left,i) => (
+          <div key={i} style={{ position:"absolute", top:`${8+i*8}%`, left:`${left}%`,
+            fontSize:"1.8rem", opacity:0.7, animation:`pulse-ring ${3+i}s ease-in-out infinite` }}>☁️</div>
+        ))}
+
+        {/* Zemin şeridi */}
+        <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"28%",
+          background: groundColor,
+          borderTop:`2px solid ${isDark?"rgba(74,158,142,0.3)":"rgba(80,130,80,0.5)"}` }} />
+        {/* Çim detayı */}
+        {Array.from({length:12}, (_,i) => (
+          <div key={i} style={{ position:"absolute", bottom:"27%", left:`${i*9+2}%`,
+            fontSize:".7rem", opacity:0.7 }}>🌿</div>
+        ))}
+
+        {/* Yerleştirilen öğeler */}
+        {forest.items.map(item => {
+          const cat = FOREST_CATALOG.find(c => c.id === item.typeId);
+          if (!cat) return null;
+          return (
+            <div
+              key={item.id}
+              onMouseDown={e => handleDragStart(e, item.id)}
+              onDoubleClick={e => { e.stopPropagation(); removeItem(item.id); }}
+              style={{
+                position:"absolute",
+                left:`${item.x}%`, top:`${item.y}%`,
+                transform:"translate(-50%, -50%)",
+                fontSize:"2rem", lineHeight:1,
+                cursor: dragging?.itemId === item.id ? "grabbing" : "grab",
+                transition: dragging?.itemId === item.id ? "none" : "filter 0.2s",
+                filter: dragging?.itemId === item.id ? "drop-shadow(0 4px 8px rgba(0,0,0,0.5))" : "drop-shadow(0 2px 3px rgba(0,0,0,0.3))",
+                zIndex: dragging?.itemId === item.id ? 10 : 1,
+                userSelect:"none",
+              }}
+              title={`${cat.label} — çift tıkla sil (${Math.floor(cat.cost*0.5)} 🪙 iade)`}
+            >
+              {cat.emoji}
+            </div>
+          );
+        })}
+
+        {/* Yerleştirme ipucu */}
+        {selectedCatalog && (
+          <div style={{ position:"absolute", top:10, left:"50%", transform:"translateX(-50%)",
+            background:"rgba(155,111,232,0.85)", borderRadius:20, padding:"5px 14px",
+            color:"#fff", fontSize:".72rem", fontWeight:700, pointerEvents:"none", backdropFilter:"blur(4px)" }}>
+            Yerleştirmek için tıkla • ESC ile iptal
+          </div>
+        )}
+
+        {/* Boş orman mesajı */}
+        {forest.items.length === 0 && !selectedCatalog && (
+          <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
+            <div style={{ fontSize:"3rem", marginBottom:8, opacity:0.4 }}>🌱</div>
+            <div style={{ color:"rgba(255,255,255,0.5)", fontSize:".82rem", fontWeight:600 }}>Mağazadan öğe seç, ormana yerleştir</div>
+          </div>
+        )}
+      </div>
+
+      {/* ESC tuşu ile iptal */}
+      {selectedCatalog && (
+        <div style={{ textAlign:"center" }}>
+          <button onClick={() => setSelectedCatalog(null)} style={{ background:"none", border:"none", color:T.textMuted, cursor:"pointer", fontSize:".78rem", textDecoration:"underline" }}>
+            İptal (ESC)
+          </button>
+        </div>
+      )}
+
+      {/* MAĞAZA */}
+      {showShop && (
+        <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:20, padding:18, marginTop:4 }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+            <div style={{ color:T.text, fontWeight:800, fontSize:".95rem" }}>🛒 Orman Mağazası</div>
+            <div style={{ color:T.textMuted, fontSize:".72rem" }}>Toplam kazanılan: <b style={{color:"#f59e0b"}}>{forest.totalEarned} 🪙</b></div>
+          </div>
+
+          {/* Kategori tabs */}
+          <div style={{ display:"flex", gap:6, marginBottom:14, overflowX:"auto", paddingBottom:4 }}>
+            {categories.map(cat => (
+              <button key={cat} onClick={() => setActiveCategory(cat)} style={{
+                background: activeCategory===cat ? "rgba(155,111,232,0.2)" : T.surface2,
+                border:`1px solid ${activeCategory===cat ? "#9B6FE8" : T.border}`,
+                borderRadius:20, padding:"5px 12px", cursor:"pointer", whiteSpace:"nowrap",
+                color: activeCategory===cat ? "#9B6FE8" : T.textSub, fontSize:".72rem", fontWeight:700, flexShrink:0,
+              }}>{CATEGORY_LABELS[cat]}</button>
+            ))}
+          </div>
+
+          {/* Öğe grid */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
+            {FOREST_CATALOG.filter(c => c.category === activeCategory).map(item => {
+              const unlocked = unlockedIds.has(item.id);
+              const canAfford = forest.tokens >= item.cost;
+              const isSelected = selectedCatalog === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    if (!unlocked || !canAfford) return;
+                    setSelectedCatalog(isSelected ? null : item.id);
+                    if (!isSelected) setShowShop(false);
+                  }}
+                  style={{
+                    background: isSelected ? "rgba(155,111,232,0.2)" : unlocked && canAfford ? T.surface2 : "rgba(0,0,0,0.1)",
+                    border:`1px solid ${isSelected ? "#9B6FE8" : unlocked ? (canAfford ? T.border : "rgba(232,69,74,0.3)") : "rgba(255,255,255,0.05)"}`,
+                    borderRadius:14, padding:"12px 8px", cursor: unlocked && canAfford ? "pointer" : "not-allowed",
+                    display:"flex", flexDirection:"column", alignItems:"center", gap:5,
+                    opacity: unlocked ? 1 : 0.5, transition:"all 0.15s",
+                    transform: isSelected ? "scale(1.03)" : "scale(1)",
+                  }}
+                >
+                  <span style={{ fontSize:"2rem", filter: !unlocked ? "grayscale(1) opacity(0.5)" : "none" }}>{item.emoji}</span>
+                  <span style={{ color: unlocked ? T.text : T.textMuted, fontSize:".72rem", fontWeight:700 }}>{item.label}</span>
+                  {unlocked ? (
+                    <div style={{ display:"flex", alignItems:"center", gap:3 }}>
+                      <span style={{ fontSize:".65rem" }}>🪙</span>
+                      <span style={{ color: canAfford ? "#f59e0b" : "#E8454A", fontSize:".72rem", fontWeight:700 }}>{item.cost}</span>
+                    </div>
+                  ) : (
+                    <div style={{ color:T.textMuted, fontSize:".6rem", textAlign:"center" }}>{item.desc}</div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ color:T.textMuted, fontSize:".68rem", textAlign:"center", marginTop:12 }}>
+            Sahneye tıkla yerleştir · Çift tıkla kaldır (%50 iade)
+          </div>
+        </div>
+      )}
+
+      {/* İstatistik */}
+      <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:16, padding:"14px 16px" }}>
+        <div style={{ color:T.textSub, fontSize:".68rem", fontWeight:700, letterSpacing:".07em", marginBottom:12 }}>🌿 ORMAN İSTATİSTİKLERİ</div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
+          {[
+            { label:"Toplam Token", val:forest.totalEarned, icon:"🪙" },
+            { label:"Kalan Token", val:forest.tokens, icon:"💰" },
+            { label:"Yerleşik Öğe", val:forest.items.length, icon:"🌲" },
+          ].map((s,i) => (
+            <div key={i} style={{ textAlign:"center" }}>
+              <div style={{ fontSize:"1.3rem" }}>{s.icon}</div>
+              <div style={{ color:T.text, fontWeight:800, fontSize:"1.1rem" }}>{s.val}</div>
+              <div style={{ color:T.textMuted, fontSize:".62rem" }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Timer Dairesi (izole — sadece seconds/phase değişince render edilir) ────
+const TimerCircle = memo(function TimerCircle({ seconds, phase, accent, dashOffset, idleDuration, T, isDark, goalMet, circumference }: {
+  seconds: number; phase: "idle"|"work"|"rest";
+  accent: string; dashOffset: number; idleDuration: number; T: Theme; isDark: boolean;
+  goalMet: boolean; circumference: number;
+}) {
+
+  return (
+    <div style={{ position:"relative", width:220, height:220 }}>
+      {phase !== "idle" && (
+        <div style={{
+          position:"absolute", inset:-16, borderRadius:"50%",
+          background:`radial-gradient(circle, ${phase === "rest" ? "#4A9E8E" : accent}2a 0%, transparent 70%)`,
+          animation:"pulse-ring 2.2s ease-in-out infinite",
+        }} />
+      )}
+      {goalMet && <div style={{ position:"absolute", inset:-8, borderRadius:"50%", animation:"celebrate-pulse 1.5s ease-in-out infinite" }} />}
+
+      <svg width="220" height="220" style={{ position:"absolute", inset:0, transform:"rotate(-90deg)" }}>
+        <circle cx="110" cy="110" r="90" fill="none" stroke={isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"} strokeWidth="12" />
+        <circle
+          cx="110" cy="110" r="90" fill="none"
+          stroke={phase === "rest" ? "#4A9E8E" : accent}
+          strokeWidth="12" strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          style={{ transition:"stroke-dashoffset 0.5s ease, stroke 0.6s ease" }}
+        />
+      </svg>
+
+      <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2 }}>
+        {phase !== "idle" && (
+          <div style={{
+            fontSize:".65rem", fontWeight:800, letterSpacing:".08em",
+            color: phase === "rest" ? "#4A9E8E" : accent,
+            background: phase === "rest" ? "rgba(74,158,142,0.12)" : `${accent}18`,
+            borderRadius:6, padding:"2px 8px", marginBottom:4, transition:"all 0.5s ease",
+          }}>
+            {phase === "work" ? "ODAK" : "MOLA"}
+          </div>
+        )}
+        <div style={{ fontSize:"2.8rem", fontWeight:800, color:T.text, letterSpacing:"-2px", fontVariantNumeric:"tabular-nums", lineHeight:1 }}>
+          {phase === "idle" ? fmtTime(idleDuration) : fmtTime(seconds)}
+        </div>
+        <div style={{ fontSize:".75rem", color:T.textSub, marginTop:6, fontWeight:600 }}>
+          {phase === "idle" ? "başlamaya hazır" : phase === "work" ? "🔥 odak zamanı" : "☕ mola zamanı"}
+        </div>
+      </div>
+    </div>
+  );
+});
+
 // ─── Mola Aktiviteleri ───────────────────────────────────────────────────────
 const BREAK_ACTIVITIES = [
   { icon: "💧", text: "Bir bardak su iç. Beyin %75 su — dehidrasyon konsantrasyonu düşürür." },
@@ -906,73 +1714,75 @@ function ExamCountdown({ T, isDark }: { T: Theme; isDark: boolean }) {
   }, []);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
+    <div style={{ display: "flex", gap: 8, width: "100%" }}>
       {EXAM_DATES.map(e => {
-        const rem     = calcRemaining(e.datetime);
-        const isPast  = !rem;
+        const rem    = calcRemaining(e.datetime);
+        const isPast = !rem;
         const isClose = rem ? rem.days <= 30 : false;
 
         return (
           <div key={e.label} style={{
+            flex: 1,
             background: isDark
-              ? `linear-gradient(135deg, ${e.color}22, ${e.color}10)`
-              : `linear-gradient(135deg, ${e.color}10, ${e.color}06)`,
-            border: `1px solid ${isClose ? e.accent : e.color}${isClose ? "66" : "33"}`,
-            borderRadius: 14, padding: "12px 16px",
-            boxShadow: isClose ? `0 0 14px ${e.accent}20` : "none",
+              ? `linear-gradient(145deg, ${e.color}28, ${e.color}10)`
+              : `linear-gradient(145deg, ${e.color}12, ${e.color}06)`,
+            border: `1px solid ${isClose ? e.accent : e.color}${isClose ? "55" : "30"}`,
+            borderRadius: 14, padding: "10px 8px",
+            textAlign: "center",
+            boxShadow: isClose ? `0 0 12px ${e.accent}18` : "none",
             transition: "border-color 0.5s, box-shadow 0.5s",
           }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              {/* Sol: ikon + etiket */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: "1.2rem" }}>{e.icon}</span>
-                <div>
-                  <div style={{ color: e.accent, fontWeight: 800, fontSize: ".88rem" }}>{e.label}</div>
-                  <div style={{ color: T.textMuted, fontSize: ".65rem" }}>
-                    {e.datetime.toLocaleDateString("tr-TR", { day: "numeric", month: "long" })} · {e.datetime.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
-                  </div>
-                </div>
-              </div>
+            {/* İkon + etiket */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginBottom: 6 }}>
+              <span style={{ fontSize: "1rem" }}>{e.icon}</span>
+              <span style={{ color: e.accent, fontWeight: 800, fontSize: ".8rem" }}>{e.label}</span>
+            </div>
 
-              {/* Sağ: geri sayım */}
-              {isPast ? (
-                <div style={{ color: T.textMuted, fontSize: ".8rem", fontWeight: 700 }}>Tamamlandı ✓</div>
-              ) : (
-                <div style={{ display: "flex", gap: 6, alignItems: "flex-end" }}>
+            {isPast ? (
+              <div style={{ color: T.textMuted, fontSize: ".72rem", fontWeight: 700 }}>Tamamlandı ✓</div>
+            ) : (
+              <>
+                {/* Gün — büyük */}
+                <div style={{
+                  color: e.accent, fontWeight: 900,
+                  fontSize: rem.days > 99 ? "1.6rem" : "1.9rem",
+                  lineHeight: 1, fontVariantNumeric: "tabular-nums",
+                }}>
+                  {rem.days}
+                </div>
+                <div style={{ color: T.textMuted, fontSize: ".6rem", marginBottom: 6 }}>gün</div>
+
+                {/* Saat : Dk : Sn — küçük */}
+                <div style={{ display: "flex", justifyContent: "center", gap: 4 }}>
                   {[
-                    { val: rem.days,    unit: "gün"  },
-                    { val: rem.hours,   unit: "sa"   },
-                    { val: rem.minutes, unit: "dk"   },
-                    { val: rem.seconds, unit: "sn"   },
-                  ].map(({ val, unit }) => (
-                    <div key={unit} style={{ textAlign: "center", minWidth: 28 }}>
-                      <div style={{
-                        color: unit === "sn" ? T.textSub : e.accent,
-                        fontWeight: 800,
-                        fontSize: unit === "gün" ? "1.3rem" : unit === "sn" ? ".85rem" : "1rem",
-                        lineHeight: 1,
-                        fontVariantNumeric: "tabular-nums",
-                      }}>
-                        {String(val).padStart(2, "0")}
+                    { val: rem.hours,   unit: "sa" },
+                    { val: rem.minutes, unit: "dk" },
+                    { val: rem.seconds, unit: "sn" },
+                  ].map(({ val, unit }, i) => (
+                    <div key={unit} style={{ display: "flex", alignItems: "center", gap: i < 2 ? 4 : 0 }}>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ color: T.textSub, fontWeight: 700, fontSize: ".72rem", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+                          {String(val).padStart(2, "0")}
+                        </div>
+                        <div style={{ color: T.textMuted, fontSize: ".52rem" }}>{unit}</div>
                       </div>
-                      <div style={{ color: T.textMuted, fontSize: ".58rem", marginTop: 1 }}>{unit}</div>
+                      {i < 2 && <span style={{ color: T.textMuted, fontSize: ".65rem", marginBottom: 6 }}>:</span>}
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
 
-            {/* Son 30 gün: ince progress bar */}
-            {isClose && rem && (
-              <div style={{ marginTop: 10, height: 3, borderRadius: 2, background: `${e.color}30`, overflow: "hidden" }}>
-                <div style={{
-                  height: "100%",
-                  width: `${100 - (rem.days / 30) * 100}%`,
-                  background: e.accent,
-                  borderRadius: 2,
-                  transition: "width 1s linear",
-                }} />
-              </div>
+                {/* Son 30 gün progress */}
+                {isClose && (
+                  <div style={{ marginTop: 8, height: 3, borderRadius: 2, background: `${e.color}25`, overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%",
+                      width: `${100 - (rem.days / 30) * 100}%`,
+                      background: e.accent, borderRadius: 2,
+                      transition: "width 1s linear",
+                    }} />
+                  </div>
+                )}
+              </>
             )}
           </div>
         );
@@ -1601,99 +2411,220 @@ const AnimalCompanion = memo(function AnimalCompanion({ animalId, phase, isDark 
 
 
 // ─── Rapor Paylaşım Butonu ────────────────────────────────────────────────────
-function ReportShareButton({ todayMin, todaySessions, weekMin, totalSessions, streak, isDark, T }: {
+function ReportShareButton({ todayMin, todaySessions, weekMin, totalSessions, streak, isDark, T, totalMin, topSubject, todayFocusAvg }: {
   todayMin: number; todaySessions: number; weekMin: number;
   totalSessions: number; streak: number; isDark: boolean; T: Theme;
+  totalMin: number; topSubject: string; todayFocusAvg: number | null;
 }) {
   const [loading, setLoading] = useState(false);
 
   const buildCanvas = (): Promise<HTMLCanvasElement> => new Promise((resolve) => {
     const canvas = document.createElement("canvas");
-    const W = 540, H = 960;
+    const W = 640, H = 1200;
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext("2d")!;
 
-    // Arka plan
+    // ── Arka plan: derin lacivert → mor → petrol ──
     const bg = ctx.createLinearGradient(0, 0, W, H);
-    bg.addColorStop(0, "#0f1f4f");
-    bg.addColorStop(0.6, "#1e3a8a");
-    bg.addColorStop(1, "#1a0a30");
+    bg.addColorStop(0,   "#080e21");
+    bg.addColorStop(0.4, "#120c2e");
+    bg.addColorStop(0.75,"#0b1e35");
+    bg.addColorStop(1,   "#060f1c");
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-    // Dekoratif daireler
-    ctx.beginPath(); ctx.arc(W + 50, -50, 200, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(249,115,22,0.1)"; ctx.fill();
-    ctx.beginPath(); ctx.arc(-50, H + 50, 180, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(99,102,241,0.12)"; ctx.fill();
+    // Işık lekeleri
+    const addGlow = (cx: number, cy: number, r: number, color: string, alpha: number) => {
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      g.addColorStop(0, color.replace(")", `,${alpha})`).replace("rgb","rgba"));
+      g.addColorStop(1, "transparent");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    };
+    addGlow(W*0.85, H*0.08, 380, "rgb(155,111,232)", 0.22);
+    addGlow(W*0.1,  H*0.55, 300, "rgb(74,158,142)",  0.16);
+    addGlow(W*0.5,  H*0.88, 260, "rgb(74,107,232)",  0.14);
 
     // Nokta grid
-    ctx.fillStyle = "rgba(255,255,255,0.025)";
+    ctx.fillStyle = "rgba(255,255,255,0.018)";
     for (let x = 20; x < W; x += 32) for (let y = 20; y < H; y += 32) {
-      ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, 1.4, 0, Math.PI*2); ctx.fill();
     }
 
+    // Yardımcı: yuvarlak dikdörtgen path
     const rr = (x: number, y: number, w: number, h: number, r: number) => {
       ctx.beginPath();
-      ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-      ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-      ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-      ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+      ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+      ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+      ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+      ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
     };
 
-    // Üst başlık
-    ctx.fillStyle = "rgba(249,115,22,0.18)"; rr(W/2-100,130,200,34,17); ctx.fill();
-    ctx.fillStyle = "#fdba74"; ctx.font = "bold 13px sans-serif"; ctx.textAlign = "center";
-    ctx.fillText("✦  İSTATİSTİKLERİM  ✦", W/2, 153);
+    // Yardımcı: glass kart
+    const glassCard = (x: number, y: number, w: number, h: number, r: number, borderColor = "rgba(255,255,255,0.08)") => {
+      ctx.fillStyle = "rgba(255,255,255,0.045)"; rr(x,y,w,h,r); ctx.fill();
+      ctx.strokeStyle = borderColor; ctx.lineWidth = 1; rr(x,y,w,h,r); ctx.stroke();
+    };
+
+    // ═══════════════════════════════════════════
+    // 1. HEADER
+    // ═══════════════════════════════════════════
+    // Üst etiket
+    glassCard(W/2-145, 44, 290, 44, 22, "rgba(155,111,232,0.4)");
+    ctx.fillStyle = "rgba(155,111,232,0.25)"; rr(W/2-145,44,290,44,22); ctx.fill();
+    ctx.fillStyle = "#c4a8f5"; ctx.font = "700 13px -apple-system,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("⏱  POMODORO İSTATİSTİKLERİM", W/2, 71);
+
+    // Büyük başlık
+    ctx.fillStyle = "white"; ctx.font = "800 38px -apple-system,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("Çalışma Raporum", W/2, 130);
 
     // Tarih
     const months = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
-    const d = new Date();
-    const dateStr = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-    ctx.fillStyle = "rgba(147,197,253,0.6)"; ctx.font = "14px sans-serif";
-    ctx.fillText(dateStr, W/2, 190);
+    const nd = new Date();
+    const dayNames = ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+    ctx.fillStyle = "rgba(196,168,245,0.6)"; ctx.font = "400 14px -apple-system,sans-serif";
+    ctx.fillText(`${dayNames[nd.getDay()]}, ${nd.getDate()} ${months[nd.getMonth()]} ${nd.getFullYear()}`, W/2, 158);
 
-    // Stat kartları
-    const stats = [
-      { label: "Bugün", val: todayMin > 0 ? (todayMin >= 60 ? `${Math.floor(todayMin/60)}sa ${todayMin%60}dk` : `${todayMin}dk`) : "0dk", sub: `${todaySessions} oturum`, color: "#E8454A" },
-      { label: "Bu Hafta", val: weekMin > 0 ? (weekMin >= 60 ? `${Math.floor(weekMin/60)}sa` : `${weekMin}dk`) : "0dk", sub: "çalışma süresi", color: "#4A9E8E" },
-      { label: "Toplam", val: `${totalSessions}`, sub: "oturum", color: "#4A6BE8" },
-      { label: "Seri", val: streak > 0 ? `${streak} 🔥` : "0", sub: "günlük seri", color: "#f97316" },
-    ];
+    // Ayırıcı çizgi
+    const sep = ctx.createLinearGradient(40,0,W-40,0);
+    sep.addColorStop(0,"transparent"); sep.addColorStop(0.5,"rgba(155,111,232,0.4)"); sep.addColorStop(1,"transparent");
+    ctx.strokeStyle = sep; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(40,176); ctx.lineTo(W-40,176); ctx.stroke();
 
-    const cardW = 220, cardH = 110, gap = 20;
-    const startX = (W - (cardW * 2 + gap)) / 2;
-    const startY = 240;
+    // ═══════════════════════════════════════════
+    // 2. BUGÜN KARTI (büyük hero)
+    // ═══════════════════════════════════════════
+    const todayCardY = 196;
+    glassCard(28, todayCardY, W-56, 168, 22, "rgba(232,69,74,0.35)");
+    // Sol renkli şerit
+    ctx.fillStyle = "#E8454A"; ctx.beginPath();
+    ctx.moveTo(28,todayCardY+22); ctx.quadraticCurveTo(28,todayCardY,28+22,todayCardY);
+    ctx.lineTo(28+22,todayCardY); ctx.lineTo(28+5,todayCardY); ctx.quadraticCurveTo(28,todayCardY,28,todayCardY+22); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#E8454A88"; ctx.fillRect(28, todayCardY+22, 5, 168-44);
+    ctx.fillStyle = "#E8454A"; ctx.beginPath();
+    ctx.moveTo(28,todayCardY+168-22); ctx.quadraticCurveTo(28,todayCardY+168,28+22,todayCardY+168);
+    ctx.lineTo(28+5,todayCardY+168); ctx.quadraticCurveTo(28,todayCardY+168,28,todayCardY+168-22); ctx.closePath(); ctx.fill();
 
-    stats.forEach((s, i) => {
-      const col = i % 2, row = Math.floor(i / 2);
-      const x = startX + col * (cardW + gap);
-      const y = startY + row * (cardH + gap);
-      ctx.fillStyle = "rgba(255,255,255,0.07)"; rr(x, y, cardW, cardH, 16); ctx.fill();
-      ctx.strokeStyle = `${s.color}44`; ctx.lineWidth = 1.5; rr(x, y, cardW, cardH, 16); ctx.stroke();
-      ctx.fillStyle = s.color; ctx.font = "bold 11px sans-serif"; ctx.textAlign = "left";
-      ctx.fillText(s.label.toUpperCase(), x + 16, y + 24);
-      ctx.fillStyle = "white"; ctx.font = `bold 32px sans-serif`; ctx.textAlign = "center";
-      ctx.fillText(s.val, x + cardW/2, y + 68);
-      ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.font = "12px sans-serif";
-      ctx.fillText(s.sub, x + cardW/2, y + 90);
-    });
+    ctx.fillStyle = "#f87171"; ctx.font = "700 11px -apple-system,sans-serif"; ctx.textAlign = "left";
+    ctx.fillText("BUGÜN", 50, todayCardY+28);
 
-    // Streak mesajı
-    if (streak >= 3) {
-      const msg = streak >= 30 ? "Efsane seri! 🏆" : streak >= 14 ? "İnanılmaz! 💎" : streak >= 7 ? "Bir hafta! 🌟" : "Harika gidiyorsun!";
-      ctx.fillStyle = "rgba(255,255,255,0.08)"; rr(W/2-130, 720, 260, 44, 12); ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
-      ctx.fillText(msg, W/2, 748);
+    const todayFmt = todayMin >= 60 ? `${Math.floor(todayMin/60)} sa ${todayMin%60} dk` : `${todayMin} dk`;
+    ctx.fillStyle = "white"; ctx.font = "800 52px -apple-system,sans-serif";
+    ctx.fillText(todayFmt, 50, todayCardY+95);
+
+    ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.font = "400 14px -apple-system,sans-serif";
+    ctx.fillText(`${todaySessions} oturum tamamlandı`, 50, todayCardY+124);
+
+    if (todayFocusAvg !== null) {
+      const fc = todayFocusAvg >= 80 ? "#4A9E8E" : todayFocusAvg >= 60 ? "#9B6FE8" : "#f59e0b";
+      ctx.fillStyle = `${fc}30`; rr(50,todayCardY+136,180,26,10); ctx.fill();
+      ctx.strokeStyle = `${fc}60`; ctx.lineWidth = 1; rr(50,todayCardY+136,180,26,10); ctx.stroke();
+      ctx.fillStyle = fc; ctx.font = "700 12px -apple-system,sans-serif";
+      ctx.fillText(`🎯  Odak Skoru: ${Math.round(todayFocusAvg)} / 100`, 64, todayCardY+154);
     }
 
-    // Alt logo
-    ctx.fillStyle = "rgba(255,255,255,0.05)"; rr(W/2-140, H-160, 280, 72, 16); ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.88)"; ctx.font = "bold 17px sans-serif"; ctx.textAlign = "center";
-    ctx.fillText("ogrencikocuadana.com", W/2, H-130);
-    ctx.fillStyle = "rgba(147,197,253,0.55)"; ctx.font = "13px sans-serif";
-    ctx.fillText("LGS & YKS Öğrenci Koçluğu", W/2, H-108);
+    // ═══════════════════════════════════════════
+    // 3. HAFTA + TOPLAM yan yana
+    // ═══════════════════════════════════════════
+    const row2Y = todayCardY + 168 + 14;
+    const halfW = (W-56-12)/2;
 
-    resolve(canvas);
+    // Hafta kartı
+    glassCard(28, row2Y, halfW, 110, 18, "rgba(74,158,142,0.35)");
+    ctx.fillStyle = "#4A9E8E"; ctx.font = "700 10px -apple-system,sans-serif"; ctx.textAlign = "left";
+    ctx.fillText("BU HAFTA", 46, row2Y+26);
+    const weekFmt = weekMin >= 60 ? `${Math.floor(weekMin/60)} sa ${weekMin%60} dk` : `${weekMin} dk`;
+    ctx.fillStyle = "white"; ctx.font = "800 32px -apple-system,sans-serif";
+    ctx.fillText(weekFmt, 46, row2Y+74);
+    ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.font = "400 11px -apple-system,sans-serif";
+    ctx.fillText("çalışma süresi", 46, row2Y+96);
+
+    // Toplam kartı
+    glassCard(28+halfW+12, row2Y, halfW, 110, 18, "rgba(74,107,232,0.35)");
+    ctx.fillStyle = "#4A6BE8"; ctx.font = "700 10px -apple-system,sans-serif"; ctx.textAlign = "left";
+    ctx.fillText("TOPLAM", 46+halfW+12, row2Y+26);
+    const totalFmt = totalMin >= 60 ? `${Math.floor(totalMin/60)} sa ${totalMin%60} dk` : `${totalMin} dk`;
+    ctx.fillStyle = "white"; ctx.font = "800 32px -apple-system,sans-serif";
+    ctx.fillText(totalFmt, 46+halfW+12, row2Y+74);
+    ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.font = "400 11px -apple-system,sans-serif";
+    ctx.fillText("tüm zamanlar", 46+halfW+12, row2Y+96);
+
+    // ═══════════════════════════════════════════
+    // 4. OTURUM + SERİ yan yana
+    // ═══════════════════════════════════════════
+    const row3Y = row2Y + 110 + 12;
+
+    glassCard(28, row3Y, halfW, 110, 18, "rgba(155,111,232,0.35)");
+    ctx.fillStyle = "#9B6FE8"; ctx.font = "700 10px -apple-system,sans-serif"; ctx.textAlign = "left";
+    ctx.fillText("TOPLAM OTURUM", 46, row3Y+26);
+    ctx.fillStyle = "white"; ctx.font = "800 42px -apple-system,sans-serif";
+    ctx.fillText(`${totalSessions}`, 46, row3Y+78);
+    ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.font = "400 11px -apple-system,sans-serif";
+    ctx.fillText("oturum tamamlandı", 46, row3Y+98);
+
+    glassCard(28+halfW+12, row3Y, halfW, 110, 18, "rgba(249,115,22,0.35)");
+    ctx.fillStyle = "#f97316"; ctx.font = "700 10px -apple-system,sans-serif"; ctx.textAlign = "left";
+    ctx.fillText("GÜNLÜK SERİ 🔥", 46+halfW+12, row3Y+26);
+    ctx.fillStyle = "white"; ctx.font = "800 42px -apple-system,sans-serif";
+    ctx.fillText(`${streak}`, 46+halfW+12, row3Y+78);
+    ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.font = "400 11px -apple-system,sans-serif";
+    ctx.fillText("gün seri", 46+halfW+12, row3Y+98);
+
+    // ═══════════════════════════════════════════
+    // 5. EN ÇOK ÇALIŞILAN DERS
+    // ═══════════════════════════════════════════
+    const row4Y = row3Y + 110 + 14;
+    if (topSubject) {
+      glassCard(28, row4Y, W-56, 66, 16, "rgba(74,107,232,0.3)");
+      ctx.fillStyle = "rgba(147,197,253,0.55)"; ctx.font = "700 10px -apple-system,sans-serif"; ctx.textAlign = "left";
+      ctx.fillText("📚  EN ÇOK ÇALIŞILAN DERS", 48, row4Y+24);
+      ctx.fillStyle = "white"; ctx.font = "700 18px -apple-system,sans-serif";
+      ctx.fillText(topSubject, 48, row4Y+52);
+    }
+
+    // ═══════════════════════════════════════════
+    // 6. MOTİVASYON BANNER
+    // ═══════════════════════════════════════════
+    const motivY = row4Y + (topSubject ? 80 : 14);
+    const motiv = streak >= 30 ? "Efsane bir seri! Sen bir şampiyonsun 🏆" :
+                  streak >= 14 ? "İki haftadır durmuyorsun! Harika 💎" :
+                  streak >= 7  ? "Bir haftalık seri! Süper gidiyorsun 🌟" :
+                  streak >= 3  ? "Serini koruyorsun, devam et! 🔥" :
+                  totalSessions >= 50 ? "50+ oturum — gerçek bir çalışkan! 💪" :
+                  todayFocusAvg !== null && todayFocusAvg >= 80 ? "Bugün tam odaktaydın! Harika iş ✨" :
+                  "Her oturum seni hedefe yaklaştırıyor ✨";
+
+    // Gradient banner
+    const motivGrad = ctx.createLinearGradient(28, motivY, W-28, motivY);
+    motivGrad.addColorStop(0, "rgba(155,111,232,0.2)");
+    motivGrad.addColorStop(0.5, "rgba(74,107,232,0.15)");
+    motivGrad.addColorStop(1, "rgba(74,158,142,0.2)");
+    ctx.fillStyle = motivGrad; rr(28, motivY, W-56, 60, 16); ctx.fill();
+    ctx.strokeStyle = "rgba(155,111,232,0.3)"; ctx.lineWidth = 1; rr(28, motivY, W-56, 60, 16); ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.88)"; ctx.font = "700 15px -apple-system,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(motiv, W/2, motivY+36);
+
+    // ═══════════════════════════════════════════
+    // 7. ALT WATERMARK
+    // ═══════════════════════════════════════════
+    const wmY = motivY + 78;
+    // İnce ayırıcı
+    const sep2 = ctx.createLinearGradient(40,0,W-40,0);
+    sep2.addColorStop(0,"transparent"); sep2.addColorStop(0.5,"rgba(255,255,255,0.12)"); sep2.addColorStop(1,"transparent");
+    ctx.strokeStyle = sep2; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(40,wmY); ctx.lineTo(W-40,wmY); ctx.stroke();
+
+    ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.font = "700 16px -apple-system,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("ogrencikocuadana.com", W/2, wmY+36);
+    ctx.fillStyle = "rgba(147,197,253,0.55)"; ctx.font = "400 12px -apple-system,sans-serif";
+    ctx.fillText("LGS & YKS Öğrenci Koçluğu", W/2, wmY+58);
+
+    // Canvas boyutunu içeriğe göre kırp
+    const finalH = wmY + 80;
+    const finalCanvas = document.createElement("canvas");
+    finalCanvas.width = W; finalCanvas.height = finalH;
+    const fCtx = finalCanvas.getContext("2d")!;
+    fCtx.drawImage(canvas, 0, 0);
+    resolve(finalCanvas);
   });
 
   const handleShare = async () => {
@@ -1715,7 +2646,6 @@ function ReportShareButton({ todayMin, todaySessions, weekMin, totalSessions, st
           if ((e as DOMException).name === "AbortError") return;
         }
       }
-      // Fallback: indir
       const link = document.createElement("a");
       link.download = fileName;
       link.href = canvas.toDataURL("image/png");
@@ -1730,248 +2660,19 @@ function ReportShareButton({ todayMin, todaySessions, weekMin, totalSessions, st
       onClick={handleShare}
       disabled={loading}
       style={{
-        width: "100%", marginTop: 18,
-        padding: "14px 20px",
-        background: "linear-gradient(135deg, #1e3a8a, #2563eb)",
-        color: "white", border: "none", borderRadius: 14,
-        fontWeight: 700, fontSize: "0.92rem", cursor: loading ? "wait" : "pointer",
-        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+        width: "100%", marginTop: 18, padding: "16px 20px",
+        background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e3a8a 100%)",
+        color: "white", border: "1px solid rgba(155,111,232,0.4)", borderRadius: 16,
+        fontWeight: 700, fontSize: "0.95rem", cursor: loading ? "wait" : "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
         opacity: loading ? 0.7 : 1,
-        boxShadow: "0 4px 16px rgba(30,58,138,0.3)",
-        transition: "all 0.2s",
+        boxShadow: "0 8px 28px rgba(99,102,241,0.35), inset 0 1px 0 rgba(255,255,255,0.1)",
+        transition: "all 0.2s", letterSpacing: ".03em",
       }}
     >
-      <span>📤</span>
-      {loading ? "Hazırlanıyor..." : "İstatistiklerimi Paylaş"}
+      <span style={{ fontSize: "1.3rem" }}>{loading ? "⏳" : "📊"}</span>
+      {loading ? "Görsel hazırlanıyor..." : "İstatistiklerimi Paylaş"}
     </button>
-  );
-}
-
-// ─── Paylaşım Modalı ──────────────────────────────────────────────────────────
-function ShareModal({ minutes, streak, isDark, T, onClose }: {
-  minutes: number; streak: number; isDark: boolean; T: Theme; onClose: () => void;
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [generated, setGenerated] = useState(false);
-
-  const hours = Math.floor(minutes / 60);
-  const mins  = minutes % 60;
-  const timeStr = hours > 0 ? `${hours} sa ${mins > 0 ? mins + " dk" : ""}` : `${minutes} dk`;
-  const dateStr = getTurkishDate();
-
-  // Canvas kart oluştur
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // 1080x1920 story formatı — 0.5x render
-    const W = 540, H = 960;
-    canvas.width  = W;
-    canvas.height = H;
-
-    // Arka plan gradient
-    const bg = ctx.createLinearGradient(0, 0, W, H);
-    bg.addColorStop(0, "#0f1f4f");
-    bg.addColorStop(0.5, "#1e3a8a");
-    bg.addColorStop(1, "#1e1040");
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, H);
-
-    // Dekoratif daire — sağ üst
-    ctx.beginPath();
-    ctx.arc(W + 60, -60, 220, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(249,115,22,0.12)";
-    ctx.fill();
-
-    // Dekoratif daire — sol alt
-    ctx.beginPath();
-    ctx.arc(-60, H + 60, 200, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(99,102,241,0.15)";
-    ctx.fill();
-
-    // Nokta grid deseni
-    ctx.fillStyle = "rgba(255,255,255,0.03)";
-    for (let x = 20; x < W; x += 32) {
-      for (let y = 20; y < H; y += 32) {
-        ctx.beginPath();
-        ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    // Üst rozet — "BUGÜN TAMAMLANDI"
-    const rozetY = 160;
-    ctx.fillStyle = "rgba(249,115,22,0.2)";
-    roundRect(ctx, W/2 - 110, rozetY - 18, 220, 36, 18);
-    ctx.fill();
-    ctx.fillStyle = "#fdba74";
-    ctx.font = "bold 13px -apple-system, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("✦  BUGÜN TAMAMLANDI  ✦", W/2, rozetY + 5);
-
-    // Ana süre
-    ctx.fillStyle = "white";
-    ctx.font = `bold ${minutes >= 60 ? 88 : 96}px -apple-system, sans-serif`;
-    ctx.textAlign = "center";
-    ctx.fillText(timeStr.trim(), W/2, H/2 - 60);
-
-    // "çalıştım"
-    ctx.font = "300 28px -apple-system, sans-serif";
-    ctx.fillStyle = "rgba(191,219,254,0.9)";
-    ctx.fillText("çalıştım 📚", W/2, H/2 - 10);
-
-    // Ayırıcı çizgi
-    const grad = ctx.createLinearGradient(80, 0, W - 80, 0);
-    grad.addColorStop(0, "transparent");
-    grad.addColorStop(0.5, "rgba(255,255,255,0.2)");
-    grad.addColorStop(1, "transparent");
-    ctx.strokeStyle = grad;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(80, H/2 + 40);
-    ctx.lineTo(W - 80, H/2 + 40);
-    ctx.stroke();
-
-    // Streak bilgisi
-    if (streak > 0) {
-      ctx.fillStyle = "rgba(255,255,255,0.08)";
-      roundRect(ctx, W/2 - 90, H/2 + 65, 180, 52, 14);
-      ctx.fill();
-      const streakIcon = streak >= 30 ? "🏆" : streak >= 7 ? "💎" : "🔥";
-      ctx.font = "bold 22px -apple-system, sans-serif";
-      ctx.fillStyle = streak >= 7 ? "#fdba74" : "#f87171";
-      ctx.fillText(`${streakIcon}  ${streak} günlük seri`, W/2, H/2 + 100);
-    }
-
-    // Tarih
-    ctx.font = "16px -apple-system, sans-serif";
-    ctx.fillStyle = "rgba(147,197,253,0.7)";
-    ctx.fillText(dateStr, W/2, H/2 + 155);
-
-    // Alt logo alanı
-    ctx.fillStyle = "rgba(255,255,255,0.06)";
-    roundRect(ctx, W/2 - 140, H - 160, 280, 72, 16);
-    ctx.fill();
-
-    ctx.font = "bold 18px -apple-system, sans-serif";
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    ctx.fillText("ogrencikocuadana.com", W/2, H - 130);
-
-    ctx.font = "13px -apple-system, sans-serif";
-    ctx.fillStyle = "rgba(147,197,253,0.6)";
-    ctx.fillText("LGS & YKS Öğrenci Koçluğu", W/2, H - 108);
-
-    setGenerated(true);
-  }, []);
-
-  function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-  }
-
-  const shareOrDownload = async () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const fileName = `pomodoro-${dateStr.replace(/ /g, "-")}.png`;
-    if (navigator.canShare) {
-      try {
-        const blob = await new Promise<Blob>((res, rej) =>
-          canvas.toBlob(b => b ? res(b) : rej(new Error("blob failed")), "image/png")
-        );
-        const file = new File([blob], fileName, { type: "image/png" });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: "Pomodoro İstatistiklerim" });
-          return;
-        }
-      } catch (e) {
-        if ((e as DOMException).name === "AbortError") return;
-      }
-    }
-    const link = document.createElement("a");
-    link.download = fileName;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  };
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, zIndex: 9999,
-        background: "rgba(0,0,0,0.75)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: 16,
-        backdropFilter: "blur(6px)",
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          background: isDark ? "#1a1a2e" : "white",
-          borderRadius: 24, padding: "28px 24px",
-          maxWidth: 380, width: "100%",
-          border: `1px solid ${T.border}`,
-          boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
-        }}
-      >
-        {/* Başlık */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <div>
-            <div style={{ color: T.text, fontWeight: 800, fontSize: "1.1rem" }}>🎉 Harika iş!</div>
-            <div style={{ color: T.textSub, fontSize: "0.82rem", marginTop: 2 }}>Arkadaşlarınla paylaş</div>
-          </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: T.textMuted, fontSize: "1.4rem", lineHeight: 1, padding: 4 }}>×</button>
-        </div>
-
-        {/* Canvas önizleme */}
-        <div style={{ borderRadius: 16, overflow: "hidden", marginBottom: 20, boxShadow: "0 8px 32px rgba(0,0,0,0.3)", aspectRatio: "9/16", maxHeight: 280, display: "flex", alignItems: "center", justifyContent: "center", background: "#0f1f4f" }}>
-          <canvas
-            ref={canvasRef}
-            style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-          />
-        </div>
-
-        {/* Butonlar */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <button
-            onClick={shareOrDownload}
-            disabled={!generated}
-            style={{
-              width: "100%", padding: "13px 20px",
-              background: "linear-gradient(135deg, #1e3a8a, #2563eb)",
-              color: "white", border: "none", borderRadius: 12,
-              fontWeight: 700, fontSize: "0.95rem", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              opacity: generated ? 1 : 0.6,
-            }}
-          >
-            <span>📤</span> Paylaş / İndir
-          </button>
-          <button
-            onClick={onClose}
-            style={{
-              width: "100%", padding: "11px 20px",
-              background: "transparent",
-              color: T.textSub, border: `1px solid ${T.border}`, borderRadius: 12,
-              fontWeight: 600, fontSize: "0.88rem", cursor: "pointer",
-            }}
-          >
-            Şimdi değil
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -2032,7 +2733,7 @@ export default function PomodoroPage() {
   const [phase, setPhase]             = useState<"idle"|"work"|"rest">("idle");
   const [seconds, setSeconds]         = useState(0);
   const [sessions, setSessions]       = useState<Session[]>([]);
-  const [tab, setTab]                 = useState<"timer"|"library"|"report"|"sinav"|"tasks">("timer");
+  const [tab, setTab] = useState<"timer"|"library"|"report"|"sinav"|"tasks"|"forest"|"profile">("timer");
   const [loaded, setLoaded]           = useState(false);
   const [isDark, setIsDark]           = useState(true);
   const T = isDark ? DARK_THEME : LIGHT_THEME;
@@ -2082,14 +2783,8 @@ export default function PomodoroPage() {
         setTasks(todayTasks);
         localStorage.setItem(TASKS_KEY, JSON.stringify(todayTasks));
       }
-      // Sayfa açılışında streak'i taze hesapla (cache eski gün yansıtabilir)
-      if (loadedSessions.length > 0) {
-        setTimeout(() => updateStreak(loadedSessions), 50);
-      } else {
-        const sk = localStorage.getItem(STREAK_KEY); if (sk) setStreak(parseInt(sk));
-      }
-
-      // Yokluk kontrolü
+      // Ziyaret & streak günlerini kaydet — en az 1 tamamlanan oturum (≥25 dk) olan günler sayılır
+      // Streak: en az 25 dk çalışılan günler sayılır, updateStreak sessions'dan hesaplar
       const today = todayStr();
       const lastSeen = localStorage.getItem(LAST_SEEN_KEY);
       if (lastSeen && lastSeen !== today) {
@@ -2113,7 +2808,29 @@ export default function PomodoroPage() {
         }
       }
       localStorage.setItem(LAST_SEEN_KEY, today);
+      // Streak'i taze hesapla
+      setTimeout(() => updateStreak(loadedSessions), 50);
       const savedTheme = localStorage.getItem(THEME_KEY); if (savedTheme) setIsDark(savedTheme === 'dark');
+
+      // ── Devam eden timer'ı geri yükle ──────────────────────────────────────
+      const savedTimer = localStorage.getItem(TIMER_KEY);
+      if (savedTimer) {
+        try {
+          const { phase: savedPhase, phaseEnd, workStart } = JSON.parse(savedTimer);
+          const now = Date.now();
+          const remaining = Math.round((phaseEnd - now) / 1000);
+          if (remaining > 5) {
+            // Süre hâlâ devam ediyor — kaldığı yerden başlat
+            phaseEndRef.current  = phaseEnd;
+            workStartRef.current = workStart ?? 0;
+            setPhase(savedPhase);
+            setSeconds(remaining);
+          } else {
+            // Süre dolmuş — temizle, idle'a al
+            localStorage.removeItem(TIMER_KEY);
+          }
+        } catch { localStorage.removeItem(TIMER_KEY); }
+      }
     } catch { /* ilk kullanım */ }
     setLoaded(true);
   }, []);
@@ -2167,28 +2884,30 @@ export default function PomodoroPage() {
 
   // ─── Streak hesaplama ─────────────────────────────────────────────────────
   const updateStreak = useCallback((list: Session[]) => {
-    let goalMin = 90;
-    try {
-      const g = localStorage.getItem(GOAL_KEY);
-      if (g) goalMin = JSON.parse(g).minutes ?? 90;
-    } catch {}
+    // En az 25 dk çalışılan günleri bul
+    const qualifyingDays = new Set(
+      list.filter(s => s.actualDuration >= 25).map(s => s.date)
+    );
 
     let count = 0;
-    const d = new Date();
-    // Bugünden geriye doğru gün gün kontrol
+    const d   = new Date();
+    const today = d.toISOString().slice(0, 10);
+
+    // Bugün henüz 25 dk dolmamışsa dünden başla
+    if (!qualifyingDays.has(today)) {
+      d.setDate(d.getDate() - 1);
+    }
+
     for (let i = 0; i < 366; i++) {
       const ds = d.toISOString().slice(0, 10);
-      const dayMin = list.filter(s => s.date === ds).reduce((a, s) => a + s.actualDuration, 0);
-      if (dayMin >= goalMin) {
+      if (qualifyingDays.has(ds)) {
         count++;
-        d.setDate(d.getDate() - 1);
-      } else if (i === 0) {
-        // Bugün henüz hedef tutmadıysa streak'i kırmaz, dünden kontrol et
         d.setDate(d.getDate() - 1);
       } else {
         break;
       }
     }
+
     setStreak(count);
     try { localStorage.setItem(STREAK_KEY, count.toString()); } catch {}
   }, []);
@@ -2336,16 +3055,19 @@ export default function PomodoroPage() {
     const now = Date.now();
     workStartRef.current = now;
     phaseEndRef.current = now + mode.work * 60 * 1000;
+    try { localStorage.setItem(TIMER_KEY, JSON.stringify({ phase: "work", phaseEnd: phaseEndRef.current, workStart: now })); } catch {}
     setPhase("work"); setSeconds(mode.work * 60);
   }, [mode.work]);
 
   const startRest = useCallback(() => {
     const now = Date.now(); phaseEndRef.current = now + mode.rest * 60 * 1000;
+    try { localStorage.setItem(TIMER_KEY, JSON.stringify({ phase: "rest", phaseEnd: phaseEndRef.current, workStart: 0 })); } catch {}
     setPhase("rest"); setSeconds(mode.rest * 60);
   }, [mode.rest]);
 
   const reset = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
+    try { localStorage.removeItem(TIMER_KEY); } catch {}
     setPhase("idle"); setSeconds(0);
   }, []);
 
@@ -2358,6 +3080,7 @@ export default function PomodoroPage() {
     playBeep("work_end");
     sendNotification("Ders tamamlandı! 🎉", `${mode.work} dakika çalıştın. Mola zamanı!`);
     const now = Date.now(); phaseEndRef.current = now + mode.rest * 60 * 1000;
+    try { localStorage.setItem(TIMER_KEY, JSON.stringify({ phase: "rest", phaseEnd: phaseEndRef.current, workStart: 0 })); } catch {}
     setPhase("rest"); setSeconds(mode.rest * 60);
   }, [mode.work, mode.rest, recordSession, playBeep, sendNotification, selectedSubject]);
 
@@ -2374,10 +3097,12 @@ export default function PomodoroPage() {
           playBeep("work_end");
           sendNotification("Ders tamamlandı! 🎉", `${mode.work} dakika çalıştın. Mola zamanı!`);
           const now = Date.now(); phaseEndRef.current = now + mode.rest * 60 * 1000;
+          try { localStorage.setItem(TIMER_KEY, JSON.stringify({ phase: "rest", phaseEnd: phaseEndRef.current, workStart: 0 })); } catch {}
           setPhase("rest"); setSeconds(mode.rest * 60);
         } else {
           playBeep("rest_end");
           sendNotification("Mola bitti! ⏰", "Tekrar çalışmaya hazır mısın?");
+          try { localStorage.removeItem(TIMER_KEY); } catch {}
           setPhase("idle"); setSeconds(0);
         }
       } else { setSeconds(remaining); }
@@ -2385,27 +3110,58 @@ export default function PomodoroPage() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [phase, mode.work, mode.rest, recordSession, playBeep, sendNotification, selectedSubject]);
 
-  // ─── Hesaplamalar ─────────────────────────────────────────────────────────
-  const today    = todayStr();
-  const wStart   = weekStart();
-  const todaySessions = sessions.filter(s => s.date === today);
-  const weekSessions  = sessions.filter(s => s.date >= wStart);
-  const todayMin = todaySessions.reduce((a, s) => a + s.actualDuration, 0);
-  const weekMin  = weekSessions.reduce((a, s) => a + s.actualDuration, 0);
-  const goalPct  = dailyGoal.minutes > 0 ? Math.min(100, (todayMin / dailyGoal.minutes) * 100) : 0;
-  const goalMet  = dailyGoal.minutes > 0 && todayMin >= dailyGoal.minutes;
-  const animalName = ANIMALS.find(a => a.id === dailyGoal.animal)?.name ?? "Kapibara";
-  const motivation = getMotivation(goalPct, goalMet, animalName);
+  // ─── Hesaplamalar (useMemo ile optimize) ─────────────────────────────────
+  const today  = useMemo(() => todayStr(), []);
+  const wStart = useMemo(() => weekStart(), []);
 
-  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-  const yStr = yesterday.toISOString().slice(0, 10);
-  const yMin = sessions.filter(s => s.date === yStr).reduce((a, s) => a + s.actualDuration, 0);
-  const yMissed = dailyGoal.minutes > 0 && yMin < dailyGoal.minutes && yMin === 0;
+  const todaySessions = useMemo(() => sessions.filter(s => s.date === today), [sessions, today]);
+  const weekSessions  = useMemo(() => sessions.filter(s => s.date >= wStart), [sessions, wStart]);
+  const todayMin  = useMemo(() => todaySessions.reduce((a,s) => a + s.actualDuration, 0), [todaySessions]);
+  const weekMin   = useMemo(() => weekSessions.reduce((a,s) => a + s.actualDuration, 0), [weekSessions]);
+  const goalPct   = useMemo(() => dailyGoal.minutes > 0 ? Math.min(100, (todayMin / dailyGoal.minutes) * 100) : 0, [todayMin, dailyGoal.minutes]);
+  const goalMet   = useMemo(() => dailyGoal.minutes > 0 && todayMin >= dailyGoal.minutes, [todayMin, dailyGoal.minutes]);
+  const animalName = useMemo(() => ANIMALS.find(a => a.id === dailyGoal.animal)?.name ?? "Kapibara", [dailyGoal.animal]);
+  const motivation = useMemo(() => getMotivation(goalPct, goalMet, animalName), [goalPct, goalMet, animalName]);
 
-  const totalSec   = phase === "work" ? mode.work * 60 : phase === "rest" ? mode.rest * 60 : 1;
-  const progress   = phase === "idle" ? 0 : ((totalSec - seconds) / totalSec) * 100;
-  const circumference = 2 * Math.PI * 90;
-  const dashOffset = circumference - (progress / 100) * circumference;
+  const { yMissed } = useMemo(() => {
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = yesterday.toISOString().slice(0, 10);
+    const yMin = sessions.filter(s => s.date === yStr).reduce((a,s) => a + s.actualDuration, 0);
+    return { yMissed: dailyGoal.minutes > 0 && yMin < dailyGoal.minutes && yMin === 0 };
+  }, [sessions, dailyGoal.minutes]);
+
+  const circumference  = 2 * Math.PI * 90;
+  const totalSec       = phase === "work" ? mode.work * 60 : phase === "rest" ? mode.rest * 60 : 1;
+  const progress       = phase === "idle" ? 0 : ((totalSec - seconds) / totalSec) * 100;
+  const dashOffset     = circumference - (progress / 100) * circumference;
+
+  // ─── Rapor verilerini önceden hesapla ─────────────────────────────────────
+  const reportData = useMemo(() => {
+    const scored = sessions.filter(s => s.focusScore !== undefined);
+    const todayScored = todaySessions.filter(s => s.focusScore !== undefined);
+    const todayFocusAvg = todayScored.length > 0
+      ? Math.round(todayScored.reduce((a,s) => a+(s.focusScore??0),0) / todayScored.length)
+      : null;
+    const allFocusAvg = scored.length > 0
+      ? Math.round(scored.reduce((a,s) => a+(s.focusScore??0),0) / scored.length)
+      : null;
+
+    const subjectMap: Record<string,number> = {};
+    sessions.forEach(s => { const k = s.subject ?? "Diğer"; subjectMap[k] = (subjectMap[k]??0) + s.actualDuration; });
+    const subjectSorted = Object.entries(subjectMap).sort((a,b) => b[1]-a[1]);
+    const subjectTotal  = subjectSorted.reduce((a,b) => a+b[1], 0);
+    const topSubject    = subjectSorted[0]?.[0] ?? "";
+    const top3Subjects  = subjectSorted.slice(0,3).map(([name]) => name);
+
+    const last7 = Array.from({length:7}, (_,i) => {
+      const d = new Date(); d.setDate(d.getDate()-6+i);
+      return d.toISOString().slice(0,10);
+    });
+
+    const totalMin = sessions.reduce((a,s) => a+s.actualDuration, 0);
+
+    return { scored, todayFocusAvg, allFocusAvg, subjectSorted, subjectTotal, topSubject, top3Subjects, last7, totalMin };
+  }, [sessions, todaySessions]);
 
   if (!loaded) return (
     <main style={{ minHeight: "100vh", background: "linear-gradient(160deg, #1a1630, #1e1c3a)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -2426,6 +3182,8 @@ export default function PomodoroPage() {
         @keyframes goal-bounce { 0%{transform:translateY(0)} 30%{transform:translateY(-10px)} 60%{transform:translateY(-4px)} 80%{transform:translateY(-7px)} 100%{transform:translateY(0)} }
         @keyframes book-popup-in { from{opacity:0;transform:translateX(-50%) translateY(calc(-100% + 8px))} to{opacity:1;transform:translateX(-50%) translateY(-100%)} }
         @keyframes popup-in { from{opacity:0;transform:translateX(-50%) translateY(6px) scale(0.9)} to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)} }
+        @keyframes rotate-slow { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes scale-in { from{opacity:0;transform:scale(0.7)} to{opacity:1;transform:scale(1)} }
         @keyframes phase-glow { 0%,100%{opacity:0.6} 50%{opacity:1} }
         .fade-in { animation: fade-in 0.35s cubic-bezier(0.16,1,0.3,1) forwards; }
         .tab-btn { border:none;cursor:pointer;transition:all 0.2s;font-weight:600;border-radius:10px;padding:10px 14px;font-size:.8rem; }
@@ -2556,63 +3314,51 @@ export default function PomodoroPage() {
               </div>
             )}
 
-            {/* Yol arkadaşı */}
-            <AnimalCompanion animalId={dailyGoal.animal} phase={phase === "rest" ? "rest" : phase === "work" ? "work" : "idle"} isDark={isDark} />
-
-            {/* Timer dairesi */}
-            <div style={{ position: "relative", width: 220, height: 220 }}>
-              {/* Phase glow ring */}
-              {phase !== "idle" && (
-                <div style={{
-                  position: "absolute", inset: -16, borderRadius: "50%",
-                  background: `radial-gradient(circle, ${phase === "rest" ? "#4A9E8E" : mode.accent}2a 0%, transparent 70%)`,
-                  animation: "pulse-ring 2.2s ease-in-out infinite",
-                }} />
-              )}
-              {goalMet && <div style={{ position: "absolute", inset: -8, borderRadius: "50%", animation: "celebrate-pulse 1.5s ease-in-out infinite" }} />}
-
-              {/* Track + progress ring */}
-              <svg width="220" height="220" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
-                <circle cx="110" cy="110" r="90" fill="none" stroke={isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"} strokeWidth="12" />
-                <circle
-                  cx="110" cy="110" r="90" fill="none"
-                  stroke={phase === "rest" ? "#4A9E8E" : mode.accent}
-                  strokeWidth="12" strokeLinecap="round"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={dashOffset}
-                  style={{ transition: "stroke-dashoffset 0.5s ease, stroke 0.6s ease" }}
-                />
-              </svg>
-
-              {/* Inner face */}
-              <div style={{
-                position: "absolute", inset: 0,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                gap: 2,
-              }}>
-                {/* Phase chip */}
-                {phase !== "idle" && (
-                  <div style={{
-                    fontSize: ".65rem", fontWeight: 800, letterSpacing: ".08em",
-                    color: phase === "rest" ? "#4A9E8E" : mode.accent,
-                    background: phase === "rest" ? "rgba(74,158,142,0.12)" : `${mode.accent}18`,
-                    borderRadius: 6, padding: "2px 8px", marginBottom: 4,
-                    transition: "all 0.5s ease",
-                  }}>
-                    {phase === "work" ? "ODAK" : "MOLA"}
-                  </div>
-                )}
-                <div style={{
-                  fontSize: "2.8rem", fontWeight: 800, color: T.text,
-                  letterSpacing: "-2px", fontVariantNumeric: "tabular-nums",
-                  lineHeight: 1,
-                }}>
-                  {phase === "idle" ? fmtTime(mode.work * 60) : fmtTime(seconds)}
-                </div>
-                <div style={{ fontSize: ".75rem", color: T.textSub, marginTop: 6, fontWeight: 600 }}>
-                  {phase === "idle" ? "başlamaya hazır" : phase === "work" ? "🔥 odak zamanı" : "☕ mola zamanı"}
+            {/* Sınav Geri Sayım Butonu */}
+            <button
+              onClick={() => setTab("sinav")}
+              style={{
+                width: "100%", maxWidth: 520,
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                background: T.surface, border: `1px solid ${T.border}`,
+                borderRadius: 16, padding: "16px 20px", cursor: "pointer",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#9B6FE8"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = T.border; }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <span style={{ fontSize: "1.5rem" }}>🎓</span>
+                <div style={{ textAlign: "left" }}>
+                  <div style={{ color: T.text, fontWeight: 700, fontSize: ".9rem" }}>Sınav Geri Sayımı</div>
+                  <div style={{ color: T.textSub, fontSize: ".72rem", marginTop: 2 }}>LGS · TYT · AYT</div>
                 </div>
               </div>
+              <span style={{ color: T.textMuted, fontSize: ".85rem" }}>›</span>
+            </button>
+
+            {/* Maskot + Timer — yan yana */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, width: "100%" }}>
+              <AnimalCompanion animalId={dailyGoal.animal} phase={phase === "rest" ? "rest" : phase === "work" ? "work" : "idle"} isDark={isDark} />
+
+              {/* Gradient ayraç */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "0 18px", flexShrink: 0 }}>
+                <div style={{ width: 1, height: 36, background: `linear-gradient(to bottom, transparent, ${mode.accent}80)` }} />
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: mode.accent, opacity: 0.7, boxShadow: `0 0 8px ${mode.accent}` }} />
+                <div style={{ width: 1, height: 36, background: `linear-gradient(to top, transparent, ${mode.accent}80)` }} />
+              </div>
+
+              <TimerCircle
+                seconds={seconds}
+                phase={phase}
+                accent={mode.accent}
+                dashOffset={dashOffset}
+                idleDuration={mode.work * 60}
+                T={T}
+                isDark={isDark}
+                goalMet={goalMet}
+                circumference={circumference}
+              />
             </div>
 
             {/* Ders Seçici — sadece idle fazında */}
@@ -2678,29 +3424,6 @@ export default function PomodoroPage() {
             {/* Sanal Kütüphane Banner */}
             <StudyBanner isActive={phase === "work"} />
 
-            {/* Araçlar — idle modda göster */}
-            {phase === "idle" && (
-              <>
-                <div style={{ color: T.textSub, fontSize: ".72rem", fontWeight: 700, letterSpacing: "1.5px", width: "100%" }}>ARAÇLAR</div>
-                <div style={{ display: "flex", gap: 12, width: "100%" }}>
-                  <div className="tool-card" onClick={() => setTab("report")} style={{ background: isDark ? "linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))" : "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7))" }}>
-                    <div style={{ padding: 18 }}>
-                      <div style={{ fontSize: "1.6rem", marginBottom: 10 }}>📊</div>
-                      <div style={{ color: T.text, fontWeight: 800, fontSize: ".95rem", marginBottom: 3 }}>Rapor</div>
-                      <div style={{ color: T.textSub, fontSize: ".75rem" }}>İstatistiklerini gör</div>
-                    </div>
-                  </div>
-                  <div className="tool-card" onClick={() => setTab("sinav")} style={{ background: isDark ? "linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))" : "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7))" }}>
-                    <div style={{ padding: 18 }}>
-                      <div style={{ fontSize: "1.6rem", marginBottom: 10 }}>🎓</div>
-                      <div style={{ color: T.text, fontWeight: 800, fontSize: ".95rem", marginBottom: 3 }}>Sınav</div>
-                      <div style={{ color: T.textSub, fontSize: ".75rem" }}>LGS / YKS sayacı</div>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
             {/* Ambient ses */}
             <div style={{ width: "100%", maxWidth: 520 }}>
               <p style={{ color: T.textSub, fontSize: ".72rem", fontWeight: 700, letterSpacing: "1.5px", textAlign: "center", marginBottom: 10 }}>🎵 ODAK MÜZİĞİ</p>
@@ -2745,6 +3468,10 @@ export default function PomodoroPage() {
         )}
 
         {/* ── GÖREVLER ── */}
+        {tab === "forest" && (
+          <ForestTab sessions={sessions} T={T} isDark={isDark} />
+        )}
+
         {tab === "tasks" && (
           <TasksTab
             tasks={tasks}
@@ -2822,113 +3549,75 @@ export default function PomodoroPage() {
             </div>
 
             {/* ── ODAK SKORU ── */}
-            {(() => {
-              const scored = sessions.filter(s => s.focusScore !== undefined);
-              if (scored.length === 0) return null;
-
-              const todayScored = todaySessions.filter(s => s.focusScore !== undefined);
-              const todayAvg    = todayScored.length > 0
-                ? Math.round(todayScored.reduce((a,s) => a + (s.focusScore ?? 0), 0) / todayScored.length)
-                : null;
-              const allAvg = Math.round(scored.reduce((a,s) => a + (s.focusScore ?? 0), 0) / scored.length);
-
-              const last7 = Array.from({length:7}, (_,i) => {
-                const d = new Date(); d.setDate(d.getDate()-6+i);
-                return d.toISOString().slice(0,10);
-              });
-
-              return (
-                <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:20, padding:22, marginTop:18 }}>
-                  <div style={{ color:T.textSub, fontSize:".78rem", fontWeight:700, letterSpacing:".05em", marginBottom:18 }}>🎯 ODAK SKORU</div>
-
-                  {/* Ortalama kartlar */}
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:20 }}>
-                    {[
-                      { label:"BUGÜN",          val:todayAvg },
-                      { label:"TÜM ZAMANLAR",   val:allAvg   },
-                    ].map(({ label, val }) => (
-                      <div key={label} style={{ background:T.surface2, borderRadius:14, padding:"14px 16px", textAlign:"center" }}>
-                        <div style={{ color:T.textSub, fontSize:".68rem", fontWeight:700, letterSpacing:".06em", marginBottom:8 }}>{label}</div>
-                        {val !== null ? (
-                          <>
-                            <div style={{ color:scoreColor(val), fontSize:"1.9rem", fontWeight:800, lineHeight:1, marginBottom:6 }}>{val}</div>
-                            <div style={{ height:4, borderRadius:2, background:T.surface, overflow:"hidden" }}>
-                              <div style={{ height:"100%", width:`${val}%`, background:scoreColor(val), borderRadius:2, transition:"width 0.6s ease" }} />
-                            </div>
-                          </>
-                        ) : (
-                          <div style={{ color:T.textMuted, fontSize:".8rem" }}>Henüz yok</div>
-                        )}
+            {reportData.scored.length > 0 && (
+              <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:20, padding:22, marginTop:18 }}>
+                <div style={{ color:T.textSub, fontSize:".78rem", fontWeight:700, letterSpacing:".05em", marginBottom:18 }}>🎯 ODAK SKORU</div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:20 }}>
+                  {[
+                    { label:"BUGÜN",        val: reportData.todayFocusAvg },
+                    { label:"TÜM ZAMANLAR", val: reportData.allFocusAvg   },
+                  ].map(({ label, val }) => (
+                    <div key={label} style={{ background:T.surface2, borderRadius:14, padding:"14px 16px", textAlign:"center" }}>
+                      <div style={{ color:T.textSub, fontSize:".68rem", fontWeight:700, letterSpacing:".06em", marginBottom:8 }}>{label}</div>
+                      {val !== null ? (
+                        <>
+                          <div style={{ color:scoreColor(val), fontSize:"1.9rem", fontWeight:800, lineHeight:1, marginBottom:6 }}>{val}</div>
+                          <div style={{ height:4, borderRadius:2, background:T.surface, overflow:"hidden" }}>
+                            <div style={{ height:"100%", width:`${val}%`, background:scoreColor(val), borderRadius:2, transition:"width 0.6s ease" }} />
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ color:T.textMuted, fontSize:".8rem" }}>Henüz yok</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ color:T.textSub, fontSize:".72rem", fontWeight:700, letterSpacing:".06em", marginBottom:10 }}>HAFTALIK ODAK TRENDİ</div>
+                <div style={{ display:"flex", gap:6, alignItems:"flex-end", height:72 }}>
+                  {reportData.last7.map(ds => {
+                    const daySc = sessions.filter(s => s.date === ds && s.focusScore !== undefined);
+                    const avg   = daySc.length > 0 ? Math.round(daySc.reduce((a,s) => a+(s.focusScore??0),0)/daySc.length) : null;
+                    const barH  = avg !== null ? Math.max((avg/100)*56, 6) : 0;
+                    const dLabel = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"][new Date(ds+"T12:00:00").getDay()===0?6:new Date(ds+"T12:00:00").getDay()-1];
+                    const col   = avg !== null ? scoreColor(avg) : T.surface2;
+                    return (
+                      <div key={ds} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+                        {avg !== null && <div style={{ color:col, fontSize:".6rem", fontWeight:700 }}>{avg}</div>}
+                        <div style={{ width:"100%", borderRadius:4, background:avg!==null?col:T.surface2, height:barH||4, transition:"height 0.4s ease", opacity:avg!==null?1:0.3 }} />
+                        <span style={{ color:ds===today?T.text:T.textMuted, fontSize:".62rem", fontWeight:ds===today?700:400 }}>{dLabel}</span>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
-                  {/* Haftalık trend */}
-                  <div style={{ color:T.textSub, fontSize:".72rem", fontWeight:700, letterSpacing:".06em", marginBottom:10 }}>HAFTALIK ODAK TRENDİ</div>
-                  <div style={{ display:"flex", gap:6, alignItems:"flex-end", height:72 }}>
-                    {last7.map(ds => {
-                      const daySc  = sessions.filter(s => s.date === ds && s.focusScore !== undefined);
-                      const avg    = daySc.length > 0
-                        ? Math.round(daySc.reduce((a,s) => a + (s.focusScore ?? 0), 0) / daySc.length)
-                        : null;
-                      const barH   = avg !== null ? Math.max((avg / 100) * 56, 6) : 0;
-                      const dLabel = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"][
-                        new Date(ds+"T12:00:00").getDay() === 0 ? 6 : new Date(ds+"T12:00:00").getDay()-1
-                      ];
-                      const isToday = ds === today;
-                      const col    = avg !== null ? scoreColor(avg) : T.surface2;
+            {/* ── DERS DAĞILIMI ── */}
+            {reportData.subjectSorted.length > 0 && (
+              <>
+                <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:20, padding:22, marginTop:18 }}>
+                  <div style={{ color:T.textSub, fontSize:".78rem", fontWeight:700, letterSpacing:".05em", marginBottom:16 }}>📚 DERS DAĞILIMI (TÜM ZAMANLAR)</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    {reportData.subjectSorted.map(([name, mins]) => {
+                      const pct = reportData.subjectTotal > 0 ? (mins/reportData.subjectTotal)*100 : 0;
+                      const col = subjectColor(name);
                       return (
-                        <div key={ds} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-                          {avg !== null && <div style={{ color:col, fontSize:".6rem", fontWeight:700 }}>{avg}</div>}
-                          <div style={{ width:"100%", borderRadius:4, background: avg !== null ? col : T.surface2, height: barH || 4, transition:"height 0.4s ease", opacity: avg !== null ? 1 : 0.3 }} />
-                          <span style={{ color:isToday?T.text:T.textMuted, fontSize:".62rem", fontWeight:isToday?700:400 }}>{dLabel}</span>
+                        <div key={name}>
+                          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                              <div style={{ width:8, height:8, borderRadius:4, background:col, flexShrink:0 }} />
+                              <span style={{ color:T.text, fontSize:".83rem", fontWeight:600 }}>{name}</span>
+                            </div>
+                            <span style={{ color:T.textSub, fontSize:".78rem" }}>{fmtMin(mins)} · {Math.round(pct)}%</span>
+                          </div>
+                          <div style={{ height:6, borderRadius:3, background:T.surface2, overflow:"hidden" }}>
+                            <div style={{ height:"100%", width:`${pct}%`, background:col, borderRadius:3, transition:"width 0.6s ease" }} />
+                          </div>
                         </div>
                       );
                     })}
                   </div>
                 </div>
-              );
-            })()}
-
-            {/* ── DERS DAĞILIMI ── */}
-            {(() => {
-              // Bu haftanın ders dağılımı
-              const subjectMap: Record<string, number> = {};
-              sessions.forEach(s => { const k = s.subject ?? "Diğer"; subjectMap[k] = (subjectMap[k] ?? 0) + s.actualDuration; });
-              const sorted = Object.entries(subjectMap).sort((a,b) => b[1]-a[1]);
-              const total  = sorted.reduce((a,b) => a + b[1], 0);
-              if (sorted.length === 0) return null;
-
-              // Haftalık ders trendi (son 7 gün × ders)
-              const last7 = Array.from({length:7}, (_,i) => { const d=new Date(); d.setDate(d.getDate()-6+i); return d.toISOString().slice(0,10); });
-              const top3  = sorted.slice(0,3).map(([name]) => name);
-
-              return (
-                <>
-                  {/* Ders bazlı toplam */}
-                  <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:20, padding:22, marginTop:18 }}>
-                    <div style={{ color:T.textSub, fontSize:".78rem", fontWeight:700, letterSpacing:".05em", marginBottom:16 }}>📚 DERS DAĞILIMI (TÜM ZAMANLAR)</div>
-                    <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                      {sorted.map(([name, mins]) => {
-                        const pct = total > 0 ? (mins/total)*100 : 0;
-                        const col = subjectColor(name);
-                        return (
-                          <div key={name}>
-                            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
-                              <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-                                <div style={{ width:8, height:8, borderRadius:4, background:col, flexShrink:0 }} />
-                                <span style={{ color:T.text, fontSize:".83rem", fontWeight:600 }}>{name}</span>
-                              </div>
-                              <span style={{ color:T.textSub, fontSize:".78rem" }}>{fmtMin(mins)} · {Math.round(pct)}%</span>
-                            </div>
-                            <div style={{ height:6, borderRadius:3, background:T.surface2, overflow:"hidden" }}>
-                              <div style={{ height:"100%", width:`${pct}%`, background:col, borderRadius:3, transition:"width 0.6s ease" }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
 
                   {/* Günlük pasta benzeri özet */}
                   <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:20, padding:22, marginTop:14 }}>
@@ -2962,55 +3651,43 @@ export default function PomodoroPage() {
                   </div>
 
                   {/* Haftalık ders trendi */}
-                  {top3.length > 0 && (
+                  {reportData.top3Subjects.length > 0 && (
                     <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:20, padding:22, marginTop:14 }}>
                       <div style={{ color:T.textSub, fontSize:".78rem", fontWeight:700, letterSpacing:".05em", marginBottom:6 }}>📈 HAFTALIK DERS TRENDİ (EN POPÜLER 3)</div>
-                      {/* Lejant */}
                       <div style={{ display:"flex", gap:12, marginBottom:14, flexWrap:"wrap" }}>
-                        {top3.map(name => (
+                        {reportData.top3Subjects.map(name => (
                           <div key={name} style={{ display:"flex", alignItems:"center", gap:5 }}>
                             <div style={{ width:8, height:8, borderRadius:4, background:subjectColor(name) }} />
                             <span style={{ color:T.textSub, fontSize:".74rem" }}>{name}</span>
                           </div>
                         ))}
                       </div>
-                      {/* Çubuk grafik — her gün için top3 dersleri ayrı renkle */}
                       <div style={{ display:"flex", gap:6, alignItems:"flex-end", height:80 }}>
-                        {last7.map(ds => {
+                        {reportData.last7.map(ds => {
                           const daySessions = sessions.filter(s => s.date === ds);
                           const dayTotal    = daySessions.reduce((a,s)=>a+s.actualDuration,0);
-                          const maxDay      = Math.max(...last7.map(d2 => sessions.filter(s=>s.date===d2).reduce((a,s)=>a+s.actualDuration,0)), 1);
+                          const maxDay      = Math.max(...reportData.last7.map(d2 => sessions.filter(s=>s.date===d2).reduce((a,s)=>a+s.actualDuration,0)), 1);
                           const barH        = dayTotal > 0 ? Math.max((dayTotal/maxDay)*68, 6) : 0;
-                          const dLabel      = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"][new Date(ds+"T12:00:00").getDay() === 0 ? 6 : new Date(ds+"T12:00:00").getDay()-1];
-                          const isToday     = ds === today;
-
-                          // Derslerin gün içi dakikasını hesapla
-                          const topMins = top3.map(name => daySessions.filter(s=>(s.subject??"Diğer")===name).reduce((a,s)=>a+s.actualDuration,0));
-                          const otherMin = dayTotal - topMins.reduce((a,b)=>a+b,0);
-
+                          const dLabel      = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"][new Date(ds+"T12:00:00").getDay()===0?6:new Date(ds+"T12:00:00").getDay()-1];
+                          const topMins     = reportData.top3Subjects.map(name => daySessions.filter(s=>(s.subject??"Diğer")===name).reduce((a,s)=>a+s.actualDuration,0));
+                          const otherMin    = dayTotal - topMins.reduce((a,b)=>a+b,0);
                           return (
                             <div key={ds} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
                               <div style={{ width:"100%", display:"flex", flexDirection:"column-reverse", borderRadius:4, overflow:"hidden", height:barH, transition:"height 0.4s ease" }}>
-                                {dayTotal === 0
-                                  ? <div style={{ flex:1, background:T.surface2 }} />
-                                  : <>
-                                      {otherMin > 0 && <div style={{ flex:otherMin, background:"rgba(255,255,255,0.12)" }} />}
-                                      {top3.map((name,i) => topMins[i]>0 && (
-                                        <div key={name} style={{ flex:topMins[i], background:subjectColor(name) }} />
-                                      ))}
-                                    </>
-                                }
+                                {dayTotal===0 ? <div style={{ flex:1, background:T.surface2 }} /> : <>
+                                  {otherMin>0 && <div style={{ flex:otherMin, background:"rgba(255,255,255,0.12)" }} />}
+                                  {reportData.top3Subjects.map((name,i) => topMins[i]>0 && <div key={name} style={{ flex:topMins[i], background:subjectColor(name) }} />)}
+                                </>}
                               </div>
-                              <span style={{ color:isToday?T.text:T.textMuted, fontSize:".62rem", fontWeight:isToday?700:400 }}>{dLabel}</span>
+                              <span style={{ color:ds===today?T.text:T.textMuted, fontSize:".62rem", fontWeight:ds===today?700:400 }}>{dLabel}</span>
                             </div>
                           );
                         })}
                       </div>
                     </div>
                   )}
-                </>
-              );
-            })()}
+              </>
+            )}
 
             {/* İstatistik paylaş */}
             <ReportShareButton
@@ -3021,6 +3698,9 @@ export default function PomodoroPage() {
               streak={streak}
               isDark={isDark}
               T={T}
+              totalMin={reportData.totalMin}
+              topSubject={reportData.topSubject}
+              todayFocusAvg={reportData.todayFocusAvg}
             />
 
             {/* Verileri temizle */}
@@ -3039,12 +3719,21 @@ export default function PomodoroPage() {
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(239,68,68,0.35)"; el.style.color = "rgba(239,68,68,0.6)"; }}
               >🗑 Tüm verileri temizle</button>
             </div>
+
+            {/* ── Sanal Kütüphane ── */}
+            <div style={{ borderTop: `1px solid ${T.border}`, marginTop: 32, paddingTop: 28 }}>
+              <LibraryTab sessions={sessions} T={T} isDark={isDark} />
+            </div>
           </div>
         )}
 
         {/* ── SINAV ── */}
         {tab === "sinav" && (
           <SinavTab T={T} isDark={isDark} />
+        )}
+
+        {tab === "profile" && (
+          <ProfileTab sessions={sessions} streak={streak} T={T} isDark={isDark} />
         )}
 
       </div>
@@ -3063,9 +3752,9 @@ export default function PomodoroPage() {
         {([
           { key: "timer",   icon: "🍅", label: "Timer"      },
           { key: "tasks",   icon: "📝", label: "Görevler"   },
-          { key: "library", icon: "📚", label: "Kütüphane"  },
+          { key: "forest",  icon: "🌲", label: "Orman"      },
           { key: "report",  icon: "📊", label: "Rapor"      },
-          { key: "sinav",   icon: "🎓", label: "Sınav"      },
+          { key: "profile", icon: "👤", label: "Profil"     },
         ] as const).map(item => (
           <button key={item.key} className="bottom-nav-btn" onClick={() => setTab(item.key)}
             style={{ color: tab === item.key ? "#9B6FE8" : T.textMuted }}>
