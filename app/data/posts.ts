@@ -13,7 +13,7 @@ export const posts: Post[] = [
     slug: "yks-hazirlik-rehberi",
     title: "YKS'ye Nasıl Hazırlanılır? Adım Adım Kapsamlı Rehber",
     description:
-      "YKS'ye hazırlık sürecinde ne zaman ne yapmalısınız? Kaynak seçiminden deneme stratejisine, psikolojik dayanıklılıktan zaman yönetimine kadar her şey bu rehberde.",
+      "YKS hazırlık sürecinde ne zaman ne yapmalısınız? Kaynak seçiminden deneme stratejisine, sınav psikolojisinden zaman yönetimine kadar TYT ve AYT hazırlığının tam rehberi.",
     date: "2026-02-10",
     readTime: "8 dk",
     category: "YKS Hazırlık",
@@ -96,7 +96,7 @@ YKS hazırlığı bir sprint değil, maraton. Doğru sistem kurulduğunda sonuç
     slug: "zaman-yonetimi-ogrenciler-icin",
     title: "Öğrenciler İçin Zaman Yönetimi: Günde 8 Saati 12 Saate Çevirin",
     description:
-      "Sınava hazırlanan öğrenciler için etkili zaman yönetimi teknikleri. Pomodoro, haftalık plan şablonu ve motivasyonu koruma yöntemleri.",
+      "LGS ve YKS hazırlığında zaman yönetimi nasıl yapılır? Pomodoro tekniği, haftalık çalışma planı ve odaklanmayı artırma yöntemleriyle çalışma veriminizi ikiye katlayın.",
     date: "2026-02-17",
     readTime: "6 dk",
     category: "Zaman Yönetimi",
@@ -173,7 +173,7 @@ Zaman yönetimi bir yetenek değil, öğrenilebilir bir beceridir. Doğru sistem
     slug: "lgs-hazirlik-rehberi",
     title: "LGS'ye Nasıl Hazırlanılır? 8. Sınıf Öğrencileri İçin Kapsamlı Rehber",
     description:
-      "LGS hazırlık sürecinde ne zaman ne yapmalısınız? Konu takviminden deneme stratejisine, sınav psikolojisinden kaynak seçimine kadar her şey bu rehberde.",
+      "LGS hazırlık rehberi: ne zaman başlanmalı, hangi konulara öncelik verilmeli, deneme stratejisi nasıl kurulmalı? 8. sınıf öğrencileri için adım adım LGS çalışma planı.",
     date: "2026-02-20",
     readTime: "7 dk",
     category: "LGS Hazırlık",
@@ -259,7 +259,7 @@ LGS başarısı zekadan çok sisteme bağlıdır. Doğru plan, düzenli çalış
     slug: "sinav-kaygisi-nasil-yenilir",
     title: "Sınav Kaygısı Nasıl Yenilir? Psikolojik Dayanıklılık Rehberi",
     description:
-      "Sınav kaygısı öğrencilerin en büyük düşmanlarından biri. Kaygıyla başa çıkmanın bilimsel yöntemlerini ve pratik tekniklerini bu yazıda bulabilirsiniz.",
+      "LGS ve YKS öncesi sınav kaygısıyla nasıl başa çıkılır? Nefes teknikleri, düşünce yeniden yapılandırma ve sınav günü rutini ile kaygıyı yönetmenin bilimsel yolları.",
     date: "2026-02-24",
     readTime: "6 dk",
     category: "Sınav Kaygısı",
@@ -345,7 +345,7 @@ Sınav kaygısı yenilmez değil, yönetilebilir. Doğru teknikler ve sistematik
     slug: "verimli-ders-calisma-teknikleri",
     title: "Verimli Ders Çalışmanın 7 Altın Kuralı",
     description:
-      "Saatlerce çalışıp az verim almak yerine, az çalışıp çok verim almanın yolları. Bilimsel olarak kanıtlanmış çalışma teknikleri bu yazıda.",
+      "Az çalışıp çok verim almanın yolları: aktif öğrenme, aralıklı tekrar, Feynman tekniği ve test efekti. LGS ve YKS hazırlığında verimliliği artıran bilimsel çalışma teknikleri.",
     date: "2026-03-03",
     readTime: "5 dk",
     category: "Verimli Çalışma",
@@ -428,7 +428,7 @@ Verimli çalışma alışkanlıkları kazanmak zaman alır ama bir kez oturduğu
     slug: "telefon-bagimliligini-yenmek",
     title: "Telefon Bağımlılığını Yenmek: Öğrenciler İçin Pratik Rehber",
     description:
-      "Telefon bağımlılığı sınav hazırlığının en büyük engellerinden biri. Ekran süresini azaltmak ve odaklanmayı artırmak için kanıtlanmış yöntemler.",
+      "Telefon bağımlılığı sınav hazırlığını nasıl etkiler? Ekran süresini azaltmak, odaklanmayı artırmak ve sosyal medya kullanımını kontrol altına almak için kanıtlanmış yöntemler.",
     date: "2026-03-10",
     readTime: "5 dk",
     category: "Verimli Çalışma",
@@ -508,7 +508,7 @@ Telefon bağımlılığı irade meselesi değil, tasarım meselesidir. Doğru si
     slug: "psikolojik-dayaniklilik-nedir",
     title: "Psikolojik Dayanıklılık Nedir ve Öğrenciler Nasıl Geliştirebilir?",
     description:
-      "Başarılı öğrencileri diğerlerinden ayıran en önemli özellik: psikolojik dayanıklılık. Bu beceriyi nasıl geliştirebileceğinizi öğrenin.",
+      "Sınav başarısını belirleyen gizli faktör: psikolojik dayanıklılık. Büyüme odaklı düşünce, başarısızlıkla başa çıkma ve LGS/YKS sürecinde motivasyonu koruma rehberi.",
     date: "2026-03-17",
     readTime: "6 dk",
     category: "Psikolojik Dayanıklılık",
@@ -593,7 +593,7 @@ Psikolojik dayanıklılık, doğuştan gelen bir özellik değil, pratikle kazan
     slug: "deneme-analizi-nasil-yapilir",
     title: "Deneme Analizi Nasıl Yapılır? Net Artışının Sırrı",
     description:
-      "Deneme çözmek yetmez — asıl gelişim analizde yaşanır. LGS ve YKS öğrencileri için adım adım deneme analizi rehberi.",
+      "Deneme çözmek yetmez, analiz şart. LGS ve YKS öğrencileri için hata kategorileme, öncelikli konu belirleme ve aksiyon planı oluşturma adımlarıyla deneme analizi rehberi.",
     date: "2026-03-24",
     readTime: "5 dk",
     category: "LGS Hazırlık",
@@ -623,7 +623,7 @@ Yaptığınız hataları 3 gruba ayırın:
 
 - **Bilgi hatası:** O konuyu bilmiyorsunuz
 - **Dikkat hatası:** Biliyorsunuz ama yanlış okudunuz veya acele ettiniz
-- **Teknik hata:** Konuyu biliyorsunuz ama soru tipini çözemedينيز
+- **Teknik hata:** Konuyu biliyorsunuz ama soru tipini çözemediniz
 
 Her grup için farklı çözüm gerekir.
 
