@@ -1,0 +1,13 @@
+# robots.txt — ogrencikocuadana.com
+# https://ogrencikocuadana.com/robots.txt
+
+User-agent: *
+Allow: /
+
+# Taranmasını istemediğimiz sayfalar
+Disallow: /api/
+Disallow: /_next/
+Disallow: /admin/
+
+# Sitemap
+Sitemap: https://ogrencikocuadana.com/sitemap.xml
