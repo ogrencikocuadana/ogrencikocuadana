@@ -4,7 +4,7 @@
 // Blog yazıları için CMS/dosya sistemi ile dinamik genişletilebilir.
 
 import { MetadataRoute } from "next";
-import { posts } from "./data/posts";
+import { posts } from "./blog/data/posts";
 
 // Blog yazılarınız bir CMS veya MDX dosya sistemindeyse buraya entegre edin.
 // Şimdilik statik slug örnekleri mevcut:
