@@ -11,7 +11,7 @@ const ARACLAR = [
   { label: "🍅 Pomodoro Timer",  href: "/pomodoro" },
   { label: "🎯 Net Hesaplama",   href: "/net-hesaplama" },
   { label: "⚡ Hız Analizörü",   href: "/hiz-analizoru" },
-  { label: "🥊 Hacıyatmaz",      href: "/haciyatmaz" },
+  { label: "🧘 Regülasyon",      href: "/regulasyon" },
 ];
 
 export default function Navbar() {
