@@ -6,26 +6,24 @@ import { usePathname } from "next/navigation";
 
 const sections = ["sistemimiz", "paketler", "İletişim"];
 
-// Araçlar dropdown'ına yeni araç eklemek için sadece bu diziyi güncelle
 const ARACLAR = [
   { label: "🍅 Pomodoro Timer",  href: "/pomodoro" },
   { label: "🎯 Net Hesaplama",   href: "/net-hesaplama" },
   { label: "⚡ Hız Analizörü",   href: "/hiz-analizoru" },
-  { label: "🧘 Regülasyon",      href: "/regulasyon" },
+  { label: "🎨 Duygu Atölyesi",  href: "/regulasyon" },
 ];
 
 export default function Navbar() {
-  const [active, setActive]           = useState("");
-  const [menuOpen, setMenuOpen]       = useState(false);
-  const [scrolled, setScrolled]       = useState(false);
-  const [araclarOpen, setAraclarOpen] = useState(false);   // masaüstü dropdown
-  const [araclarMobil, setAraclarMobil] = useState(false); // mobil accordion
+  const [active, setActive]             = useState("");
+  const [menuOpen, setMenuOpen]         = useState(false);
+  const [scrolled, setScrolled]         = useState(false);
+  const [araclarOpen, setAraclarOpen]   = useState(false);
+  const [araclarMobil, setAraclarMobil] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname    = usePathname();
   const isHomePage  = pathname === "/";
   const isAraclarActive = ARACLAR.some(a => pathname === a.href);
 
-  // Scroll spy + navbar gölge
   const handleScroll = useCallback(() => {
     setScrolled(window.scrollY > 12);
     if (!isHomePage) return;
@@ -46,13 +44,11 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
 
-  // Menü açıkken scroll kilitle
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
 
-  // Masaüstü dropdown dışına tıklanınca kapat
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -87,7 +83,6 @@ export default function Navbar() {
       >
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
 
-          {/* Logo */}
           <Link
             href="/"
             onClick={handleLogoClick}
@@ -97,9 +92,7 @@ export default function Navbar() {
             <span>Öğrenci Koçu Adana</span>
           </Link>
 
-          {/* ── Masaüstü Menü ── */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
-
             {sections.map((s) => (
               <a
                 key={s}
@@ -129,7 +122,6 @@ export default function Navbar() {
               />
             </Link>
 
-            {/* Araçlar dropdown */}
             <div ref={dropdownRef} className="relative">
               <button
                 onClick={() => setAraclarOpen(o => !o)}
@@ -173,10 +165,8 @@ export default function Navbar() {
                 </div>
               )}
             </div>
-
           </nav>
 
-          {/* Masaüstü CTA */}
           <a
             href={isHomePage ? "#İletişim" : "/#İletişim"}
             className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-700 transition-colors duration-200"
@@ -184,7 +174,6 @@ export default function Navbar() {
             Randevu Al
           </a>
 
-          {/* Hamburger */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="md:hidden flex flex-col justify-center items-center w-10 h-10 gap-1.5 rounded-lg hover:bg-slate-100 transition-colors duration-200"
@@ -199,7 +188,6 @@ export default function Navbar() {
         </div>
       </header>
 
-      {/* ── Mobil Menü ── */}
       <div
         className={`fixed inset-0 z-40 bg-white flex flex-col pt-24 px-8 pb-8 transition-all duration-300 ${
           menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
@@ -207,7 +195,6 @@ export default function Navbar() {
         style={{ transform: menuOpen ? "translateY(0)" : "translateY(-8px)" }}
       >
         <nav className="flex flex-col">
-
           {sections.map((s) => (
             <a
               key={s}
@@ -233,7 +220,6 @@ export default function Navbar() {
             {pathname.startsWith("/blog") && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
           </Link>
 
-          {/* Araçlar accordion */}
           <div className="border-b border-slate-100">
             <button
               onClick={() => setAraclarMobil(o => !o)}
@@ -250,7 +236,6 @@ export default function Navbar() {
               </svg>
             </button>
 
-            {/* maxHeight animasyonu ile accordion */}
             <div style={{
               maxHeight: araclarMobil ? `${ARACLAR.length * 56}px` : "0px",
               overflow: "hidden",
@@ -273,7 +258,6 @@ export default function Navbar() {
               ))}
             </div>
           </div>
-
         </nav>
 
         <a
