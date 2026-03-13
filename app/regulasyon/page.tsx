@@ -6,8 +6,9 @@ import Haciyatmaz from "./Haciyatmaz";
 import DenemeYirt from "./DenemeYirt";
 import KaralamaDefteri from "./KaralamaDefteri";
 import NefesEgzersizi from "./NefesEgzersizi";
+import KumTorbasi from "./KumTorbasi";
 
-type Modul = "home" | "haciyatmaz" | "yirt" | "karalama" | "nefes";
+type Modul = "home" | "haciyatmaz" | "yirt" | "karalama" | "nefes" | "kumtorbasi";
 type Tema = "gece" | "gunduz";
 
 // ── TEMA PALETLERİ ──────────────────────────────────────────────────────
@@ -28,12 +29,14 @@ const TEMA = {
       yirt:       "linear-gradient(135deg,#080e1e,#101828)",
       karalama:   "linear-gradient(135deg,#08130a,#0f1d10)",
       nefes:      "linear-gradient(135deg,#0e0818,#1a1028)",
+      kumtorbasi: "linear-gradient(135deg,#1e0a04,#2d1408)",
     },
     ikonBg: {
       haciyatmaz: "rgba(220,50,50,0.22)",
       yirt:       "rgba(60,100,220,0.22)",
       karalama:   "rgba(40,160,75,0.22)",
       nefes:      "rgba(140,65,220,0.22)",
+      kumtorbasi: "rgba(201, 59, 8, 0.22)",
     },
   },
   gunduz: {
@@ -52,12 +55,14 @@ const TEMA = {
       yirt:       "linear-gradient(135deg,#eaeffc,#d8e3f7)",
       karalama:   "linear-gradient(135deg,#eaf5ec,#d5edda)",
       nefes:      "linear-gradient(135deg,#f0eafc,#e2d5f7)",
+      kumtorbasi: "linear-gradient(135deg,#fceae1,#f5d4c9)",
     },
     ikonBg: {
       haciyatmaz: "rgba(200,40,40,0.13)",
       yirt:       "rgba(40,80,200,0.13)",
       karalama:   "rgba(30,140,60,0.13)",
       nefes:      "rgba(120,50,200,0.13)",
+      kumtorbasi: "rgba(200,60,10,0.13)",
     },
   },
 } as const;
@@ -94,6 +99,14 @@ const KARTLAR = [
     baslik: "Nefes Egzersizi",
     aciklama: "4-7-8 tekniğiyle sinir sistemini sıfırla.",
     hoverRenk: "rgba(140,70,220,0.5)",
+  },
+  {
+    id: "kumtorbasi" as Modul,
+    emoji: "🥊",
+    etiket: "Güç boşaltımı",
+    baslik: "Kum Torbası",
+    aciklama: "Vur, sall, rahatla. Gerçek boks hissi.",
+    hoverRenk: "rgba(201, 59, 8, 0.5)",
   },
 ];
 
@@ -337,6 +350,7 @@ export default function DuyguAtölyesiPage() {
         {ekran === "yirt"       && <DenemeYirt />}
         {ekran === "karalama"   && <KaralamaDefteri />}
         {ekran === "nefes"      && <NefesEgzersizi />}
+        {ekran === "kumtorbasi" && <KumTorbasi />}
       </main>
     </>
   );
