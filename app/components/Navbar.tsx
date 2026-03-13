@@ -11,6 +11,7 @@ const ARACLAR = [
   { label: "🍅 Pomodoro Timer",  href: "/pomodoro" },
   { label: "🎯 Net Hesaplama",   href: "/net-hesaplama" },
   { label: "⚡ Hız Analizörü",   href: "/hiz-analizoru" },
+  { label: "🥊 Hacıyatmaz",      href: "/haciyatmaz" },
 ];
 
 export default function Navbar() {
@@ -259,7 +260,7 @@ export default function Navbar() {
                 <Link
                   key={a.href}
                   href={a.href}
-                  onClick={closeMenu}   // ← menüyü kapatır ve sayfaya gider
+                  onClick={closeMenu}
                   className={`flex items-center justify-between pl-5 pr-2 py-3.5 text-base font-medium transition-colors duration-150 ${
                     pathname === a.href
                       ? "text-slate-900 font-semibold"
