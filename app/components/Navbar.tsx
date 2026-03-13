@@ -7,10 +7,10 @@ import { usePathname } from "next/navigation";
 const sections = ["sistemimiz", "paketler", "İletişim"];
 
 const ARACLAR = [
-  { label: "🍅 Pomodoro Timer",  href: "/pomodoro" },
-  { label: "🎯 Net Hesaplama",   href: "/net-hesaplama" },
-  { label: "⚡ Hız Analizörü",   href: "/hiz-analizoru" },
-  { label: "🎨 Duygu Atölyesi",  href: "/regulasyon" },
+  { label: "🍅 Pomodoro Timer", href: "/pomodoro" },
+  { label: "🎯 Net Hesaplama", href: "/net-hesaplama" },
+  { label: "⚡ Hız Analizörü", href: "/hiz-analizoru" },
+  { label: "🎨 Duygu Atölyesi", href: "/regulasyon" },
 ];
 
 export default function Navbar() {

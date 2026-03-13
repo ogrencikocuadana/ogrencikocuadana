@@ -1,168 +1,529 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useState, useEffect, useCallback, PointerEvent } from "react";
 
+// ─── TİPLER ───────────────────────────────────────────────────────────────
+type Arac = "kalem" | "firca" | "silgi";
+
+interface Stroke {
+  id: number;
+  points: { x: number; y: number }[];
+  color: string;
+  width: number;
+  tool: Arac;
+}
+
+interface StickerObj {
+  id: number;
+  emoji: string;
+  x: number;
+  y: number;
+  rot: number;
+  scale: number;
+  side: "left" | "right";
+}
+
+// ─── RENKLER ──────────────────────────────────────────────────────────────
 const RENKLER = [
-  { label: "Beyaz", hex: "#ffffff" },
-  { label: "Turuncu", hex: "#f5a623" },
-  { label: "Kırmızı", hex: "#e74c3c" },
-  { label: "Mavi", hex: "#3498db" },
-  { label: "Yeşil", hex: "#2ecc71" },
-  { label: "Mor", hex: "#9b59b6" },
+  "#1a1a1a", "#ffffff", "#e53935", "#f5a623",
+  "#fdd835", "#43a047", "#1e88e5", "#8e24aa",
+  "#00acc1", "#ff6f00", "#ad1457", "#546e7a",
 ];
 
-const KALINLIKLAR = [
-  { label: "İnce", deger: 3 },
-  { label: "Normal", deger: 9 },
-  { label: "Kalın", deger: 20 },
-  { label: "Çok kalın", deger: 38 },
+// ─── STİCKERLAR ───────────────────────────────────────────────────────────
+const STICKER_KATEGORILER = [
+  {
+    id: "hayvan", label: "Hayvanlar",
+    emojiler: ["🐱","🐶","🦊","🐻","🐼","🐨","🦁","🐯","🐸","🐙","🦋","🐧","🦄","🐺","🦖"],
+  },
+  {
+    id: "duygu", label: "Duygular",
+    emojiler: ["😂","😭","😤","😍","🥹","😩","🤯","😎","🥺","😡","🤩","😴","🥴","😱","🤪"],
+  },
+  {
+    id: "kalp", label: "Yıldız & Kalp",
+    emojiler: ["❤️","🧡","💛","💚","💙","💜","🖤","🤍","⭐","🌟","✨","💫","🔥","💎","🎯"],
+  },
 ];
+
+// ─── ARAÇ BİLGİLERİ ───────────────────────────────────────────────────────
+const ARAC_CONFIG: Record<Arac, { label: string; emoji: string; defaultWidth: number }> = {
+  kalem: { label: "Kalem",  emoji: "✏️", defaultWidth: 2.5 },
+  firca: { label: "Fırça",  emoji: "🖌️", defaultWidth: 14  },
+  silgi: { label: "Silgi",  emoji: "🧹", defaultWidth: 22  },
+};
+
+let idSay = 0;
+const uid = () => ++idSay;
 
 export default function KaralamaDefteri() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const ciziyorRef = useRef(false);
-  const sonNoktaRef = useRef<{ x: number; y: number } | null>(null);
-  const renkRef = useRef("#ffffff");
-  const kalinlikRef = useRef(9);
-  const [aktifRenk, setAktifRenk] = useState("#ffffff");
-  const [aktifKalinlik, setAktifKalinlik] = useState(9);
+  const canvasRef     = useRef<HTMLCanvasElement>(null);
+  const overlayRef    = useRef<HTMLDivElement>(null);
+  const isDrawing     = useRef(false);
+  const currentStroke = useRef<Stroke | null>(null);
+  const allStrokes    = useRef<Stroke[]>([]);
 
-  useEffect(() => {
-    const c = canvasRef.current; if (!c) return;
-    const g = c.getContext("2d")!;
-    g.fillStyle = "#0a1520"; g.fillRect(0, 0, 330, 270);
+  const [arac, setArac]               = useState<Arac>("kalem");
+  const [renk, setRenk]               = useState("#1a1a1a");
+  const [stickers, setStickers]       = useState<StickerObj[]>([]);
+  const [aktifKat, setAktifKat]       = useState<string | null>(null);
+  const [dragSticker, setDragSticker] = useState<number | null>(null);
+  const dragOffset = useRef<{dx:number;dy:number}>({dx:0,dy:0});
+
+  const CANVAS_W = 340;
+  const CANVAS_H = 480;
+
+  // ── Canvas çiz ──────────────────────────────────────────────────────────
+  const redraw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+    for (const stroke of allStrokes.current) {
+      if (stroke.points.length < 2) continue;
+      ctx.save();
+      if (stroke.tool === "silgi") {
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.strokeStyle = "rgba(0,0,0,1)";
+      } else if (stroke.tool === "firca") {
+        ctx.globalCompositeOperation = "source-over";
+        ctx.strokeStyle = stroke.color;
+        ctx.globalAlpha = 0.55;
+      } else {
+        ctx.globalCompositeOperation = "source-over";
+        ctx.strokeStyle = stroke.color;
+        ctx.globalAlpha = 1;
+      }
+      ctx.lineWidth   = stroke.width;
+      ctx.lineCap     = "round";
+      ctx.lineJoin    = "round";
+      ctx.beginPath();
+      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+      for (let i = 1; i < stroke.points.length - 1; i++) {
+        const mx = (stroke.points[i].x + stroke.points[i+1].x) / 2;
+        const my = (stroke.points[i].y + stroke.points[i+1].y) / 2;
+        ctx.quadraticCurveTo(stroke.points[i].x, stroke.points[i].y, mx, my);
+      }
+      const last = stroke.points[stroke.points.length - 1];
+      ctx.lineTo(last.x, last.y);
+      ctx.stroke();
+      ctx.restore();
+    }
   }, []);
 
-  function konum(e: MouseEvent | Touch, c: HTMLCanvasElement) {
-    const r = c.getBoundingClientRect();
+  // ── Pointer coords ───────────────────────────────────────────────────────
+  function getCanvasPos(e: PointerEvent<HTMLCanvasElement>) {
+    const rect = canvasRef.current!.getBoundingClientRect();
     return {
-      x: (e.clientX - r.left) * (330 / r.width),
-      y: (e.clientY - r.top) * (270 / r.height),
+      x: (e.clientX - rect.left) * (CANVAS_W / rect.width),
+      y: (e.clientY - rect.top)  * (CANVAS_H / rect.height),
     };
   }
 
-  function cizgi(a: { x: number; y: number }, b: { x: number; y: number }) {
-    const g = canvasRef.current?.getContext("2d"); if (!g) return;
-    g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y);
-    g.strokeStyle = renkRef.current; g.lineWidth = kalinlikRef.current;
-    g.lineCap = "round"; g.lineJoin = "round"; g.stroke();
+  // ── Çizim olayları ───────────────────────────────────────────────────────
+  function onPointerDown(e: PointerEvent<HTMLCanvasElement>) {
+    canvasRef.current?.setPointerCapture(e.pointerId);
+    isDrawing.current = true;
+    const pos = getCanvasPos(e);
+    const width = ARAC_CONFIG[arac].defaultWidth;
+    currentStroke.current = {
+      id: uid(), points: [pos],
+      color: renk, width, tool: arac,
+    };
+    allStrokes.current.push(currentStroke.current);
   }
 
-  useEffect(() => {
-    const c = canvasRef.current; if (!c) return;
-    const bas = (e: MouseEvent) => { ciziyorRef.current = true; sonNoktaRef.current = konum(e, c); };
-    const hare = (e: MouseEvent) => {
-      if (!ciziyorRef.current) return;
-      const p = konum(e, c); cizgi(sonNoktaRef.current!, p); sonNoktaRef.current = p;
-    };
-    const birak = () => { ciziyorRef.current = false; sonNoktaRef.current = null; };
-    const tBas = (e: TouchEvent) => { e.preventDefault(); ciziyorRef.current = true; sonNoktaRef.current = konum(e.touches[0], c); };
-    const tHare = (e: TouchEvent) => {
-      e.preventDefault();
-      if (!ciziyorRef.current) return;
-      const p = konum(e.touches[0], c); cizgi(sonNoktaRef.current!, p); sonNoktaRef.current = p;
-    };
-    const tBirak = () => { ciziyorRef.current = false; sonNoktaRef.current = null; };
-    c.addEventListener("mousedown", bas); c.addEventListener("mousemove", hare);
-    c.addEventListener("mouseup", birak); c.addEventListener("mouseleave", birak);
-    c.addEventListener("touchstart", tBas, { passive: false });
-    c.addEventListener("touchmove", tHare, { passive: false });
-    c.addEventListener("touchend", tBirak);
-    return () => {
-      c.removeEventListener("mousedown", bas); c.removeEventListener("mousemove", hare);
-      c.removeEventListener("mouseup", birak); c.removeEventListener("mouseleave", birak);
-      c.removeEventListener("touchstart", tBas); c.removeEventListener("touchmove", tHare);
-      c.removeEventListener("touchend", tBirak);
-    };
-  }, []);
+  function onPointerMove(e: PointerEvent<HTMLCanvasElement>) {
+    if (!isDrawing.current || !currentStroke.current) return;
+    const pos = getCanvasPos(e);
+    currentStroke.current.points.push(pos);
+    redraw();
+  }
 
-  function renkSec(hex: string) { renkRef.current = hex; setAktifRenk(hex); }
-  function kalinlikSec(d: number) { kalinlikRef.current = d; setAktifKalinlik(d); }
+  function onPointerUp() {
+    isDrawing.current = false;
+    currentStroke.current = null;
+  }
 
+  // ── Temizle ──────────────────────────────────────────────────────────────
   function temizle() {
-    const g = canvasRef.current?.getContext("2d"); if (!g) return;
-    g.fillStyle = "#0a1520"; g.fillRect(0, 0, 330, 270);
+    allStrokes.current = [];
+    redraw();
+    setStickers([]);
   }
 
-  function indir() {
-    const a = document.createElement("a");
-    a.download = "karalama.png";
-    a.href = canvasRef.current!.toDataURL();
-    a.click();
+  // ── Geri al ──────────────────────────────────────────────────────────────
+  function geriAl() {
+    allStrokes.current = allStrokes.current.slice(0, -1);
+    redraw();
   }
+
+  // ── Sticker ekle ────────────────────────────────────────────────────────
+  function stickerEkle(emoji: string) {
+    const side = Math.random() > 0.5 ? "left" : "right";
+    const s: StickerObj = {
+      id: uid(), emoji,
+      x: side === "left" ? 18 + Math.random() * 38 : CANVAS_W + 18 + Math.random() * 38,
+      y: 40 + Math.random() * (CANVAS_H - 80),
+      rot: (Math.random() - 0.5) * 34,
+      scale: 0.85 + Math.random() * 0.55,
+      side,
+    };
+    setStickers(p => [...p, s]);
+    setAktifKat(null);
+  }
+
+  // ── Sticker sürükle ─────────────────────────────────────────────────────
+  function onStickerPointerDown(e: React.PointerEvent, id: number) {
+    e.stopPropagation();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    setDragSticker(id);
+    const s = stickers.find(s => s.id === id);
+    if (!s || !overlayRef.current) return;
+    const rect = overlayRef.current.getBoundingClientRect();
+    dragOffset.current = {
+      dx: e.clientX - rect.left - s.x,
+      dy: e.clientY - rect.top  - s.y,
+    };
+  }
+
+  function onOverlayPointerMove(e: React.PointerEvent) {
+    if (dragSticker === null || !overlayRef.current) return;
+    const rect = overlayRef.current.getBoundingClientRect();
+    const nx = e.clientX - rect.left - dragOffset.current.dx;
+    const ny = e.clientY - rect.top  - dragOffset.current.dy;
+    setStickers(p => p.map(s => s.id === dragSticker ? {...s, x: nx, y: ny} : s));
+  }
+
+  function onStickerPointerUp() { setDragSticker(null); }
+
+  function stickerSil(id: number, e: React.MouseEvent) {
+    e.stopPropagation();
+    setStickers(p => p.filter(s => s.id !== id));
+  }
+
+  useEffect(() => { redraw(); }, [redraw]);
+
+  const aktifAracWidth = ARAC_CONFIG[arac].defaultWidth;
+  const cursorSize = arac === "silgi" ? 22 : arac === "firca" ? 14 : 3;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "52px 18px 36px", width: "100%" }}>
-      <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 4, textAlign: "center" }}>✏️ Karalama Defteri</div>
-      <div style={{ fontSize: 11, color: "rgba(232,244,253,0.45)", marginBottom: 16, textAlign: "center" }}>Çiz, yaz, karala. Kimse görmeyecek, söz.</div>
+    <>
+      <style>{`
+        .kd-root{display:flex;flex-direction:column;align-items:center;padding:36px 20px 40px;width:100%;font-family:'Sora',sans-serif;}
 
-      {/* Renk seçici */}
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", marginBottom: 8 }}>
-        {RENKLER.map(r => (
-          <button
-            key={r.hex}
-            onClick={() => renkSec(r.hex)}
+        /* Araç butonu */
+        .kd-tool-btn{
+          display:flex;flex-direction:column;align-items:center;gap:3px;
+          padding:8px 6px;border-radius:9px;cursor:pointer;
+          border:1.5px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);
+          color:rgba(232,244,253,.5);font-family:'Sora',sans-serif;
+          font-size:9px;font-weight:600;transition:all .15s;flex:1;
+        }
+        .kd-tool-btn:hover{background:rgba(255,255,255,.09);color:white;transform:translateY(-1px);}
+        .kd-tool-btn.on{border-color:#f5a623;background:rgba(245,166,35,.13);color:#f5a623;}
+
+        /* Renk nokta */
+        .kd-color{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0;}
+        .kd-color:hover{transform:scale(1.18);}
+        .kd-color.on{border-color:white;transform:scale(1.22);}
+
+        /* Sticker panel */
+        .kd-sticker-btn{
+          padding:7px 12px;border-radius:8px;cursor:pointer;
+          border:1.5px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);
+          color:rgba(232,244,253,.6);font-family:'Sora',sans-serif;
+          font-size:10px;font-weight:600;transition:all .15s;
+        }
+        .kd-sticker-btn:hover{background:rgba(255,255,255,.09);color:white;}
+        .kd-sticker-btn.on{border-color:#f5a623;background:rgba(245,166,35,.13);color:#f5a623;}
+        .kd-sticker-grid{
+          display:flex;flex-wrap:wrap;gap:4px;padding:10px;
+          background:rgba(20,30,50,.95);border-radius:12px;
+          border:1px solid rgba(255,255,255,.08);
+          max-width:340px;
+        }
+        .kd-sticker-item{
+          font-size:24px;cursor:pointer;padding:4px;border-radius:7px;
+          transition:transform .12s;user-select:none;
+        }
+        .kd-sticker-item:hover{transform:scale(1.28);}
+
+        /* Defter gölgesi */
+        .kd-notebook-shadow{
+          filter: drop-shadow(0 24px 40px rgba(0,0,0,.8)) drop-shadow(0 8px 16px rgba(0,0,0,.6));
+        }
+
+        /* Sticker üzeri */
+        .kd-sticker-obj{
+          position:absolute;font-size:32px;cursor:grab;user-select:none;
+          touch-action:none;transition:filter .15s;
+          filter: drop-shadow(2px 3px 4px rgba(0,0,0,.35));
+        }
+        .kd-sticker-obj:hover .kd-del{opacity:1;}
+        .kd-sticker-obj:active{cursor:grabbing;}
+        .kd-del{
+          position:absolute;top:-8px;right:-8px;width:16px;height:16px;
+          background:#e53935;border-radius:50%;border:none;cursor:pointer;
+          font-size:9px;color:white;display:flex;align-items:center;justify-content:center;
+          opacity:0;transition:opacity .15s;font-weight:700;line-height:1;
+        }
+
+        @keyframes stickerIn{from{opacity:0;transform:scale(.4) rotate(20deg);}to{opacity:1;transform:scale(1) rotate(0deg);}}
+      `}</style>
+
+      <div className="kd-root">
+
+        <div style={{fontSize:17,fontWeight:800,color:"white",marginBottom:4,letterSpacing:"-.02em"}}>
+          📓 Karalama Defteri
+        </div>
+        <div style={{fontSize:11,color:"rgba(232,244,253,.35)",marginBottom:16,flexShrink:0}}>
+          Çiz, karalamala, sticker yapıştır — tamamen senin.
+        </div>
+
+        {/* ── ARAÇLAR + RENKLER ── */}
+        <div style={{width:"100%",maxWidth:460,marginBottom:12,flexShrink:0}}>
+
+          {/* Araçlar */}
+          <div style={{display:"flex",gap:6,marginBottom:10}}>
+            {(Object.keys(ARAC_CONFIG) as Arac[]).map(a => (
+              <button key={a} className={`kd-tool-btn${arac===a?" on":""}`} onClick={() => setArac(a)}>
+                <span style={{fontSize:20}}>{ARAC_CONFIG[a].emoji}</span>
+                {ARAC_CONFIG[a].label}
+              </button>
+            ))}
+            {/* Geri Al */}
+            <button className="kd-tool-btn" onClick={geriAl} title="Geri Al">
+              <span style={{fontSize:20}}>↩️</span>
+              Geri Al
+            </button>
+            {/* Temizle */}
+            <button className="kd-tool-btn" onClick={temizle} title="Temizle">
+              <span style={{fontSize:20}}>🗑️</span>
+              Temizle
+            </button>
+          </div>
+
+          {/* Renk Paleti */}
+          <div style={{display:"flex",flexWrap:"wrap",gap:7,padding:"10px 12px",
+            background:"rgba(255,255,255,.04)",borderRadius:10,
+            border:"1px solid rgba(255,255,255,.07)"}}>
+            {RENKLER.map(r => (
+              <div key={r} className={`kd-color${renk===r?" on":""}`}
+                style={{background: r, boxShadow: r==="#ffffff"?"inset 0 0 0 1px rgba(0,0,0,.2)":"none"}}
+                onClick={() => { setRenk(r); if (arac === "silgi") setArac("kalem"); }}
+              />
+            ))}
+            {/* Özel renk */}
+            <div style={{position:"relative",width:22,height:22,flexShrink:0}}>
+              <div style={{
+                width:22,height:22,borderRadius:"50%",cursor:"pointer",
+                background:"conic-gradient(red,yellow,lime,cyan,blue,magenta,red)",
+                border: !RENKLER.includes(renk) ? "2px solid white" : "2px solid transparent",
+                transform: !RENKLER.includes(renk) ? "scale(1.22)" : "scale(1)",
+                transition:"all .15s",
+              }}/>
+              <input type="color" value={renk}
+                onChange={e => { setRenk(e.target.value); if (arac==="silgi") setArac("kalem"); }}
+                style={{position:"absolute",inset:0,opacity:0,cursor:"pointer",width:"100%",height:"100%"}}/>
+            </div>
+          </div>
+        </div>
+
+        {/* ── STİCKER PANELİ ── */}
+        <div style={{width:"100%",maxWidth:460,marginBottom:14,flexShrink:0}}>
+          <div style={{display:"flex",gap:6,marginBottom:aktifKat?8:0}}>
+            {STICKER_KATEGORILER.map(k => (
+              <button key={k.id}
+                className={`kd-sticker-btn${aktifKat===k.id?" on":""}`}
+                onClick={() => setAktifKat(aktifKat===k.id?null:k.id)}>
+                {k.emojiler[0]} {k.label}
+              </button>
+            ))}
+          </div>
+          {aktifKat && (
+            <div className="kd-sticker-grid">
+              {STICKER_KATEGORILER.find(k=>k.id===aktifKat)?.emojiler.map(e => (
+                <div key={e} className="kd-sticker-item" onClick={() => stickerEkle(e)}>{e}</div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── DEFTER + KENAR STİCKERLAR ── */}
+        <div className="kd-notebook-shadow" style={{
+          display:"flex",alignItems:"flex-start",gap:0,
+          position:"relative",flexShrink:0,
+        }}>
+
+          {/* Sol kenar */}
+          <SidePanel side="left" width={72}/>
+
+          {/* DEFTER ANA GÖVDE */}
+          <div style={{position:"relative",flexShrink:0}}>
+
+            {/* Spiral cilt */}
+            <div style={{
+              position:"absolute",left:-18,top:0,bottom:0,width:18,
+              display:"flex",flexDirection:"column",justifyContent:"space-evenly",
+              alignItems:"center",zIndex:20,pointerEvents:"none",
+            }}>
+              {Array.from({length:20}).map((_,i) => (
+                <div key={i} style={{
+                  width:14,height:14,borderRadius:"50%",
+                  border:"2.5px solid #8B6914",
+                  background:"linear-gradient(135deg,#D4A820 0%,#8B6914 60%,#5A3D08 100%)",
+                  boxShadow:"1px 1px 3px rgba(0,0,0,.5),-1px -1px 2px rgba(255,200,80,.15)",
+                }}/>
+              ))}
+            </div>
+
+            {/* Kraft kağıt arka plan */}
+            <div style={{
+              width:CANVAS_W,
+              background:"#C4935A",
+              position:"relative",
+              overflow:"hidden",
+            }}>
+              {/* Kraft doku */}
+              <svg style={{position:"absolute",inset:0,opacity:.18,pointerEvents:"none"}}
+                width={CANVAS_W} height={CANVAS_H}>
+                <filter id="noise">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/>
+                  <feColorMatrix type="saturate" values="0"/>
+                </filter>
+                <rect width="100%" height="100%" filter="url(#noise)" opacity="1"/>
+              </svg>
+
+              {/* Kraft renk gradyan katmanları */}
+              <div style={{
+                position:"absolute",inset:0,pointerEvents:"none",
+                background:"linear-gradient(160deg,rgba(210,160,80,.4) 0%,transparent 45%,rgba(100,55,15,.3) 100%)",
+              }}/>
+              <div style={{
+                position:"absolute",inset:0,pointerEvents:"none",
+                background:"radial-gradient(ellipse at 30% 20%,rgba(255,210,120,.2) 0%,transparent 60%)",
+              }}/>
+
+              {/* Sayfa kenar gölgesi (sol) */}
+              <div style={{position:"absolute",top:0,left:0,bottom:0,width:12,pointerEvents:"none",
+                background:"linear-gradient(to right,rgba(0,0,0,.18),transparent)",zIndex:1}}/>
+              {/* Sayfa kenar gölgesi (sağ) */}
+              <div style={{position:"absolute",top:0,right:0,bottom:0,width:8,pointerEvents:"none",
+                background:"linear-gradient(to left,rgba(0,0,0,.12),transparent)",zIndex:1}}/>
+
+              {/* Canvas — çizim alanı */}
+              <canvas
+                ref={canvasRef}
+                width={CANVAS_W}
+                height={CANVAS_H}
+                style={{
+                  display:"block",position:"relative",zIndex:2,
+                  cursor: arac==="silgi"
+                    ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Crect x='2' y='2' width='20' height='20' rx='4' fill='rgba(255,220,180,.8)' stroke='%23888' stroke-width='1.5'/%3E%3C/svg%3E") 12 12, crosshair`
+                    : arac==="firca"
+                    ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='8' fill='${encodeURIComponent(renk)}' opacity='.6'/%3E%3C/svg%3E") 10 10, crosshair`
+                    : "crosshair",
+                }}
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerLeave={onPointerUp}
+              />
+            </div>
+          </div>
+
+          {/* Sağ kenar */}
+          <SidePanel side="right" width={72}/>
+
+          {/* STİCKER katmanı — tüm alanı kaplıyor */}
+          <div
+            ref={overlayRef}
             style={{
-              padding: "5px 10px",
-              borderRadius: 7,
-              border: `1.5px solid ${aktifRenk === r.hex ? r.hex : "rgba(255,255,255,0.14)"}`,
-              background: aktifRenk === r.hex ? `${r.hex}22` : "transparent",
-              color: r.hex,
-              cursor: "pointer",
-              fontSize: 11,
-              fontFamily: "'Sora', sans-serif",
-              fontWeight: aktifRenk === r.hex ? 700 : 400,
+              position:"absolute",inset:0,
+              pointerEvents: dragSticker !== null ? "all" : "none",
+              zIndex:30,
             }}
+            onPointerMove={onOverlayPointerMove}
+            onPointerUp={onStickerPointerUp}
           >
-            ⬤ {r.label}
-          </button>
-        ))}
-      </div>
+            {stickers.map(s => (
+              <div
+                key={s.id}
+                className="kd-sticker-obj"
+                style={{
+                  left: s.x,
+                  top:  s.y,
+                  transform:`translate(-50%,-50%) rotate(${s.rot}deg) scale(${s.scale})`,
+                  pointerEvents:"all",
+                  animation: "stickerIn .25s cubic-bezier(.34,1.5,.64,1)",
+                  zIndex: dragSticker===s.id ? 50 : 31,
+                }}
+                onPointerDown={e => onStickerPointerDown(e, s.id)}
+              >
+                {s.emoji}
+                <button className="kd-del"
+                  onPointerDown={e => e.stopPropagation()}
+                  onClick={e => stickerSil(s.id, e)}>×</button>
+              </div>
+            ))}
+          </div>
 
-      {/* Kalınlık seçici */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-        {KALINLIKLAR.map(k => (
-          <button
-            key={k.deger}
-            onClick={() => kalinlikSec(k.deger)}
-            style={{
-              padding: "5px 9px",
-              borderRadius: 7,
-              border: `1px solid ${aktifKalinlik === k.deger ? "rgba(245,166,35,0.6)" : "rgba(255,255,255,0.14)"}`,
-              background: aktifKalinlik === k.deger ? "rgba(245,166,35,0.12)" : "transparent",
-              color: aktifKalinlik === k.deger ? "#f5a623" : "rgba(232,244,253,0.35)",
-              cursor: "pointer",
-              fontSize: 11,
-              fontFamily: "'Sora', sans-serif",
-            }}
-          >
-            {k.label}
-          </button>
-        ))}
-      </div>
+        </div>
 
-      <canvas
-        ref={canvasRef}
-        width={330}
-        height={270}
-        style={{
-          display: "block",
-          borderRadius: 12,
-          border: "1px solid rgba(255,255,255,0.08)",
-          cursor: "crosshair",
-          touchAction: "none",
-          maxWidth: "100%",
-        }}
-      />
+        {/* Alt not */}
+        <div style={{marginTop:14,fontSize:10,color:"rgba(232,244,253,.22)",textAlign:"center",flexShrink:0}}>
+          Stickerlara tıklayarak sürükleyebilir, × ile silebilirsin.
+        </div>
 
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={temizle} style={{ padding: "6px 13px", background: "transparent", color: "rgba(232,244,253,0.35)", border: "1px solid rgba(232,244,253,0.14)", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Sora', sans-serif" }}>
-          🗑 Temizle
-        </button>
-        <button onClick={indir} style={{ padding: "6px 13px", background: "#f5a623", color: "#1a2e4a", fontWeight: 700, border: "none", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Sora', sans-serif" }}>
-          💾 İndir
-        </button>
       </div>
+    </>
+  );
+}
+
+// ─── YAN PANEL (kraft kenar) ──────────────────────────────────────────────
+function SidePanel({ side, width }: { side: "left" | "right"; width: number }) {
+  return (
+    <div style={{
+      width,
+      height: 480,
+      flexShrink: 0,
+      position: "relative",
+      background: side === "left"
+        ? "linear-gradient(to right,#7A4F1A,#A8722A,#C4935A)"
+        : "linear-gradient(to left,#7A4F1A,#A8722A,#C4935A)",
+      overflow: "hidden",
+    }}>
+      {/* Doku */}
+      <svg style={{position:"absolute",inset:0,opacity:.15,pointerEvents:"none"}}
+        width={width} height={480}>
+        <filter id={`noise${side}`}>
+          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" stitchTiles="stitch"/>
+          <feColorMatrix type="saturate" values="0"/>
+        </filter>
+        <rect width="100%" height="100%" filter={`url(#noise${side})`}/>
+      </svg>
+      {/* İç gölge */}
+      <div style={{
+        position:"absolute",inset:0,pointerEvents:"none",
+        background: side==="left"
+          ? "linear-gradient(to right,rgba(0,0,0,.35),transparent 70%)"
+          : "linear-gradient(to left,rgba(0,0,0,.35),transparent 70%)",
+      }}/>
+      {/* Dekoratif dikey çizgiler */}
+      {Array.from({length:4}).map((_,i) => (
+        <div key={i} style={{
+          position:"absolute",
+          top:0,bottom:0,
+          left: side==="left" ? `${20+i*14}%` : undefined,
+          right: side==="right" ? `${20+i*14}%` : undefined,
+          width:1,
+          background:"rgba(255,200,100,.07)",
+        }}/>
+      ))}
     </div>
   );
 }
