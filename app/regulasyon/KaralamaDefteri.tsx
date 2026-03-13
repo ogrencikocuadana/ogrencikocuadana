@@ -200,6 +200,101 @@ export default function KaralamaDefteri() {
 
   function onStickerPointerUp() { setDragSticker(null); }
 
+  // ── İNDİR ──────────────────────────────────────────────────────────────
+  async function indir() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Tüm alanı (canvas + sticker overlay) birleştiren canvas oluştur
+    const out = document.createElement("canvas");
+    out.width  = canvas.width;
+    out.height = canvas.height;
+    const ctx = out.getContext("2d");
+    if (!ctx) return;
+
+    // Kraft arka plan
+    ctx.fillStyle = "#C4935A";
+    ctx.fillRect(0, 0, out.width, out.height);
+
+    // Çizimler
+    ctx.drawImage(canvas, 0, 0);
+
+    // Stickerlları çiz (sadece canvas üzerindekiler)
+    const overlay = overlayRef.current;
+    if (overlay) {
+      const rect = overlay.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      for (const s of stickers) {
+        const relX = (s.x / overlay.offsetWidth) * out.width;
+        const relY = (s.y / overlay.offsetHeight) * out.height;
+        ctx.save();
+        ctx.translate(relX, relY);
+        ctx.rotate((s.rot * Math.PI) / 180);
+        ctx.font = `${Math.round(32 * s.scale)}px serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(s.emoji, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    const link = document.createElement("a");
+    link.download = "karalama-defteri.png";
+    link.href = out.toDataURL("image/png");
+    link.click();
+  }
+
+  // ── PAYLAŞ ──────────────────────────────────────────────────────────────
+  async function paylas() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const out = document.createElement("canvas");
+    out.width  = canvas.width;
+    out.height = canvas.height;
+    const ctx = out.getContext("2d");
+    if (!ctx) return;
+    ctx.fillStyle = "#C4935A";
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.drawImage(canvas, 0, 0);
+
+    const overlay = overlayRef.current;
+    if (overlay) {
+      for (const s of stickers) {
+        const relX = (s.x / overlay.offsetWidth) * out.width;
+        const relY = (s.y / overlay.offsetHeight) * out.height;
+        ctx.save();
+        ctx.translate(relX, relY);
+        ctx.rotate((s.rot * Math.PI) / 180);
+        ctx.font = `${Math.round(32 * s.scale)}px serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(s.emoji, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    out.toBlob(async (blob) => {
+      if (!blob) return;
+      if (navigator.share && navigator.canShare({ files: [new File([blob], "karalama.png", { type: "image/png" })] })) {
+        try {
+          await navigator.share({
+            title: "Karalama Defterim",
+            files: [new File([blob], "karalama.png", { type: "image/png" })],
+          });
+        } catch {}
+      } else {
+        // Paylaşım desteklenmiyorsa indir
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.download = "karalama-defteri.png";
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+    }, "image/png");
+  }
+
   function stickerSil(id: number, e: React.MouseEvent) {
     e.stopPropagation();
     setStickers(p => p.filter(s => s.id !== id));
@@ -474,9 +569,39 @@ export default function KaralamaDefteri() {
 
         </div>
 
-        {/* Alt not */}
-        <div style={{marginTop:14,fontSize:10,color:"rgba(232,244,253,.22)",textAlign:"center",flexShrink:0}}>
-          Stickerlara tıklayarak sürükleyebilir, × ile silebilirsin.
+        {/* Sticker ipucu */}
+        <div style={{
+          marginTop:12,display:"flex",alignItems:"center",gap:6,
+          background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.07)",
+          borderRadius:8,padding:"6px 12px",flexShrink:0,
+        }}>
+          <span style={{fontSize:14}}>👆</span>
+          <span style={{fontSize:10,color:"rgba(232,244,253,.45)"}}>
+            Stickerlara bas, sürükle • × ile sil
+          </span>
+        </div>
+
+        {/* İndir & Paylaş */}
+        <div style={{display:"flex",gap:8,marginTop:14,flexShrink:0}}>
+          <button onClick={indir} style={{
+            display:"flex",alignItems:"center",gap:7,
+            padding:"10px 20px",borderRadius:10,cursor:"pointer",border:"none",
+            background:"linear-gradient(135deg,#f5a623,#e08c10)",
+            color:"#1a1a1a",fontWeight:700,fontSize:12,fontFamily:"'Sora',sans-serif",
+            boxShadow:"0 4px 14px rgba(245,166,35,.35)",transition:"all .18s",
+          }}>
+            <span style={{fontSize:16}}>⬇️</span> İndir
+          </button>
+          <button onClick={paylas} style={{
+            display:"flex",alignItems:"center",gap:7,
+            padding:"10px 20px",borderRadius:10,cursor:"pointer",
+            border:"1.5px solid rgba(255,255,255,.12)",
+            background:"rgba(255,255,255,.06)",
+            color:"white",fontWeight:700,fontSize:12,fontFamily:"'Sora',sans-serif",
+            transition:"all .18s",
+          }}>
+            <span style={{fontSize:16}}>📤</span> Paylaş
+          </button>
         </div>
 
       </div>
