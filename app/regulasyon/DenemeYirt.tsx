@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect } from "react";
 import gsap from "gsap";
 
 type AnimTip = "yirt" | "kes" | "yak" | "uc";
@@ -30,10 +30,10 @@ export default function DenemeYirt() {
   const bottomRef    = useRef<HTMLDivElement>(null);
   const scissors     = useRef<HTMLDivElement>(null);
   const wrapperRef   = useRef<HTMLDivElement>(null);
-  const burnInterval = useRef<ReturnType<typeof setInterval>|null>(null);
-  const burnPos      = useRef<{x:number;y:number}|null>(null);
-  const splitY       = useRef<number|null>(null);
-  const splitX       = useRef<number|null>(null);
+  const burnInterval = useRef<number | null>(null);
+  const burnPos      = useRef<{x:number;y:number} | null>(null);
+  const splitY       = useRef<number | null>(null);
+  const splitX       = useRef<number | null>(null);
 
   const formDolu = form.denemeAdi.trim().length > 0;
 
@@ -52,7 +52,6 @@ export default function DenemeYirt() {
     setIsDragging(false);
     splitY.current = null;
     splitX.current = null;
-    // GSAP temizle
     if (leftRef.current)   gsap.set(leftRef.current,   { clearProps: "all" });
     if (rightRef.current)  gsap.set(rightRef.current,  { clearProps: "all" });
     if (topRef.current)    gsap.set(topRef.current,    { clearProps: "all" });
@@ -60,7 +59,6 @@ export default function DenemeYirt() {
     if (paperRef.current)  gsap.set(paperRef.current,  { clearProps: "all" });
   }
 
-  // ── KOORDINAT HESAPLA ────────────────────────────────────────────────────
   function getRelPos(e: React.MouseEvent | React.TouchEvent): {x:number;y:number} | null {
     const el = wrapperRef.current;
     if (!el) return null;
@@ -92,38 +90,30 @@ export default function DenemeYirt() {
     if (!isDragging) return;
     setIsDragging(false);
     if (yirtPath.length < 8) return;
-    // Yırtığın ortalama Y'sini bul → yatay mı dikey mi?
     const avgX = yirtPath.reduce((s,p)=>s+p.x,0)/yirtPath.length;
     const avgY = yirtPath.reduce((s,p)=>s+p.y,0)/yirtPath.length;
     const dx = Math.abs(yirtPath[yirtPath.length-1].x - yirtPath[0].x);
     const dy = Math.abs(yirtPath[yirtPath.length-1].y - yirtPath[0].y);
 
     if (dy > dx) {
-      // Dikey yırtık → sol/sağ
       splitX.current = avgX;
       animYirtDikeyGSAP(avgX);
     } else {
-      // Yatay yırtık → üst/alt
       splitY.current = avgY;
       animYirtYatayGSAP(avgY);
     }
   }
 
-  function animYirtDikeyGSAP(xPct: number) {
-    const el = wrapperRef.current;
-    if (!el || !leftRef.current || !rightRef.current) return;
-    const w = el.offsetWidth;
-    const h = el.offsetHeight;
-    const tl = gsap.timeline({ onComplete: () => setTimeout(() => setPhase("done"), 200) });
-    // Sol yarı
-    tl.to(leftRef.current, { x: -160, rotation: -28, y: 60, opacity: 0, duration: 0.9, ease: "power3.in" }, 0.1);
-    // Sağ yarı
-    tl.to(rightRef.current, { x: 160, rotation: 28, y: 40, opacity: 0, duration: 0.9, ease: "power3.in" }, 0.1);
+  function animYirtDikeyGSAP(_xPct: number) {
+    if (!leftRef.current || !rightRef.current) return;
+    const tl = gsap.timeline({ onComplete: () => { window.setTimeout(() => setPhase("done"), 200); } });
+    tl.to(leftRef.current,  { x: -160, rotation: -28, y: 60, opacity: 0, duration: 0.9, ease: "power3.in" }, 0.1);
+    tl.to(rightRef.current, { x:  160, rotation:  28, y: 40, opacity: 0, duration: 0.9, ease: "power3.in" }, 0.1);
   }
 
-  function animYirtYatayGSAP(y: number) {
+  function animYirtYatayGSAP(_y: number) {
     if (!topRef.current || !bottomRef.current) return;
-    const tl = gsap.timeline({ onComplete: () => setTimeout(() => setPhase("done"), 200) });
+    const tl = gsap.timeline({ onComplete: () => { window.setTimeout(() => setPhase("done"), 200); } });
     tl.to(topRef.current,    { y: -180, rotation: -14, x: -30, opacity: 0, duration: 0.95, ease: "power3.in" }, 0.1);
     tl.to(bottomRef.current, { y:  180, rotation:  14, x:  30, opacity: 0, duration: 0.95, ease: "power3.in" }, 0.1);
   }
@@ -136,9 +126,8 @@ export default function DenemeYirt() {
 
     const w = wrapperRef.current.offsetWidth;
     const h = wrapperRef.current.offsetHeight;
-    const isYatay = pos.y < h * 0.6; // Üst bölge → yatay kes
+    const isYatay = pos.y < h * 0.6;
 
-    // Makası konumlandır
     gsap.set(scissors.current, {
       display: "block",
       x: isYatay ? -60 : pos.x - 20,
@@ -160,7 +149,6 @@ export default function DenemeYirt() {
       }
     });
 
-    // Makas geçişi
     tl.to(scissors.current, {
       x: isYatay ? w + 60 : pos.x - 20,
       y: isYatay ? pos.y - 16 : h + 50,
@@ -177,7 +165,7 @@ export default function DenemeYirt() {
     if (!pos) return;
     burnPos.current = pos;
     addBurnSpot(pos);
-    burnInterval.current = setInterval(() => {
+    burnInterval.current = window.setInterval(() => {
       if (burnPos.current) addBurnSpot(burnPos.current);
     }, 80);
   }
@@ -190,9 +178,8 @@ export default function DenemeYirt() {
   }
 
   function onYakEnd() {
-    if (burnInterval.current) { clearInterval(burnInterval.current); burnInterval.current = null; }
-    // Yeterince yandı mı?
-    setTimeout(() => {
+    if (burnInterval.current) { window.clearInterval(burnInterval.current); burnInterval.current = null; }
+    window.setTimeout(() => {
       setBurnSpots(spots => {
         if (spots.length > 12) animYakGSAP();
         return spots;
@@ -209,14 +196,13 @@ export default function DenemeYirt() {
         r: 14 + Math.random()*22,
         id: Date.now() + Math.random(),
       };
-      // Mevcut spotları büyüt
       return [...prev.map(s => ({...s, r: Math.min(s.r + 1.8, 80)})), newSpot];
     });
   }
 
   function animYakGSAP() {
     if (!paperRef.current) return;
-    const tl = gsap.timeline({ onComplete: () => setTimeout(() => setPhase("done"), 300) });
+    const tl = gsap.timeline({ onComplete: () => { window.setTimeout(() => setPhase("done"), 300); } });
     tl.to(paperRef.current, { opacity: 0, scale: 0.88, y: 20, duration: 1.2, ease: "power2.in" });
   }
 
@@ -224,7 +210,7 @@ export default function DenemeYirt() {
   function onUc() {
     if (phase !== "ready" || animTip !== "uc") return;
     if (!paperRef.current) return;
-    const tl = gsap.timeline({ onComplete: () => setTimeout(() => setPhase("done"), 150) });
+    const tl = gsap.timeline({ onComplete: () => { window.setTimeout(() => setPhase("done"), 150); } });
     tl.to(paperRef.current, {
       y: -420, x: 60, rotation: 18, opacity: 0, scale: 0.7,
       duration: 0.85, ease: "power3.in",
@@ -250,19 +236,16 @@ export default function DenemeYirt() {
   }
 
   useEffect(() => () => {
-    if (burnInterval.current) clearInterval(burnInterval.current);
+    if (burnInterval.current) window.clearInterval(burnInterval.current);
   }, []);
 
-  // Yırtma çizgisi SVG path'i
   const yirtSvgPath = yirtPath.length > 1
     ? yirtPath.map((p,i) => `${i===0?"M":"L"} ${p.x} ${p.y}`).join(" ")
     : "";
 
-  // Kağıt yüksekliği için ref
   const paperH = paperRef.current?.offsetHeight || 520;
   const paperW = 340;
 
-  // Split noktaları
   const sy = splitY.current ?? paperH / 2;
   const sx = splitX.current ?? paperW / 2;
 
@@ -280,8 +263,6 @@ export default function DenemeYirt() {
         .dy-paper{width:340px;background:#fff;border-radius:3px;overflow:hidden;
           box-shadow:0 2px 0 rgba(255,255,255,.07) inset,0 24px 64px rgba(0,0,0,.75),0 8px 24px rgba(0,0,0,.5);
           font-family:'Times New Roman',serif;position:relative;}
-
-        /* Animasyon seçici */
         .dy-anim-btn{display:flex;flex-direction:column;align-items:center;gap:3px;
           padding:10px 6px;border-radius:10px;cursor:pointer;
           border:1.5px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);
@@ -289,35 +270,24 @@ export default function DenemeYirt() {
           font-size:10px;font-weight:600;transition:all .15s;flex:1;}
         .dy-anim-btn:hover{background:rgba(255,255,255,.09);color:white;transform:translateY(-1px);}
         .dy-anim-btn.on{border-color:#f5a623;background:rgba(245,166,35,.12);color:#f5a623;}
-
-        /* Input */
         .dy-input{width:100%;padding:8px 12px;border-radius:8px;
           border:1.5px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);
           color:white;font-family:'Sora',sans-serif;font-size:13px;outline:none;
           transition:border-color .2s;}
         .dy-input:focus{border-color:#f5a623;}
         .dy-input::placeholder{color:rgba(232,244,253,.25);}
-
-        /* Yırtık katmanlar */
         .dy-half{position:absolute;top:0;overflow:hidden;will-change:transform;}
         .dy-half-l{left:0;}
         .dy-half-r{right:0;}
         .dy-slice-t{position:absolute;left:0;top:0;overflow:hidden;will-change:transform;}
         .dy-slice-b{position:absolute;left:0;overflow:hidden;will-change:transform;}
         .dy-inner{position:absolute;top:0;width:340px;}
-
-        /* Makas */
         .dy-scissors{position:absolute;font-size:28px;pointer-events:none;display:none;z-index:20;user-select:none;}
-
-        /* İpucu */
         @keyframes hint{0%,100%{opacity:.5;transform:scale(1);}50%{opacity:1;transform:scale(1.04);}}
         .dy-hint{animation:hint 1.8s ease-in-out infinite;font-size:11.5px;
           color:rgba(232,244,253,.5);text-align:center;margin-bottom:14px;font-style:italic;}
-
         @keyframes doneIn{from{opacity:0;transform:scale(.85) translateY(14px);}to{opacity:1;transform:scale(1) translateY(0);}}
         .dy-done{animation:doneIn .45s cubic-bezier(.34,1.4,.64,1);text-align:center;padding:28px 20px;}
-
-        @keyframes pulse{0%,100%{box-shadow:0 4px 20px rgba(229,57,53,.45);}50%{box-shadow:0 4px 34px rgba(229,57,53,.8);}}
       `}</style>
 
       <div className="dy-root">
@@ -383,7 +353,7 @@ export default function DenemeYirt() {
             onTouchMove={phase==="ready"?onPointerMove:undefined}
             onTouchEnd={phase==="ready"?onPointerUp:undefined}
           >
-            {/* Yırt modu — dikey split (sol/sağ) */}
+            {/* Yırt modu — dikey split */}
             {animTip==="yirt" && splitX.current !== null && (
               <>
                 <div ref={leftRef} className="dy-half dy-half-l" style={{width:sx,height:paperH}}>
@@ -397,7 +367,7 @@ export default function DenemeYirt() {
               </>
             )}
 
-            {/* Yırt modu — yatay split (üst/alt) */}
+            {/* Yırt modu — yatay split */}
             {animTip==="yirt" && splitY.current !== null && (
               <>
                 <div ref={topRef} className="dy-slice-t" style={{width:paperW,height:sy}}>
@@ -411,12 +381,11 @@ export default function DenemeYirt() {
               </>
             )}
 
-            {/* Ana kağıt (yırt öncesi ve diğer modlar) */}
+            {/* Ana kağıt */}
             {(animTip !== "yirt" || (splitX.current === null && splitY.current === null)) && (
               <div ref={paperRef}>
                 <KagitIcerik form={form}/>
 
-                {/* Yanma spotları */}
                 {burnSpots.length > 0 && (
                   <svg style={{position:"absolute",inset:0,pointerEvents:"none",zIndex:5}}
                     width={paperW} height={paperH}>
@@ -427,12 +396,9 @@ export default function DenemeYirt() {
                     </defs>
                     {burnSpots.map(s=>(
                       <g key={s.id}>
-                        {/* Yanmış alan */}
                         <circle cx={s.x} cy={s.y} r={s.r} fill="rgba(0,0,0,.92)" filter="url(#burnBlur)"/>
-                        {/* Kor halkası */}
                         <circle cx={s.x} cy={s.y} r={s.r*.7} fill="none"
                           stroke="rgba(255,120,0,.6)" strokeWidth="3" filter="url(#burnBlur)"/>
-                        {/* Alov halkası */}
                         <circle cx={s.x} cy={s.y} r={s.r*.5} fill="none"
                           stroke="rgba(255,200,0,.4)" strokeWidth="2" filter="url(#burnBlur)"/>
                       </g>
@@ -442,7 +408,7 @@ export default function DenemeYirt() {
               </div>
             )}
 
-            {/* Yırtık çizgisi (sürüklerken) */}
+            {/* Yırtık çizgisi */}
             {yirtPath.length > 1 && (splitX.current === null && splitY.current === null) && (
               <svg style={{position:"absolute",inset:0,pointerEvents:"none",zIndex:10}}
                 width={paperW} height={paperH}>
@@ -453,9 +419,7 @@ export default function DenemeYirt() {
               </svg>
             )}
 
-            {/* Makas */}
             <div ref={scissors} className="dy-scissors">✂️</div>
-
           </div>
         )}
 
@@ -540,7 +504,6 @@ function KagitIcerik({form}:{form:FormData}) {
   return (
     <div className="dy-paper">
 
-      {/* Kırmızı üst bant */}
       <div style={{background:"#c0392b",padding:"8px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{width:44,height:36,background:"white",borderRadius:3,display:"flex",alignItems:"center",justifyContent:"center",
           fontSize:8,fontWeight:800,color:"#c0392b",textAlign:"center",lineHeight:1.2,fontFamily:"'Sora',sans-serif",letterSpacing:.5}}>
@@ -556,14 +519,12 @@ function KagitIcerik({form}:{form:FormData}) {
         </div>
       </div>
 
-      {/* Lacivert alt şerit */}
       <div style={{background:"#1565c0",padding:"4px 14px",textAlign:"center"}}>
         <div style={{fontSize:8,color:"white",fontWeight:600,fontFamily:"'Sora',sans-serif",letterSpacing:.3}}>
           DENEME SINAVI
         </div>
       </div>
 
-      {/* Soru kitapçığı */}
       <div style={{background:"#f5f5f0",borderBottom:"1px solid #ddd",padding:"7px 14px"}}>
         <div style={{fontSize:7,fontWeight:700,color:"#444",letterSpacing:.3,marginBottom:4,fontFamily:"'Sora',sans-serif"}}>SORU KİTAPÇIĞI NUMARASI</div>
         <div style={{display:"flex",gap:4,alignItems:"center"}}>
@@ -576,7 +537,6 @@ function KagitIcerik({form}:{form:FormData}) {
         </div>
       </div>
 
-      {/* ÖRNEK damgası */}
       <div style={{position:"absolute",top:"32%",left:"50%",
         transform:"translate(-50%,-50%) rotate(-22deg)",
         fontSize:42,fontWeight:900,color:"rgba(180,30,30,.09)",letterSpacing:3,
@@ -584,7 +544,6 @@ function KagitIcerik({form}:{form:FormData}) {
         ÖRNEK
       </div>
 
-      {/* Deneme adı + Net — büyük ve belirgin */}
       <div style={{padding:"14px 16px 10px",background:"white",borderBottom:"2px solid #1565c0"}}>
         <div style={{fontSize:7,fontWeight:700,color:"#888",letterSpacing:1,textTransform:"uppercase",fontFamily:"'Sora',sans-serif",marginBottom:4}}>
           Deneme Adı
@@ -604,9 +563,8 @@ function KagitIcerik({form}:{form:FormData}) {
         )}
       </div>
 
-      {/* Form alanları */}
       <div style={{background:"white",padding:"10px 14px 6px"}}>
-        {[["T.C. KİMLİK NUMARASI",""],["ADI",""],["SOYADI",""],].map(([l],i)=>(
+        {[["T.C. KİMLİK NUMARASI"],["ADI"],["SOYADI"]].map(([l],i)=>(
           <div key={i} style={{marginBottom:8}}>
             <div style={{fontSize:7,fontWeight:700,color:"#555",letterSpacing:.3,fontFamily:"'Sora',sans-serif",marginBottom:2}}>{l}</div>
             <div style={{height:16,borderBottom:"1px solid #aaa"}}/>
@@ -622,7 +580,6 @@ function KagitIcerik({form}:{form:FormData}) {
         </div>
       </div>
 
-      {/* Dikkat kutusu */}
       <div style={{padding:"8px 14px",background:"#fffef8",borderTop:"1px solid #eee"}}>
         <div style={{fontSize:8,fontWeight:800,color:"#c0392b",marginBottom:4,fontFamily:"'Sora',sans-serif"}}>ADAYIN DİKKATİNE:</div>
         {[
@@ -637,7 +594,6 @@ function KagitIcerik({form}:{form:FormData}) {
         ))}
       </div>
 
-      {/* İmza */}
       <div style={{padding:"6px 14px 12px",background:"white",borderTop:"1px solid #ddd",display:"flex",gap:10}}>
         {["Adayın İmzası:","Kitapçık Numarası:"].map((l,i)=>(
           <div key={i} style={{flex:1}}>
