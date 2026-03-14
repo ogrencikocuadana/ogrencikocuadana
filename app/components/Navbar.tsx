@@ -10,7 +10,7 @@ const ARACLAR = [
   { label: "🍅 Pomodoro Timer", href: "/pomodoro" },
   { label: "🎯 Net Hesaplama", href: "/net-hesaplama" },
   { label: "⚡ Hız Analizörü", href: "/hiz-analizoru" },
-  { label: "🎨 Duygu Atölyesi", href: "/regulasyon" },
+  { label: "🎨 Duygu Atölyesi", href: "/duygu-atolyesi" },
 ];
 
 export default function Navbar() {
@@ -108,6 +108,19 @@ export default function Navbar() {
                 />
               </a>
             ))}
+
+            <Link
+              href="/hakkimizda"
+              className={`relative py-1 transition-colors duration-200 ${
+                pathname.startsWith("/hakkimizda") ? "text-slate-900" : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              Hakkımızda
+              <span
+                className="absolute left-0 -bottom-1 h-[2px] bg-slate-900 rounded-full transition-all duration-300"
+                style={{ width: pathname.startsWith("/hakkimizda") ? "100%" : "0%" }}
+              />
+            </Link>
 
             <Link
               href="/blog"
@@ -208,6 +221,17 @@ export default function Navbar() {
               {active === s && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
             </a>
           ))}
+
+          <Link
+            href="/hakkimizda"
+            onClick={closeMenu}
+            className={`flex items-center justify-between py-4 border-b border-slate-100 text-lg font-medium transition-colors duration-150 ${
+              pathname.startsWith("/hakkimizda") ? "text-slate-900 font-semibold" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Hakkımızda
+            {pathname.startsWith("/hakkimizda") && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
+          </Link>
 
           <Link
             href="/blog"

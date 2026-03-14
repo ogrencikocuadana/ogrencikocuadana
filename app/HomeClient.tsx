@@ -1,18 +1,9 @@
 "use client";
-// app/HomeClient.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Orijinal page.tsx içeriğinin tamamı buraya taşındı.
-// Değişiklikler:
-//   1. "use client" direktifi bu dosyada — metadata çakışması ortadan kalktı
-//   2. H1/H2/H3 heading hiyerarşisi semantik olarak düzenlendi (SEO kritik)
-//   3. font-family referansları Sora'ya güncellendi (Inter/Playfair kaldırıldı)
-//   4. page.tsx'teki eski JSON-LD (schemaData) buradan kaldırıldı —
-//      page.tsx server component'ında FAQPage + Service olarak yeniden yazıldı
-//   5. Küçük erişilebilirlik düzeltmeleri (aria-label, role)
-// ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, CSSProperties, ReactNode, FormEvent } from "react";
 import ReviewsCarousel from "./components/ReviewsCarousel";
+import Image from "next/image";
+
 
 // ─── Tip Tanımları ────────────────────────────────────────────────────────────
 interface IconProps { className?: string; style?: CSSProperties; filled?: boolean; }
@@ -53,11 +44,11 @@ const IconSend = ({ style }: IconProps) => (<svg style={style} fill="none" strok
 const IconX = () => (<svg fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" viewBox="0 0 24 24" width="22" height="22"><path d="M18 6 6 18M6 6l12 12" /></svg>);
 const IconChevronDown = () => (<svg fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" width="18" height="18"><path d="m6 9 6 6 6-6" /></svg>);
 
-// ─── Font Değişkeni (Sora) ────────────────────────────────────────────────────
-// layout.tsx'te body'ye sora.className uygulandı.
-// Burada display font için var(--font-sora) kullanıyoruz.
-// Orijinal kodda "Playfair Display" vardı — Sora ile değiştirildi.
-const displayFont = "var(--font-sora), 'Sora', sans-serif";
+// ─── FONT DEĞİŞKENİ ────────────────────────────────────────────────────────────
+// ⚠️ SADECE BU SATIR DEĞİŞTİ (önceki: "Playfair Display" veya "'Sora'")
+// layout.tsx'teki Bricolage Grotesque'i --font-display CSS değişkeni üzerinden alıyor.
+// Tüm başlıklar (H1, H2, H3, modal başlıkları, pricing kartları) bu fontla render edilir.
+const displayFont = "var(--font-display), 'Bricolage Grotesque', sans-serif";
 
 // ─── Pricing Card ─────────────────────────────────────────────────────────────
 function PricingCard({ badge, icon, iconBg, title, features, checkColor, onOpen }: PricingCardProps) {
@@ -78,7 +69,6 @@ function PricingCard({ badge, icon, iconBg, title, features, checkColor, onOpen 
         <span style={{ color: "#6b7280", fontWeight: 700, fontSize: "0.68rem", letterSpacing: "0.08em" }}>{badge}</span>
       </div>
       <div style={{ width: 56, height: 56, background: iconBg, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18, boxShadow: `0 4px 14px ${iconBg}99` }}>{icon}</div>
-      {/* ✅ SEO: h3 — pricing section'daki 3. düzey başlık */}
       <h3 style={{ fontFamily: displayFont, fontSize: "1.2rem", fontWeight: 700, color: "#0f1f4f", margin: "0 0 20px", lineHeight: 1.35 }}>{title}</h3>
       <div style={{ height: 1, background: "linear-gradient(90deg, #e5e7eb, transparent)", marginBottom: 20 }} />
       {features.map((f, i) => (
@@ -91,7 +81,7 @@ function PricingCard({ badge, icon, iconBg, title, features, checkColor, onOpen 
       ))}
       <button
         onClick={onOpen}
-        style={{ width: "100%", padding: "13px 24px", background: hovered ? "#1e3a8a" : "white", color: hovered ? "white" : "#1e3a8a", border: "2px solid #1e3a8a", borderRadius: 10, fontWeight: 700, cursor: "pointer", marginTop: 24, transition: "all 0.25s ease", fontSize: "0.9rem" }}
+        style={{ width: "100%", padding: "13px 24px", background: hovered ? "#1e3a8a" : "white", color: hovered ? "white" : "#1e3a8a", border: "2px solid #1e3a8a", borderRadius: 10, fontWeight: 700, cursor: "pointer", marginTop: 24, transition: "all 0.25s ease", fontSize: "0.9rem", fontFamily: "inherit" }}
       >
         Ön Görüşme İste
       </button>
@@ -122,7 +112,6 @@ function AppointmentModal({ onClose }: { onClose: () => void }) {
         <div onClick={(e) => e.stopPropagation()} style={{ background: "white", borderRadius: 20, width: "100%", maxWidth: 640, maxHeight: "92vh", overflowY: "auto", boxShadow: "0 28px 80px rgba(0,0,0,0.28)", animation: "modal-box-in 0.28s cubic-bezier(.22,.68,0,1.2)", pointerEvents: "all" }}>
           <div style={{ position: "sticky", top: 0, zIndex: 10, background: "linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)", padding: "24px 28px", borderRadius: "20px 20px 0 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
-              {/* ✅ Modal başlığı h2 — ana H1'den sonra mantıklı hiyerarşi */}
               <h2 style={{ fontFamily: displayFont, fontSize: "1.65rem", fontWeight: 800, color: "white", margin: "0 0 4px" }}>Ücretsiz Ön Görüşme</h2>
               <p style={{ color: "#bfdbfe", margin: 0, fontSize: "0.9rem" }}>Formu doldurun, en kısa sürede size dönelim</p>
             </div>
@@ -134,7 +123,7 @@ function AppointmentModal({ onClose }: { onClose: () => void }) {
               <h3 style={{ fontFamily: displayFont, fontSize: "1.7rem", fontWeight: 800, color: "#0f1f4f", margin: "0 0 12px" }}>Talebiniz Alındı! 🎉</h3>
               <p style={{ color: "#4b5563", lineHeight: 1.7, maxWidth: 420, margin: "0 auto 12px" }}>En kısa sürede <strong style={{ color: "#1e3a8a" }}>{form.phone || "belirttiğiniz numara"}</strong>&apos;dan sizi arayacağız.</p>
               <p style={{ color: "#6b7280", fontSize: "0.9rem", maxWidth: 420, margin: "0 auto 32px" }}>📧 Bilgileriniz e-posta ile iletildi. WhatsApp otomatik açılmadıysa <a href="https://wa.me/905473803801" target="_blank" rel="noopener noreferrer" style={{ color: "#1e3a8a", fontWeight: 600 }}>buraya tıklayın</a>.</p>
-              <button onClick={onClose} style={{ background: "linear-gradient(135deg,#1e3a8a,#1e40af)", color: "white", border: "none", padding: "13px 36px", borderRadius: 10, fontWeight: 700, fontSize: "1rem", cursor: "pointer", boxShadow: "0 4px 14px rgba(30,58,138,0.35)" }}>Kapat</button>
+              <button onClick={onClose} style={{ background: "linear-gradient(135deg,#1e3a8a,#1e40af)", color: "white", border: "none", padding: "13px 36px", borderRadius: 10, fontWeight: 700, fontSize: "1rem", cursor: "pointer", boxShadow: "0 4px 14px rgba(30,58,138,0.35)", fontFamily: "inherit" }}>Kapat</button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} style={{ padding: "28px 28px 32px" }}>
@@ -155,7 +144,7 @@ function AppointmentModal({ onClose }: { onClose: () => void }) {
                 </div>
               </div>
               <div style={{ marginBottom: 28 }}><label style={lbl}>Mesajınız <span style={{ color: "#9ca3af", fontWeight: 400 }}>(İsteğe bağlı)</span></label><textarea name="message" rows={4} placeholder="Öğrencinin mevcut durumu, hedefleri veya sormak istedikleriniz..." value={form.message} onChange={handleChange} className="modal-inp" style={{ ...inp, paddingLeft: 16, resize: "none", lineHeight: 1.65 }} /></div>
-              <button type="submit" className="modal-submit" style={{ width: "100%", padding: "15px 24px", background: "linear-gradient(135deg,#1e3a8a,#1e40af)", color: "white", border: "none", borderRadius: 10, fontWeight: 700, fontSize: "1.05rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 4px 16px rgba(30,58,138,0.35)", transition: "box-shadow 0.25s, filter 0.25s" }}><IconSend style={{ width: 20, height: 20 }} />Ön Görüşme Talep Et</button>
+              <button type="submit" className="modal-submit" style={{ width: "100%", padding: "15px 24px", background: "linear-gradient(135deg,#1e3a8a,#1e40af)", color: "white", border: "none", borderRadius: 10, fontWeight: 700, fontSize: "1.05rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 4px 16px rgba(30,58,138,0.35)", transition: "box-shadow 0.25s, filter 0.25s", fontFamily: "inherit" }}><IconSend style={{ width: 20, height: 20 }} />Ön Görüşme Talep Et</button>
               <p style={{ textAlign: "center", fontSize: "0.78rem", color: "#9ca3af", margin: "14px 0 0" }}>🔒 Bilgileriniz güvende — yalnızca sizinle iletişim için kullanılır.</p>
             </form>
           )}
@@ -166,40 +155,119 @@ function AppointmentModal({ onClose }: { onClose: () => void }) {
 }
 
 // ─── Geri Sayım ───────────────────────────────────────────────────────────────
+interface TimeLeft { days: number; hours: number; minutes: number; seconds: number; done: boolean; }
+
+function calcTimeLeft(target: Date): TimeLeft {
+  const diff = target.getTime() - new Date().getTime();
+  if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, done: true };
+  const days    = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours   = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  return { days, hours, minutes, seconds, done: false };
+}
+
 function CountdownSection() {
   const exams = [
-    { name: "LGS", date: new Date("2026-06-14T09:00:00"), color: "#1e3a8a", bg: "#eff6ff", border: "#bfdbfe", tag: "8. Sınıf" },
-    { name: "YKS", date: new Date("2026-06-20T10:00:00"), color: "#c2410c", bg: "#fff7ed", border: "#fed7aa", tag: "12. Sınıf" },
+    { name: "LGS", date: new Date("2026-06-14T09:00:00"), tarih: "14 Haziran 2026", color: "#1e3a8a", bg: "#eff6ff", border: "#bfdbfe", tag: "8. Sınıf" },
+    { name: "YKS", date: new Date("2026-06-20T10:00:00"), tarih: "20–21 Haziran 2026", color: "#c2410c", bg: "#fff7ed", border: "#fed7aa", tag: "12. Sınıf" },
   ];
-  const [days, setDays] = useState<number[]>(exams.map(() => 0));
+
+  const [times, setTimes] = useState<TimeLeft[]>(exams.map(e => calcTimeLeft(e.date)));
+
   useEffect(() => {
-    const calc = () => { const now = new Date().getTime(); setDays(exams.map(e => Math.max(0, Math.ceil((e.date.getTime() - now) / (1000 * 60 * 60 * 24))))); };
-    calc();
-    const t = setInterval(calc, 60000);
+    // Saniyede bir güncelle
+    const t = setInterval(() => {
+      setTimes(exams.map(e => calcTimeLeft(e.date)));
+    }, 1000);
     return () => clearInterval(t);
   }, []);
+
   return (
-    <section aria-label="Sınava geri sayım" style={{ padding: "44px 16px", background: "linear-gradient(135deg, #f8faff, #eff6ff)" }}>
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <p style={{ textAlign: "center", fontSize: "0.8rem", fontWeight: 700, color: "#6b7280", letterSpacing: "0.1em", marginBottom: 20 }}>SINAVA NE KADAR KALDI?</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }} className="grid-cols-2">
-          {exams.map((exam, i) => (
-            <div key={i} className="card-hover" style={{ background: exam.bg, borderRadius: 18, padding: "24px 28px", border: `2px solid ${exam.border}`, display: "flex", alignItems: "center", gap: 20, boxShadow: "0 4px 16px rgba(0,0,0,0.05)" }}>
-              <div style={{ textAlign: "center", flexShrink: 0, minWidth: 72 }}>
-                <div style={{ fontSize: "3.2rem", fontWeight: 800, color: exam.color, lineHeight: 1, fontFamily: displayFont }}>{days[i]}</div>
-                <div style={{ fontSize: "0.7rem", fontWeight: 700, color: exam.color, opacity: 0.65, marginTop: 4, letterSpacing: "0.08em" }}>GÜN</div>
-              </div>
-              <div style={{ width: 2, height: 52, background: exam.border, flexShrink: 0 }} />
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+    <section aria-label="Sınava geri sayım" style={{ padding: "52px 16px", background: "linear-gradient(135deg, #f8faff, #eff6ff)" }}>
+      <div style={{ maxWidth: 980, margin: "0 auto" }}>
+        <p style={{ textAlign: "center", fontSize: "0.75rem", fontWeight: 700, color: "#6b7280", letterSpacing: "0.12em", marginBottom: 28 }}>
+          SINAVA NE KADAR KALDI?
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }} className="grid-cols-2">
+          {exams.map((exam, i) => {
+            const t = times[i];
+            const birimler = [
+              { deger: t.days,    etiket: "Gün" },
+              { deger: t.hours,   etiket: "Saat" },
+              { deger: t.minutes, etiket: "Dakika" },
+              { deger: t.seconds, etiket: "Saniye" },
+            ];
+            return (
+              <div
+                key={i}
+                className="card-hover"
+                style={{
+                  background: exam.bg,
+                  borderRadius: 20,
+                  padding: "28px 24px",
+                  border: `2px solid ${exam.border}`,
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+                }}
+              >
+                {/* Başlık */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
                   <span style={{ fontSize: "1.5rem", fontWeight: 800, color: exam.color, fontFamily: displayFont }}>{exam.name}</span>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 700, background: exam.border, color: exam.color, padding: "3px 10px", borderRadius: 9999 }}>{exam.tag}</span>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, background: exam.border, color: exam.color, padding: "3px 10px", borderRadius: 9999 }}>
+                    {exam.tag}
+                  </span>
+                  <span style={{ marginLeft: "auto", fontSize: "0.8rem", color: "#6b7280", fontWeight: 500 }}>{exam.tarih}</span>
                 </div>
-                <div style={{ fontSize: "0.88rem", color: "#4b5563", fontWeight: 500 }}>{exam.name === "LGS" ? "14 Haziran 2026" : "20–21 Haziran 2026"}</div>
-                <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: 3 }}>{days[i] === 0 ? "🎉 Sınav günü!" : `${Math.floor(days[i] / 7)} hafta ${days[i] % 7} gün`}</div>
+
+                {/* Sayaç kutuları */}
+                {t.done ? (
+                  <div style={{ textAlign: "center", fontSize: "1.4rem", fontWeight: 800, color: exam.color, padding: "12px 0" }}>
+                    🎉 Sınav günü!
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+                    {birimler.map((b) => (
+                      <div
+                        key={b.etiket}
+                        style={{
+                          background: "white",
+                          borderRadius: 12,
+                          padding: "14px 8px",
+                          textAlign: "center",
+                          border: `1.5px solid ${exam.border}`,
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                        }}
+                      >
+                        <div style={{
+                          fontSize: "clamp(1.5rem, 3.5vw, 2.1rem)",
+                          fontWeight: 800,
+                          color: exam.color,
+                          lineHeight: 1,
+                          fontFamily: displayFont,
+                          // Sayı değişince titreme olmasın diye sabit genişlik
+                          fontVariantNumeric: "tabular-nums",
+                        }}>
+                          {String(b.deger).padStart(2, "0")}
+                        </div>
+                        <div style={{
+                          fontSize: "0.65rem",
+                          fontWeight: 700,
+                          color: exam.color,
+                          opacity: 0.6,
+                          marginTop: 5,
+                          letterSpacing: "0.07em",
+                          textTransform: "uppercase",
+                        }}>
+                          {b.etiket}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
@@ -216,7 +284,7 @@ export default function HomeClient() {
     <>
       <style>{`
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: var(--font-sora), 'Sora', sans-serif; }
+        body { margin: 0; font-family: var(--font-body), 'Plus Jakarta Sans', sans-serif; }
         .dot-bg { background-image: radial-gradient(#1e3a8a 1px, transparent 1px); background-size: 28px 28px; }
         .card-hover { transition: all 0.3s ease; }
         .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.10); }
@@ -253,11 +321,6 @@ export default function HomeClient() {
               <span style={{ color: "#374151", fontWeight: 600, fontSize: "0.82rem" }}>LGS &amp; YKS Öğrencileri İçin Online &amp; Yüz Yüze Özel Koçluk</span>
             </div>
 
-            {/*
-              ✅ SEO KRİTİK: Sayfada tek bir H1 olmalı.
-              Anahtar kelimeler: "lgs koçu adana", "yks koçu adana", "sınav başarısı"
-              H1 içeriği hem kullanıcıya hem Google'a sayfanın ne hakkında olduğunu söyler.
-            */}
             <h1
               id="hero-heading"
               className="hero-h1"
@@ -275,7 +338,7 @@ export default function HomeClient() {
             </p>
 
             <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap", marginBottom: 72 }}>
-              <button onClick={openModal} className="btn-main" style={{ background: "linear-gradient(135deg, #1e3a8a, #2563eb)", color: "white", border: "none", padding: "16px 36px", borderRadius: 10, fontWeight: 700, fontSize: "1.05rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 10, boxShadow: "0 6px 24px rgba(30,58,138,0.3)", transition: "all 0.25s" }}>
+              <button onClick={openModal} className="btn-main" style={{ background: "linear-gradient(135deg, #1e3a8a, #2563eb)", color: "white", border: "none", padding: "16px 36px", borderRadius: 10, fontWeight: 700, fontSize: "1.05rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 10, boxShadow: "0 6px 24px rgba(30,58,138,0.3)", transition: "all 0.25s", fontFamily: "inherit" }}>
                 <IconCalendar style={{ width: 20, height: 20 }} />
                 Ücretsiz Ön Görüşme Planla
                 <IconArrowRight style={{ width: 18, height: 18 }} />
@@ -294,7 +357,7 @@ export default function HomeClient() {
               ].map((s, i) => (
                 <div key={i} style={{ background: s.bg, borderRadius: 16, padding: "18px 12px", border: `1.5px solid ${s.border}`, textAlign: "center" }}>
                   <div style={{ fontSize: "1.4rem", marginBottom: 6 }} aria-hidden="true">{s.icon}</div>
-                  <div style={{ fontSize: "1.55rem", fontWeight: 800, color: s.color, lineHeight: 1, marginBottom: 5 }}>{s.val}</div>
+                  <div style={{ fontSize: "1.55rem", fontWeight: 800, color: s.color, lineHeight: 1, marginBottom: 5, fontFamily: displayFont }}>{s.val}</div>
                   <div style={{ fontSize: "0.7rem", color: "#6b7280", fontWeight: 500, lineHeight: 1.35 }}>{s.label}</div>
                 </div>
               ))}
@@ -309,7 +372,6 @@ export default function HomeClient() {
         <section aria-labelledby="sorunlar-heading" style={{ padding: "88px 16px", background: "white" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 56 }}>
-              {/* ✅ H2 — bölüm başlığı */}
               <h2 id="sorunlar-heading" style={{ fontFamily: displayFont, fontSize: "clamp(1.8rem, 4vw, 2.6rem)", fontWeight: 800, color: "#0f1f4f", marginBottom: 12 }}>Tanıdık Geliyor mu?</h2>
               <p style={{ fontSize: "1.1rem", color: "#4b5563", maxWidth: 560, margin: "0 auto" }}>Birçok öğrenci ve veli bu sorunlarla karşılaşıyor</p>
             </div>
@@ -317,7 +379,6 @@ export default function HomeClient() {
               <div className="card-hover" style={{ background: "#eff6ff", borderRadius: 20, padding: 32, border: "2px solid #bfdbfe" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
                   <div style={{ width: 48, height: 48, background: "#1e3a8a", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }} aria-hidden="true"><IconUsers style={{ width: 24, height: 24, color: "white" }} /></div>
-                  {/* ✅ H3 — alt bölüm başlığı */}
                   <h3 style={{ fontFamily: displayFont, fontSize: "1.4rem", fontWeight: 700, color: "#0f1f4f", margin: 0 }}>Velilerden Duyuyoruz</h3>
                 </div>
                 {[{ Icon: IconTrendingDown, text: "Çalışıyor ama verimsiz geçiyor" }, { Icon: IconBrain, text: "Denemede netleri artmıyor" }, { Icon: IconAlertCircle, text: "Kaygı ve telefon dikkatini bölüyor" }, { Icon: IconTrendingDown, text: "Programlı çalışmıyor" }].map(({ Icon, text }, i) => (
@@ -393,19 +454,8 @@ export default function HomeClient() {
               <h2 id="paketler-heading" style={{ fontFamily: displayFont, fontSize: "clamp(1.8rem, 4vw, 3rem)", fontWeight: 800, color: "#0f1f4f", marginBottom: 12 }}>Size Uygun Paketi Seçin</h2>
               <p style={{ fontSize: "1.05rem", color: "#4b5563", maxWidth: 520, margin: "0 auto" }}>Her öğrencinin ihtiyacı farklıdır. Size en uygun desteği sunuyoruz.</p>
             </div>
-
             <div className="pricing-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1.15fr 1fr", gap: 20, alignItems: "start" }}>
-              <PricingCard
-                badge="TEMEL"
-                icon={<IconSparkles style={{ width: 28, height: 28, color: "#1d4ed8" }} />}
-                iconBg="#dbeafe" iconColor="#1d4ed8"
-                title="Akademik Performans Paketi"
-                features={["Haftalık bireysel koçluk görüşmesi", "Öğrenciye özel akademik planlama", "Kaynak ve ders takip sistemi", "Deneme analiz sistemi", "Aylık performans raporu"]}
-                checkColor="#2563eb"
-                onOpen={openModal}
-              />
-
-              {/* Önerilen kart */}
+              <PricingCard badge="TEMEL" icon={<IconSparkles style={{ width: 28, height: 28, color: "#1d4ed8" }} />} iconBg="#dbeafe" iconColor="#1d4ed8" title="Akademik Performans Paketi" features={["Haftalık bireysel koçluk görüşmesi", "Öğrenciye özel akademik planlama", "Kaynak ve ders takip sistemi", "Deneme analiz sistemi", "Aylık performans raporu"]} checkColor="#2563eb" onOpen={openModal} />
               <div style={{ position: "relative", marginTop: -8 }}>
                 <div style={{ position: "absolute", inset: -3, borderRadius: 28, background: "linear-gradient(135deg, #f97316, #1e40af, #f97316)", backgroundSize: "200% 200%", zIndex: 0, filter: "blur(1px)", opacity: 0.7 }} aria-hidden="true" />
                 <article style={{ position: "relative", zIndex: 1, background: "linear-gradient(160deg, #1e3a8a 0%, #1e40af 60%, #1a35a0 100%)", borderRadius: 26, padding: "40px 32px 32px", boxShadow: "0 20px 60px rgba(30,58,138,0.35), 0 0 0 1px rgba(255,255,255,0.08) inset" }}>
@@ -413,57 +463,24 @@ export default function HomeClient() {
                     <IconStar style={{ width: 13, height: 13, color: "white" }} filled />
                     <span style={{ color: "white", fontWeight: 800, fontSize: "0.72rem", letterSpacing: "0.06em" }}>ÖNERİLEN</span>
                   </div>
-                  <div style={{ width: 56, height: 56, background: "rgba(255,255,255,0.12)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16, border: "1px solid rgba(255,255,255,0.2)" }} aria-hidden="true">
-                    <IconStar style={{ width: 28, height: 28, color: "#fdba74" }} />
-                  </div>
+                  <div style={{ width: 56, height: 56, background: "rgba(255,255,255,0.12)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16, border: "1px solid rgba(255,255,255,0.2)" }} aria-hidden="true"><IconStar style={{ width: 28, height: 28, color: "#fdba74" }} /></div>
                   <h3 style={{ fontFamily: displayFont, fontSize: "1.2rem", fontWeight: 700, color: "white", margin: "0 0 8px", lineHeight: 1.35 }}>Akademik Performans ve Psikolojik Dayanıklılık Paketi</h3>
                   <p style={{ fontSize: "0.8rem", color: "rgba(191,219,254,0.8)", margin: "0 0 22px" }}>En kapsamlı program — akademik + psikolojik destek</p>
                   <div style={{ height: 1, background: "rgba(255,255,255,0.12)", marginBottom: 20 }} />
-                  {[
-                    { text: "Tüm Akademik Performans özellikleri", highlight: true },
-                    { text: "Haftalık online seminer", highlight: false },
-                    { text: "Zaman yönetimi eğitimi", highlight: false },
-                    { text: "Sınav kaygısı ve stres yönetimi", highlight: false },
-                    { text: "Verimli ders çalışma teknikleri", highlight: false },
-                    { text: "Hızlı okuma ve teknoloji bağımlılığı", highlight: false },
-                    { text: "Seminer sonrası ödevlendirme", highlight: false },
-                    { text: "Detaylı gelişim takibi", highlight: false },
-                  ].map((f, i) => (
+                  {[{ text: "Tüm Akademik Performans özellikleri", highlight: true }, { text: "Haftalık online seminer", highlight: false }, { text: "Zaman yönetimi eğitimi", highlight: false }, { text: "Sınav kaygısı ve stres yönetimi", highlight: false }, { text: "Verimli ders çalışma teknikleri", highlight: false }, { text: "Hızlı okuma ve teknoloji bağımlılığı", highlight: false }, { text: "Seminer sonrası ödevlendirme", highlight: false }, { text: "Detaylı gelişim takibi", highlight: false }].map((f, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 11 }}>
-                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: f.highlight ? "rgba(253,186,116,0.25)" : "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }} aria-hidden="true">
-                        <IconCheck style={{ width: 11, height: 11, color: f.highlight ? "#fdba74" : "rgba(255,255,255,0.7)" }} />
-                      </div>
+                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: f.highlight ? "rgba(253,186,116,0.25)" : "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }} aria-hidden="true"><IconCheck style={{ width: 11, height: 11, color: f.highlight ? "#fdba74" : "rgba(255,255,255,0.7)" }} /></div>
                       <span style={{ fontSize: "0.875rem", color: f.highlight ? "#fdba74" : "rgba(255,255,255,0.88)", lineHeight: 1.55, fontWeight: f.highlight ? 600 : 400 }}>{f.text}</span>
                     </div>
                   ))}
-                  <button
-                    onClick={openModal}
-                    style={{ width: "100%", padding: "14px 24px", background: "white", color: "#1e3a8a", border: "none", borderRadius: 12, fontWeight: 700, cursor: "pointer", marginTop: 24, fontSize: "0.95rem", boxShadow: "0 4px 16px rgba(0,0,0,0.2)", transition: "all 0.25s" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#eff6ff"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "white"; }}
-                  >
-                    Ön Görüşme İste →
-                  </button>
+                  <button onClick={openModal} style={{ width: "100%", padding: "14px 24px", background: "white", color: "#1e3a8a", border: "none", borderRadius: 12, fontWeight: 700, cursor: "pointer", marginTop: 24, fontSize: "0.95rem", boxShadow: "0 4px 16px rgba(0,0,0,0.2)", transition: "all 0.25s", fontFamily: "inherit" }} onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#eff6ff"; }} onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "white"; }}>Ön Görüşme İste →</button>
                 </article>
               </div>
-
-              <PricingCard
-                badge="HIZ ODAKLI"
-                icon={<IconBolt style={{ width: 28, height: 28, color: "#1d4ed8" }} />}
-                iconBg="#dbeafe" iconColor="#1d4ed8"
-                title="Sınav Odaklı Hızlı Okuma Programı"
-                features={["4 hafta uygulamalı online eğitim", "21 gün disiplinli ödev sistemi", "365 günlük yazılım desteği", "Veli rapor sistemi", "Moxo Dikkat Testi Uygulaması"]}
-                checkColor="#2563eb"
-                onOpen={openModal}
-              />
+              <PricingCard badge="HIZ ODAKLI" icon={<IconBolt style={{ width: 28, height: 28, color: "#1d4ed8" }} />} iconBg="#dbeafe" iconColor="#1d4ed8" title="Sınav Odaklı Hızlı Okuma Programı" features={["4 hafta uygulamalı online eğitim", "21 gün disiplinli ödev sistemi", "365 günlük yazılım desteği", "Veli rapor sistemi", "Moxo Dikkat Testi Uygulaması"]} checkColor="#2563eb" onOpen={openModal} />
             </div>
-
             <div style={{ marginTop: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "18px 28px", background: "white", borderRadius: 14, border: "1.5px solid #fed7aa", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
               <span style={{ fontSize: "1.1rem" }} aria-hidden="true">👥</span>
-              <p style={{ fontSize: "0.95rem", color: "#374151", margin: 0 }}>
-                <strong style={{ color: "#1e3a8a" }}>Sınırlı Kontenjan:</strong> Kaliteyi korumak için en fazla{" "}
-                <strong style={{ color: "#c2410c" }}>30 öğrenci</strong> ile çalışıyoruz.
-              </p>
+              <p style={{ fontSize: "0.95rem", color: "#374151", margin: 0 }}><strong style={{ color: "#1e3a8a" }}>Sınırlı Kontenjan:</strong> Kaliteyi korumak için en fazla <strong style={{ color: "#c2410c" }}>30 öğrenci</strong> ile çalışıyoruz.</p>
             </div>
           </div>
         </section>
@@ -535,7 +552,7 @@ export default function HomeClient() {
         {/* ══════ VELİ & ÖĞRENCİ ══════ */}
         <section aria-labelledby="veli-ogrenci-heading" style={{ padding: "88px 16px", background: "white" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-            <h2 id="veli-ogrenci-heading" className="sr-only" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0,0,0,0)" }}>Veli ve Öğrenciler İçin</h2>
+            <h2 id="veli-ogrenci-heading" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0,0,0,0)" }}>Veli ve Öğrenciler İçin</h2>
             <div className="grid-cols-2" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 40 }}>
               <div className="card-hover" style={{ background: "linear-gradient(135deg, #eff6ff, white)", borderRadius: 20, padding: 40, border: "2px solid #bfdbfe", boxShadow: "0 4px 16px rgba(0,0,0,0.05)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 22 }}>
@@ -569,6 +586,98 @@ export default function HomeClient() {
           </div>
         </section>
 
+        {/* ══════ HAKKIMIZDA MİNİ ══════ */}
+        <section style={{ padding: "88px 16px", background: "white" }}>
+          <div style={{ maxWidth: 1060, margin: "0 auto" }}>
+
+            <div style={{ textAlign: "center", marginBottom: 52 }}>
+              <div style={{ display: "inline-block", marginBottom: 14, padding: "7px 18px", background: "#dbeafe", borderRadius: 9999 }}>
+                <span style={{ color: "#1e40af", fontWeight: 700, fontSize: "0.75rem", letterSpacing: "0.06em" }}>HAKKIMIZDA</span>
+              </div>
+              <h2 style={{ fontFamily: displayFont, fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 800, color: "#0f1f4f", marginBottom: 14 }}>
+                Bizi Tanıyın
+              </h2>
+              <p style={{ fontSize: "1rem", color: "#4b5563", lineHeight: 1.75, maxWidth: 560, margin: "0 auto" }}>
+                İki uzman psikolojik danışman olarak akademik koçluk ve psikolojik destek sunuyoruz — ikisi bir arada.
+              </p>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))", gap: 28, marginBottom: 44 }}>
+
+              {/* ── Cumali ── */}
+              <div style={{ background: "#eff6ff", borderRadius: 20, padding: "28px", border: "2px solid #bfdbfe", display: "flex", gap: 22, alignItems: "flex-start" }}>
+                <div style={{ width: 84, height: 84, borderRadius: "50%", border: "3px solid #93c5fd", flexShrink: 0, overflow: "hidden", background: "#dbeafe" }}>
+                  <Image
+                    src="/cumali-ozdemir.jpeg"
+                    alt="Cumali Özdemir - Psikolojik Danışman"
+                    width={84} height={84}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "inline-block", background: "#1e3a8a", color: "white", fontSize: "0.68rem", fontWeight: 700, borderRadius: 9999, padding: "3px 12px", marginBottom: 10 }}>
+                    Uzman · 8 yıl deneyim
+                  </div>
+                  <h3 style={{ fontFamily: displayFont, fontSize: "1.2rem", fontWeight: 800, color: "#0f1f4f", margin: "0 0 4px" }}>
+                    Cumali Özdemir
+                  </h3>
+                  <p style={{ fontSize: "0.8rem", color: "#1e3a8a", fontWeight: 600, margin: "0 0 12px" }}>
+                    Psikolojik Danışman & Öğrenci Koçu
+                  </p>
+                  <p style={{ fontSize: "0.875rem", color: "#374151", lineHeight: 1.7, margin: "0 0 14px" }}>
+                    Hasan Kalyoncu Üniversitesi PDR mezunu. Akademik koçluk, çalışma sistemi ve deneme analizi konularında uzman.
+                  </p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {["Akademik Koçluk", "Verimli Ders Çalışma", "Çalışma Sistemi", "Deneme Analizi"].map(t => (
+                      <span key={t} style={{ background: "white", border: "1px solid #bfdbfe", borderRadius: 6, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 600, color: "#1e3a8a" }}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Şükran ── */}
+              <div style={{ background: "#fff7ed", borderRadius: 20, padding: "28px", border: "2px solid #fed7aa", display: "flex", gap: 22, alignItems: "flex-start" }}>
+                <div style={{ width: 84, height: 84, borderRadius: "50%", border: "3px solid #fdba74", flexShrink: 0, overflow: "hidden", background: "#ffedd5" }}>
+                  <Image
+                    src="/sukran-ozdemir.jpeg"
+                    alt="Şükran Özdemir - Uzman Psikolojik Danışman"
+                    width={84} height={84}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "inline-block", background: "#c2410c", color: "white", fontSize: "0.68rem", fontWeight: 700, borderRadius: 9999, padding: "3px 12px", marginBottom: 10 }}>
+                    Uzman · 8 yıl deneyim
+                  </div>
+                  <h3 style={{ fontFamily: displayFont, fontSize: "1.2rem", fontWeight: 800, color: "#0f1f4f", margin: "0 0 4px" }}>
+                    Şükran Özdemir
+                  </h3>
+                  <p style={{ fontSize: "0.8rem", color: "#c2410c", fontWeight: 600, margin: "0 0 12px" }}>
+                    Uzman Psikolojik Danışman & Öğrenci Koçu
+                  </p>
+                  <p style={{ fontSize: "0.875rem", color: "#374151", lineHeight: 1.7, margin: "0 0 14px" }}>
+                    Erciyes Üniversitesi lisans, Cerrahpaşa Üniversitesi yüksek lisans. Sınav kaygısı ve psikolojik dayanıklılık uzmanı.
+                  </p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {["Sınav Kaygısı", "Psikolojik Dayanıklılık", "Motivasyon", "Zaman Yönetimi"].map(t => (
+                      <span key={t} style={{ background: "white", border: "1px solid #fed7aa", borderRadius: 6, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 600, color: "#c2410c" }}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Hakkımızda sayfasına link */}
+            <div style={{ textAlign: "center" }}>
+              <a href="/hakkimizda" style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "#1e3a8a", fontWeight: 700, fontSize: "0.95rem", textDecoration: "none", border: "2px solid #bfdbfe", borderRadius: 10, padding: "12px 28px", background: "#eff6ff" }}>
+                Daha fazlası için Hakkımızda sayfasına git →
+              </a>
+            </div>
+
+          </div>
+        </section>
+
         {/* ══════ YORUMLAR ══════ */}
         <section aria-labelledby="yorumlar-heading" style={{ padding: "88px 0", background: "linear-gradient(135deg, #f8faff, #eff6ff)", overflow: "hidden" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
@@ -595,7 +704,7 @@ export default function HomeClient() {
               arıyorsanız...
             </h2>
             <p style={{ fontSize: "1.1rem", color: "#bfdbfe", marginBottom: 40, lineHeight: 1.75 }}>Potansiyeli sistematik bir şekilde performansa dönüştürme zamanı.</p>
-            <button onClick={openModal} className="btn-main" style={{ background: "white", color: "#1e3a8a", border: "none", padding: "18px 44px", borderRadius: 12, fontWeight: 700, fontSize: "1.1rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 12, margin: "0 auto", boxShadow: "0 8px 32px rgba(0,0,0,0.28)", transition: "all 0.25s" }}>
+            <button onClick={openModal} className="btn-main" style={{ background: "white", color: "#1e3a8a", border: "none", padding: "18px 44px", borderRadius: 12, fontWeight: 700, fontSize: "1.1rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 12, margin: "0 auto", boxShadow: "0 8px 32px rgba(0,0,0,0.28)", transition: "all 0.25s", fontFamily: "inherit" }}>
               <IconCalendar style={{ width: 22, height: 22 }} aria-hidden="true" />
               Ücretsiz Ön Görüşme Planlayın
               <IconArrowRight style={{ width: 22, height: 22 }} aria-hidden="true" />
@@ -603,7 +712,7 @@ export default function HomeClient() {
             <div className="cta-grid" style={{ marginTop: 52, display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20 }}>
               {[{ val: "30", label: "Öğrenci İle Sınırlı Kontenjan" }, { val: "1:1", label: "Bireysel Takip" }, { val: "100%", label: "Ölçülebilir Sistem" }].map((item, i) => (
                 <div key={i} style={{ background: "rgba(255,255,255,0.09)", borderRadius: 14, padding: 22, border: "1px solid rgba(255,255,255,0.18)" }}>
-                  <div style={{ fontSize: "1.9rem", fontWeight: 800, color: "#fdba74", marginBottom: 7 }}>{item.val}</div>
+                  <div style={{ fontSize: "1.9rem", fontWeight: 800, color: "#fdba74", marginBottom: 7, fontFamily: displayFont }}>{item.val}</div>
                   <div style={{ fontSize: "0.83rem", color: "#bfdbfe" }}>{item.label}</div>
                 </div>
               ))}
@@ -620,13 +729,13 @@ export default function HomeClient() {
                 <p style={{ color: "#bfdbfe", lineHeight: 1.75, margin: 0, fontSize: "0.92rem" }}>LGS ve YKS öğrencileri için yapılandırılmış Akademik Performans ve Psikolojik Dayanıklılık Modeli</p>
               </div>
               <nav aria-label="İletişim bilgileri">
-                <h3 style={{ fontWeight: 700, fontSize: "1rem", color: "#fdba74", margin: "0 0 14px" }}>İletişim</h3>
+                <h3 style={{ fontWeight: 700, fontSize: "1rem", color: "#fdba74", margin: "0 0 14px", fontFamily: displayFont }}>İletişim</h3>
                 {[{ Icon: IconPhone, text: "0547 380 38 01" }, { Icon: IconPhone, text: "0540 380 38 01" }, { Icon: IconMail, text: "ogrencikocuadana@gmail.com" }, { Icon: IconMapPin, text: "Adana, Türkiye" }].map(({ Icon, text }, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 11, color: "#bfdbfe" }}><Icon style={{ width: 18, height: 18, flexShrink: 0 }} aria-hidden="true" /><span style={{ fontSize: "0.9rem" }}>{text}</span></div>
                 ))}
               </nav>
               <div>
-                <h3 style={{ fontWeight: 700, fontSize: "1rem", color: "#fdba74", margin: "0 0 14px" }}>Çalışma Saatleri</h3>
+                <h3 style={{ fontWeight: 700, fontSize: "1rem", color: "#fdba74", margin: "0 0 14px", fontFamily: displayFont }}>Çalışma Saatleri</h3>
                 {["Pazartesi – Cuma: 10:00 – 20:00", "Cumartesi: 10:00 – 17:00", "Pazar: Kapalı"].map((t, i) => (<p key={i} style={{ color: "#bfdbfe", marginBottom: 8, fontSize: "0.9rem" }}>{t}</p>))}
               </div>
             </div>
@@ -637,7 +746,7 @@ export default function HomeClient() {
           </div>
         </footer>
 
-        {/* ══════ WHATSAPP ══════ */}
+        {/* ══════ WHATSAPP BUTONU ══════ */}
         <a
           href="https://wa.me/905473803801?text=Merhaba,%20bilgi%20almak%20istiyorum"
           target="_blank"

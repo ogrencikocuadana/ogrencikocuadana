@@ -1,67 +1,93 @@
 @import "tailwindcss";
 
+/* ─── CSS FONT DEĞİŞKENLERİ ─────────────────────────────
+   --font-display : Bricolage Grotesque → başlıklar, hero, modal başlığı
+   --font-body    : Plus Jakarta Sans   → paragraf, form, nav
+
+   HomeClient.tsx'te displayFont değişkenini şöyle güncelle:
+   const displayFont = "var(--font-display), 'Bricolage Grotesque', sans-serif";
+─────────────────────────────────────────────────────── */
 :root {
+  --font-display: 'Bricolage Grotesque', sans-serif;
+  --font-body:    'Plus Jakarta Sans', sans-serif;
+
+  /* Renk paleti */
+  --lacivert:      #1a2e4a;
+  --lacivert-acik: #243d61;
+  --turuncu:       #f5a623;
+  --acik-mavi:     #e8f4fd;
+  --beyaz:         #ffffff;
+  --yazi-gri:      #4a5568;
+  --acik-gri:      #f7fafc;
+  --sinir:         #e2e8f0;
+
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f1f4f;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ─── TEMEL SIFIRLAMA ───────────────────────────────────
+─────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* layout.tsx'te jakarta.className body'e atanıyor.
+     Yedek olarak buraya da yazıyoruz. */
+  font-family: var(--font-body), 'Plus Jakarta Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  line-height: 1.6;
 }
 
-html {
-  scroll-behavior: smooth;
+img, video {
+  max-width: 100%;
+  display: block;
 }
 
+/* ─── ODAK & SEÇİM ──────────────────────────────────────
+─────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 3px solid #f5a623;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+::selection {
+  background-color: #1e3a8a;
+  color: #ffffff;
+}
+
+/* ─── SCROLL ÇUBUĞU ─────────────────────────────────────
+─────────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; }
+::-webkit-scrollbar-track  { background: #f1f5f9; }
+::-webkit-scrollbar-thumb  { background: #94a3b8; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #1e3a8a; }
+
+/* ─── ANİMASYONLAR ──────────────────────────────────────
+─────────────────────────────────────────────────────── */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fadeIn {
-  animation: fadeIn 1s ease forwards;
+  animation: fadeIn 0.7s ease forwards;
 }
 
-.reveal {
-  opacity: 0;
-  transform: translateY(40px);
-  transition: all 0.8s ease;
-}
-
-.reveal.active {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.reveal {
-  opacity: 0;
-  transform: translateY(40px);
-  transition: all 0.8s ease;
-}
-
-.reveal.active {
-  opacity: 1;
-  transform: translateY(0);
+/* Navbar dropdown animasyonu */
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
