@@ -117,7 +117,7 @@ export default function HakkimizdaPage() {
               {/* Cumali Özdemir */}
               <DanismanKarti
                 isim="Cumali Özdemir"
-                unvan="Uzman Psikolojik Danışman & Öğrenci Koçu"
+                unvan="Psikolojik Danışman & Öğrenci Koçu"
                 renk="#1e3a8a"
                 acikRenk="#eff6ff"
                 sinirRenk="#bfdbfe"
