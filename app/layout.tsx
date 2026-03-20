@@ -4,20 +4,14 @@ import Navbar from "./components/Navbar";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import type { Metadata } from "next";
 
-// ─── DISPLAY FONT: Bricolage Grotesque ───────────────────────────────────────
-// Başlıklar, hero metni, pricing kartları için.
-// Karakterli, güçlü, premium görünüm — Türkçe tam destekli.
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   display: "swap",
   preload: true,
-  variable: "--font-display",   // CSS: font-family: var(--font-display)
+  variable: "--font-display",
 });
 
-// ─── BODY FONT: Plus Jakarta Sans ────────────────────────────────────────────
-// Paragraflar, form alanları, nav linkleri için.
-// Temiz, okunaklı, modern — Sora'dan çok daha premium hissettiriyor.
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
@@ -26,7 +20,6 @@ const jakarta = Plus_Jakarta_Sans({
   variable: "--font-body",
 });
 
-// ─── SEO Metadata ─────────────────────────────────────────────────────────────
 export const metadata: Metadata = {
   title: {
     template: "%s | Öğrenci Koçu Adana",
@@ -65,7 +58,6 @@ export const metadata: Metadata = {
   verification: { google: "hcEpeTsta9BYeI_63ruaZco1k3_92EYv9l9yHDMLNVw" },
 };
 
-// ─── JSON-LD: LocalBusiness ────────────────────────────────────────────────
 const localBusinessJsonLd = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
@@ -104,21 +96,24 @@ const websiteJsonLd = {
   },
 };
 
-// ─── Root Layout ──────────────────────────────────────────────────────────────
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="tr"
       className={`scroll-smooth ${bricolage.variable} ${jakarta.variable}`}
     >
-      <head>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
-      </head>
       <body
         className={jakarta.className}
         style={{ WebkitFontSmoothing: "antialiased", MozOsxFontSmoothing: "grayscale" }}
       >
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        />
         <Navbar />
         <div className="h-20" aria-hidden="true" />
         {children}
