@@ -14,6 +14,7 @@ const ARACLAR = [
 ];
 
 export default function Navbar() {
+  const [mounted, setMounted]           = useState(false);
   const [active, setActive]             = useState("");
   const [menuOpen, setMenuOpen]         = useState(false);
   const [scrolled, setScrolled]         = useState(false);
@@ -23,6 +24,8 @@ export default function Navbar() {
   const pathname    = usePathname();
   const isHomePage  = pathname === "/";
   const isAraclarActive = ARACLAR.some(a => pathname === a.href);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const handleScroll = useCallback(() => {
     setScrolled(window.scrollY > 12);
@@ -69,6 +72,10 @@ export default function Navbar() {
     setAraclarMobil(false);
   };
 
+  const bgStyle = mounted && scrolled
+    ? { background: "rgba(255,255,255,0.88)", borderBottom: "1px solid rgba(226,232,240,0.8)", boxShadow: "0 2px 20px rgba(0,0,0,0.06)" }
+    : { background: "rgba(255,255,255,0.72)", borderBottom: "1px solid rgba(226,232,240,0.4)", boxShadow: "none" };
+
   return (
     <>
       <header
@@ -76,9 +83,7 @@ export default function Navbar() {
         style={{
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
-          background: scrolled ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.72)",
-          borderBottom: scrolled ? "1px solid rgba(226,232,240,0.8)" : "1px solid rgba(226,232,240,0.4)",
-          boxShadow: scrolled ? "0 2px 20px rgba(0,0,0,0.06)" : "none",
+          ...bgStyle,
         }}
       >
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -88,7 +93,7 @@ export default function Navbar() {
             onClick={handleLogoClick}
             className="flex items-center gap-2 text-lg font-semibold tracking-tight cursor-pointer no-underline text-slate-900 hover:opacity-80 transition-opacity duration-200"
           >
-            <img src="/logo.png" alt="Öğrenci Koçu Adana Logo" className="h-8 w-auto" />
+            <img src="/logo.png" alt="Ogrenci Kocu Adana Logo" className="h-8 w-auto" />
             <span>Öğrenci Koçu Adana</span>
           </Link>
 
@@ -190,7 +195,7 @@ export default function Navbar() {
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="md:hidden flex flex-col justify-center items-center w-10 h-10 gap-1.5 rounded-lg hover:bg-slate-100 transition-colors duration-200"
-            aria-label={menuOpen ? "Menüyü kapat" : "Menüyü aç"}
+            aria-label={menuOpen ? "Menuyu kapat" : "Menuyu ac"}
             aria-expanded={menuOpen}
           >
             <span className={`block w-5 h-0.5 bg-slate-900 transition-all duration-300 origin-center ${menuOpen ? "rotate-45 translate-y-2" : ""}`} />
