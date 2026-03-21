@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 const sections = ["sistemimiz", "paketler", "İletişim"];
 
 const ARACLAR = [
+  { label: "📝 Blog", href: "/blog" },
   { label: "🍅 Pomodoro Timer", href: "/pomodoro" },
   { label: "🎯 Net Hesaplama", href: "/net-hesaplama" },
   { label: "⚡ Hız Analizörü", href: "/hiz-analizoru" },
@@ -14,16 +15,18 @@ const ARACLAR = [
 ];
 
 export default function Navbar() {
-  const [mounted, setMounted]           = useState(false);
   const [active, setActive]             = useState("");
   const [menuOpen, setMenuOpen]         = useState(false);
   const [scrolled, setScrolled]         = useState(false);
   const [araclarOpen, setAraclarOpen]   = useState(false);
   const [araclarMobil, setAraclarMobil] = useState(false);
+  const [mounted, setMounted]           = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname    = usePathname();
-  const isHomePage  = pathname === "/";
-  const isAraclarActive = ARACLAR.some(a => pathname === a.href);
+
+  const safePath        = mounted ? pathname : "/";
+  const isHomePage      = safePath === "/";
+  const isAraclarActive = mounted ? ARACLAR.some(a => safePath === a.href) : false;
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -72,10 +75,6 @@ export default function Navbar() {
     setAraclarMobil(false);
   };
 
-  const bgStyle = mounted && scrolled
-    ? { background: "rgba(255,255,255,0.88)", borderBottom: "1px solid rgba(226,232,240,0.8)", boxShadow: "0 2px 20px rgba(0,0,0,0.06)" }
-    : { background: "rgba(255,255,255,0.72)", borderBottom: "1px solid rgba(226,232,240,0.4)", boxShadow: "none" };
-
   return (
     <>
       <header
@@ -83,7 +82,9 @@ export default function Navbar() {
         style={{
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
-          ...bgStyle,
+          background: scrolled ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.72)",
+          borderBottom: scrolled ? "1px solid rgba(226,232,240,0.8)" : "1px solid rgba(226,232,240,0.4)",
+          boxShadow: scrolled ? "0 2px 20px rgba(0,0,0,0.06)" : "none",
         }}
       >
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -93,7 +94,7 @@ export default function Navbar() {
             onClick={handleLogoClick}
             className="flex items-center gap-2 text-lg font-semibold tracking-tight cursor-pointer no-underline text-slate-900 hover:opacity-80 transition-opacity duration-200"
           >
-            <img src="/logo.png" alt="Ogrenci Kocu Adana Logo" className="h-8 w-auto" />
+            <img src="/logo.png" alt="Öğrenci Koçu Adana Logo" className="h-8 w-auto" />
             <span>Öğrenci Koçu Adana</span>
           </Link>
 
@@ -113,32 +114,6 @@ export default function Navbar() {
                 />
               </a>
             ))}
-
-            <Link
-              href="/hakkimizda"
-              className={`relative py-1 transition-colors duration-200 ${
-                pathname.startsWith("/hakkimizda") ? "text-slate-900" : "text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              Hakkımızda
-              <span
-                className="absolute left-0 -bottom-1 h-[2px] bg-slate-900 rounded-full transition-all duration-300"
-                style={{ width: pathname.startsWith("/hakkimizda") ? "100%" : "0%" }}
-              />
-            </Link>
-
-            <Link
-              href="/blog"
-              className={`relative py-1 transition-colors duration-200 ${
-                pathname.startsWith("/blog") ? "text-slate-900" : "text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              Blog
-              <span
-                className="absolute left-0 -bottom-1 h-[2px] bg-slate-900 rounded-full transition-all duration-300"
-                style={{ width: pathname.startsWith("/blog") ? "100%" : "0%" }}
-              />
-            </Link>
 
             <div ref={dropdownRef} className="relative">
               <button
@@ -172,7 +147,7 @@ export default function Navbar() {
                       href={a.href}
                       onClick={() => setAraclarOpen(false)}
                       className={`flex items-center px-4 py-2.5 text-sm transition-colors duration-150 ${
-                        pathname === a.href
+                        safePath === a.href
                           ? "text-slate-900 font-semibold bg-slate-50"
                           : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                       }`}
@@ -185,17 +160,61 @@ export default function Navbar() {
             </div>
           </nav>
 
-          <a
-            href={isHomePage ? "#İletişim" : "/#İletişim"}
-            className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-700 transition-colors duration-200"
-          >
-            Randevu Al
-          </a>
+          {/* Hakkımızda + Randevu Al — glow butonlar */}
+          <div className="hidden md:flex items-center gap-2">
+            <style>{`
+              .btn-hakkimizda {
+                position: relative;
+                padding: 8px 18px;
+                border-radius: 8px;
+                font-size: 0.875rem;
+                font-weight: 600;
+                text-decoration: none;
+                color: #c2410c;
+                background: rgba(245,166,35,0.1);
+                border: 1.5px solid rgba(245,166,35,0.5);
+                transition: all 0.25s ease;
+              }
+              .btn-hakkimizda:hover {
+                background: rgba(245,166,35,0.18);
+                border-color: rgba(245,166,35,0.8);
+                box-shadow: 0 0 14px rgba(245,166,35,0.22), 0 0 4px rgba(245,166,35,0.12);
+                color: #9a3412;
+              }
+              .btn-randevu {
+                position: relative;
+                padding: 8px 18px;
+                border-radius: 8px;
+                font-size: 0.875rem;
+                font-weight: 600;
+                text-decoration: none;
+                color: #1a2e4a;
+                background: rgba(26,46,74,0.08);
+                border: 1.5px solid rgba(26,46,74,0.3);
+                transition: all 0.25s ease;
+              }
+              .btn-randevu:hover {
+                background: rgba(26,46,74,0.14);
+                border-color: rgba(26,46,74,0.6);
+                box-shadow: 0 0 14px rgba(26,46,74,0.18), 0 0 4px rgba(26,46,74,0.1);
+                color: #0f1f4f;
+              }
+            `}</style>
+            <Link href="/hakkimizda" className="btn-hakkimizda">
+              Hakkımızda
+            </Link>
+            <a
+              href={isHomePage ? "#İletişim" : "/#İletişim"}
+              className="btn-randevu"
+            >
+              Randevu Al
+            </a>
+          </div>
 
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="md:hidden flex flex-col justify-center items-center w-10 h-10 gap-1.5 rounded-lg hover:bg-slate-100 transition-colors duration-200"
-            aria-label={menuOpen ? "Menuyu kapat" : "Menuyu ac"}
+            aria-label={menuOpen ? "Menüyü kapat" : "Menüyü aç"}
             aria-expanded={menuOpen}
           >
             <span className={`block w-5 h-0.5 bg-slate-900 transition-all duration-300 origin-center ${menuOpen ? "rotate-45 translate-y-2" : ""}`} />
@@ -227,26 +246,16 @@ export default function Navbar() {
             </a>
           ))}
 
+
           <Link
             href="/hakkimizda"
             onClick={closeMenu}
             className={`flex items-center justify-between py-4 border-b border-slate-100 text-lg font-medium transition-colors duration-150 ${
-              pathname.startsWith("/hakkimizda") ? "text-slate-900 font-semibold" : "text-slate-600 hover:text-slate-900"
+              safePath.startsWith("/hakkimizda") ? "text-slate-900 font-semibold" : "text-slate-600 hover:text-slate-900"
             }`}
           >
             Hakkımızda
-            {pathname.startsWith("/hakkimizda") && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
-          </Link>
-
-          <Link
-            href="/blog"
-            onClick={closeMenu}
-            className={`flex items-center justify-between py-4 border-b border-slate-100 text-lg font-medium transition-colors duration-150 ${
-              pathname.startsWith("/blog") ? "text-slate-900 font-semibold" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Blog
-            {pathname.startsWith("/blog") && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
+            {safePath.startsWith("/hakkimizda") && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
           </Link>
 
           <div className="border-b border-slate-100">
@@ -276,13 +285,13 @@ export default function Navbar() {
                   href={a.href}
                   onClick={closeMenu}
                   className={`flex items-center justify-between pl-5 pr-2 py-3.5 text-base font-medium transition-colors duration-150 ${
-                    pathname === a.href
+                    safePath === a.href
                       ? "text-slate-900 font-semibold"
                       : "text-slate-500 hover:text-slate-900"
                   }`}
                 >
                   {a.label}
-                  {pathname === a.href && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
+                  {safePath === a.href && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
                 </Link>
               ))}
             </div>
