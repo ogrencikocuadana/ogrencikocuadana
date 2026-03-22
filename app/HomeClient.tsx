@@ -314,36 +314,8 @@ function PricingCard({ badge, icon, iconBg, title, features, onOpen, featured }:
 // ─── ANA BİLEŞEN ─────────────────────────────────────────────────────────────
 export default function HomeClient() {
   const [showModal, setShowModal] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
   const openModal  = () => setShowModal(true);
   const closeModal = () => setShowModal(false);
-
-  const sistemTabs = [
-    {
-      baslik: "Bireysel performans koçluğu",
-      ikon: <IconTarget style={{ width: 20, height: 20, color: "#1e3a8a" }} />,
-      aciklama: "Her öğrenci için haftalık bire-bir görüşme yapılır. Öğrencinin güçlü ve zayıf yönleri belirlenerek kişiye özel akademik plan hazırlanır. Kaynak seçiminden günlük programa kadar her adım takip edilir.",
-      detaylar: ["Haftalık bireysel koçluk görüşmesi", "Öğrenciye özel akademik planlama", "Kaynak ve ders takip sistemi", "Deneme analizi ve net artış takibi"],
-    },
-    {
-      baslik: "Psikolojik dayanıklılık eğitimi",
-      ikon: <IconBrain style={{ width: 20, height: 20, color: "#1e3a8a" }} />,
-      aciklama: "Sınav kaygısı, motivasyon düşüklüğü ve telefon bağımlılığı akademik başarının önündeki en büyük engellerdir. Haftalık seminerlerle öğrenci bu engellerle başa çıkmayı öğrenir.",
-      detaylar: ["Sınav kaygısı ve stres yönetimi", "Zaman yönetimi ve odaklanma teknikleri", "Hızlı okuma eğitimi", "Teknoloji bağımlılığı ve dikkat yönetimi"],
-    },
-    {
-      baslik: "Sistemli akademik takip",
-      ikon: <IconBarChart style={{ width: 20, height: 20, color: "#1e3a8a" }} />,
-      aciklama: "İlerlemeyi sezgiyle değil, veriyle ölçüyoruz. Her ay öğrencinin net gelişimi, konu bazlı performansı ve çalışma düzeni analiz edilerek veliye şeffaf bir rapor sunulur.",
-      detaylar: ["Aylık detaylı performans analizi", "Net artış odaklı değerlendirme", "Veli performans raporu", "Strateji güncellemesi ve yol haritası"],
-    },
-    {
-      baslik: "Nasıl işliyor?",
-      ikon: <IconFileText style={{ width: 20, height: 20, color: "#1e3a8a" }} />,
-      aciklama: "Ücretsiz ön görüşmeyle başlıyoruz. Öğrencinin mevcut durumunu, hedeflerini ve ihtiyaçlarını birlikte değerlendiriyor, kişisel sistem kuruyoruz. Haftalık takip ve aylık raporla süreci şeffaf yönetiyoruz.",
-      detaylar: ["1. Ücretsiz ön görüşme (30 dk)", "2. Başlangıç performans analizi", "3. Kişisel sistem kurulumu", "4. Haftalık takip + aylık rapor"],
-    },
-  ];
 
   return (
     <>
@@ -363,7 +335,9 @@ export default function HomeClient() {
           .hero-h1      { font-size: 2.1rem !important; }
           .cta-grid     { grid-template-columns: 1fr !important; }
           .footer-grid  { grid-template-columns: 1fr !important; }
-          .sistem-grid  { grid-template-columns: 1fr !important; }
+          .sistem-kartlar { grid-template-columns: 1fr !important; }
+          .sistem-cizgi-y { display: none !important; }
+          .nasil-isliyor  { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
         }
       `}</style>
 
@@ -485,98 +459,146 @@ export default function HomeClient() {
           </div>
         </Reveal>
 
-        {/* ══════ 5 — SİSTEM (tab layout) ══════ */}
+        {/* ══════ 5 — SİSTEM (kart grid) ══════ */}
         <Reveal style={{ padding: "72px 16px", background: "white" }} delay={0}>
           <div id="sistemimiz" style={{ maxWidth: 1060, margin: "0 auto" }}>
+
+            {/* Başlık */}
             <div style={{ textAlign: "center", marginBottom: 44 }}>
               <div style={{ display: "inline-block", marginBottom: 12, padding: "6px 16px", background: "#dbeafe", borderRadius: 9999 }}>
                 <span style={{ color: "#1e40af", fontWeight: 700, fontSize: "0.72rem", letterSpacing: "0.06em" }}>SİSTEMİMİZ</span>
               </div>
               <h2 style={{ fontFamily: displayFont, fontSize: "clamp(1.7rem,4vw,2.5rem)", fontWeight: 800, color: "#0f1f4f", marginBottom: 12 }}>Nasıl Çalışıyoruz?</h2>
-              <p style={{ fontSize: "1rem", color: "#4b5563", maxWidth: 500, margin: "0 auto" }}>Akademik performans ve psikolojik dayanıklılık — tek çatı altında, sistematik ve ölçülebilir.</p>
+              <p style={{ fontSize: "1rem", color: "#4b5563", maxWidth: 500, margin: "0 auto" }}>Akademik performans ve psikolojik dayanıklılık —<br />tek çatı altında, sistematik ve ölçülebilir.</p>
             </div>
 
-            <div className="sistem-grid" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 0, border: "2px solid #e2e8f0", borderRadius: 20, overflow: "hidden", boxShadow: "0 4px 32px rgba(26,46,74,0.08)" }}>
-
-              {/* Sol sekmeler — pastel lacivert zemin */}
-              <div style={{ borderRight: "2px solid #e2e8f0", background: "#e8f4fd" }}>
-                {sistemTabs.map((tab, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActiveTab(i)}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "20px 20px",
-                      background: activeTab === i ? "white" : "transparent",
-                      border: "none",
-                      borderLeft: activeTab === i ? "4px solid #f5a623" : "4px solid transparent",
-                      borderBottom: i < sistemTabs.length - 1 ? "1px solid rgba(26,46,74,0.08)" : "none",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      transition: "all 0.2s",
-                      fontFamily: "inherit",
-                    }}
-                  >
-                    <div style={{
-                      width: 36, height: 36, borderRadius: 9,
-                      background: activeTab === i ? "#fff3d6" : "rgba(26,46,74,0.08)",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      flexShrink: 0, transition: "background 0.2s",
-                    }}>
-                      <span style={{ color: activeTab === i ? "#c2410c" : "#1a2e4a", display: "flex", opacity: activeTab === i ? 1 : 0.5 }}>
-                        {tab.ikon}
-                      </span>
-                    </div>
-                    <span style={{
-                      fontSize: "0.875rem",
-                      fontWeight: activeTab === i ? 700 : 500,
-                      color: activeTab === i ? "#1a2e4a" : "#4b6282",
-                      lineHeight: 1.4,
-                      transition: "color 0.2s",
-                    }}>
-                      {tab.baslik}
-                    </span>
-                  </button>
-                ))}
+            {/* Entegre sistem notu */}
+            <div style={{ textAlign: "center", marginBottom: 28 }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: "0.75rem", fontWeight: 600, color: "#1a2e4a", background: "#e8f4fd", padding: "6px 16px", borderRadius: 9999 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#378ADD", display: "inline-block" }} />
+                Entegre sistem — üç bileşen birlikte çalışır
               </div>
+              <p style={{ fontSize: "0.8rem", color: "#6b7280", marginTop: 6 }}>Biri olmadan diğerleri eksik kalır</p>
+            </div>
 
-              {/* Sağ içerik — beyaz zemin */}
-              <div style={{ padding: "36px 32px", background: "white" }}>
-                {/* Aktif sekme etiketi */}
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 14, padding: "4px 14px", background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 9999 }}>
-                  <span style={{ color: "#c2410c", fontWeight: 700, fontSize: "0.7rem", letterSpacing: "0.06em" }}>
-                    {["01", "02", "03", "04"][activeTab]}
-                  </span>
+            {/* 3 Kart Grid */}
+            <div className="sistem-kartlar" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14, marginBottom: 20, position: "relative" }}>
+
+              {/* Bağlantı çizgileri — masaüstünde görünür */}
+              <div className="sistem-cizgi-y" style={{ position: "absolute", top: "10%", left: "calc(33.33% - 1px)", width: 2, height: "80%", background: "linear-gradient(to bottom, #bfdbfe, #378ADD, #bfdbfe)", borderRadius: 2, zIndex: 0 }} />
+              <div className="sistem-cizgi-y" style={{ position: "absolute", top: "10%", left: "calc(66.66% - 1px)", width: 2, height: "80%", background: "linear-gradient(to bottom, #bfdbfe, #378ADD, #bfdbfe)", borderRadius: 2, zIndex: 0 }} />
+
+              {/* Kart 1 — Akademik Koçluk */}
+              <div style={{ background: "white", border: "2px solid #bfdbfe", borderRadius: 16, padding: "20px", display: "flex", flexDirection: "column", gap: 10, position: "relative", zIndex: 1 }}>
+                <div style={{ position: "absolute", top: -11, left: 14, fontSize: "0.65rem", fontWeight: 700, color: "white", background: "#378ADD", padding: "2px 10px", borderRadius: 9999 }}>01</div>
+                <div style={{ display: "inline-block", fontSize: "0.68rem", fontWeight: 600, color: "#185FA5", background: "#E6F1FB", padding: "2px 10px", borderRadius: 9999, marginTop: 4 }}>Akademik koçluk</div>
+                <h3 style={{ fontFamily: displayFont, fontSize: "1rem", fontWeight: 700, color: "#1a2e4a", lineHeight: 1.35, margin: 0 }}>Bireysel performans koçluğu</h3>
+                <p style={{ fontSize: "0.82rem", color: "#4b5563", lineHeight: 1.6, margin: 0 }}>Haftalık bire-bir görüşmeyle kişiye özel plan hazırlanır, her adım birlikte takip edilir.</p>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#185FA5", display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#378ADD", display: "inline-block" }} />İlk 2–3 haftada fark edilir
                 </div>
-                <h3 style={{ fontFamily: displayFont, fontSize: "1.35rem", fontWeight: 800, color: "#1a2e4a", marginBottom: 14 }}>
-                  {sistemTabs[activeTab].baslik}
-                </h3>
-                <p style={{ fontSize: "0.95rem", color: "#4b5563", lineHeight: 1.8, marginBottom: 24 }}>
-                  {sistemTabs[activeTab].aciklama}
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {sistemTabs[activeTab].detaylar.map((d, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "#fafafa", borderRadius: 10, border: "1.5px solid #e8f4fd" }}>
-                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#1a2e4a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <IconCheck style={{ width: 12, height: 12, color: "white" }} />
-                      </div>
-                      <span style={{ fontSize: "0.875rem", color: "#374151", fontWeight: 500 }}>{d}</span>
+                <div style={{ height: 1, background: "#e2e8f0" }} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {["Haftalık bireysel görüşme", "Kişiye özel akademik plan", "Deneme analizi ve net takibi"].map(d => (
+                    <div key={d} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.78rem", color: "#374151" }}>
+                      <div style={{ width: 14, height: 14, borderRadius: "50%", background: "#E6F1FB", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                        <IconCheck style={{ width: 7, height: 7, color: "#185FA5" }} />
+                      </div>{d}
                     </div>
                   ))}
                 </div>
-                <button
-                  onClick={openModal}
-                  style={{ marginTop: 28, display: "inline-flex", alignItems: "center", gap: 8, background: "#f5a623", color: "#1a2e4a", border: "none", padding: "13px 26px", borderRadius: 10, fontWeight: 700, fontSize: "0.9rem", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(245,166,35,0.35)", transition: "all 0.2s" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#d4891a"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#f5a623"; }}
-                >
-                  <IconCalendar style={{ width: 18, height: 18 }} /> Ücretsiz Ön Görüşme Al
-                </button>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                  {["LGS & YKS", "Kaynak takibi", "Net artışı"].map(t => (
+                    <span key={t} style={{ fontSize: "0.65rem", fontWeight: 600, color: "#185FA5", background: "#E6F1FB", padding: "2px 8px", borderRadius: 9999 }}>{t}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Kart 2 — Psikolojik Destek */}
+              <div style={{ background: "white", border: "2px solid #FAC775", borderRadius: 16, padding: "20px", display: "flex", flexDirection: "column", gap: 10, position: "relative", zIndex: 1 }}>
+                <div style={{ display: "inline-block", fontSize: "0.68rem", fontWeight: 600, color: "#BA7517", background: "#FAEEDA", padding: "2px 10px", borderRadius: 9999, marginTop: 4 }}>Psikolojik destek</div>
+                <h3 style={{ fontFamily: displayFont, fontSize: "1rem", fontWeight: 700, color: "#1a2e4a", lineHeight: 1.35, margin: 0 }}>Sınav stresini birlikte yönetiyoruz</h3>
+                <p style={{ fontSize: "0.82rem", color: "#4b5563", lineHeight: 1.6, margin: 0 }}>Kaygı ve motivasyon sorunları çocuğunuzun başarısının önündeki en büyük engeldir.</p>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#BA7517", display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#BA7517", display: "inline-block" }} />4–6 haftada anlamlı değişim
+                </div>
+                <div style={{ height: 1, background: "#e2e8f0" }} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {["Kaygı ve stres yönetimi", "Zaman yönetimi eğitimi", "Odaklanma ve motivasyon"].map(d => (
+                    <div key={d} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.78rem", color: "#374151" }}>
+                      <div style={{ width: 14, height: 14, borderRadius: "50%", background: "#FAEEDA", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                        <IconCheck style={{ width: 7, height: 7, color: "#BA7517" }} />
+                      </div>{d}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                  {["Sınav kaygısı", "Özgüven", "Hızlı okuma"].map(t => (
+                    <span key={t} style={{ fontSize: "0.65rem", fontWeight: 600, color: "#BA7517", background: "#FAEEDA", padding: "2px 8px", borderRadius: 9999 }}>{t}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Kart 3 — Takip */}
+              <div style={{ background: "white", border: "2px solid #9FE1CB", borderRadius: 16, padding: "20px", display: "flex", flexDirection: "column", gap: 10, position: "relative", zIndex: 1 }}>
+                <div style={{ display: "inline-block", fontSize: "0.68rem", fontWeight: 600, color: "#0F6E56", background: "#E1F5EE", padding: "2px 10px", borderRadius: 9999, marginTop: 4 }}>Takip & raporlama</div>
+                <h3 style={{ fontFamily: displayFont, fontSize: "1rem", fontWeight: 700, color: "#1a2e4a", lineHeight: 1.35, margin: 0 }}>Sistemli akademik takip</h3>
+                <p style={{ fontSize: "0.82rem", color: "#4b5563", lineHeight: 1.6, margin: 0 }}>İlerlemeyi sezgiyle değil veriyle ölçüyoruz. Her ay size şeffaf bir rapor sunuyoruz.</p>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#0F6E56", display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#0F6E56", display: "inline-block" }} />Her ay veliye rapor
+                </div>
+                <div style={{ height: 1, background: "#e2e8f0" }} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {["Aylık performans raporu", "Net artış odaklı analiz", "Strateji güncelleme"].map(d => (
+                    <div key={d} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.78rem", color: "#374151" }}>
+                      <div style={{ width: 14, height: 14, borderRadius: "50%", background: "#E1F5EE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                        <IconCheck style={{ width: 7, height: 7, color: "#0F6E56" }} />
+                      </div>{d}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                  {["Aylık rapor", "Veli bilgilendirme", "Şeffaf süreç"].map(t => (
+                    <span key={t} style={{ fontSize: "0.65rem", fontWeight: 600, color: "#0F6E56", background: "#E1F5EE", padding: "2px 8px", borderRadius: 9999 }}>{t}</span>
+                  ))}
+                </div>
               </div>
             </div>
+
+            {/* Akış şeridi — Nasıl işliyor? */}
+            <div style={{ background: "#f8faff", border: "1.5px solid #e2e8f0", borderRadius: 16, padding: "20px 24px" }}>
+              <p style={{ fontSize: "0.7rem", fontWeight: 700, color: "#6b7280", letterSpacing: "0.1em", marginBottom: 16 }}>NASIL İŞLİYOR?</p>
+              <div className="nasil-isliyor" style={{ display: "flex", alignItems: "center", gap: 0 }}>
+                {[
+                  { ikon: <IconCalendar style={{ width: 13, height: 13, color: "white" }} />, baslik: "Ücretsiz ön görüşme", alt: "30 dakika" },
+                  { ikon: <IconFileText style={{ width: 13, height: 13, color: "white" }} />, baslik: "Sistem kurulumu", alt: "1. hafta" },
+                  { ikon: <IconUsers style={{ width: 13, height: 13, color: "white" }} />, baslik: "Haftalık koçluk", alt: "Süregelen" },
+                  { ikon: <IconBarChart style={{ width: 13, height: 13, color: "white" }} />, baslik: "Aylık rapor", alt: "Veliye sunulur" },
+                  { ikon: <IconTarget style={{ width: 13, height: 13, color: "white" }} />, baslik: "Strateji güncelleme", alt: "Sürekli iyileşme" },
+                ].map((s, i, arr) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", flex: i < arr.length - 1 ? 1 : "none" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1a2e4a", display: "flex", alignItems: "center", justifyContent: "center" }}>{s.ikon}</div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: "0.72rem", fontWeight: 600, color: "#1a2e4a", lineHeight: 1.3 }}>{s.baslik}</div>
+                        <div style={{ fontSize: "0.65rem", color: "#6b7280" }}>{s.alt}</div>
+                      </div>
+                    </div>
+                    {i < arr.length - 1 && (
+                      <div style={{ flex: 1, height: 2, background: "linear-gradient(to right, #bfdbfe, #378ADD)", margin: "0 6px", marginBottom: 22, borderRadius: 2 }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Alt not */}
+            <div style={{ textAlign: "center", marginTop: 20 }}>
+              <p style={{ fontSize: "0.82rem", color: "#6b7280" }}>
+                <strong style={{ color: "#1a2e4a" }}>Akademik + Psikolojik + Takip</strong> — üçü birlikte çalışır, biri eksik kalırsa sistem tamamlanmaz
+              </p>
+            </div>
+
           </div>
         </Reveal>
 
