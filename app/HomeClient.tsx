@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect, CSSProperties, ReactNode, FormEvent } from "react";
+import { useState, useEffect, useRef, CSSProperties, ReactNode, FormEvent } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
+
+const CountdownSection = dynamic(() => import("./CountdownSection"), { ssr: false });
 
 interface IconProps { className?: string; style?: CSSProperties; filled?: boolean; }
 interface PricingCardProps { badge: string; icon: ReactNode; iconBg: string; title: string; features: string[]; onOpen: () => void; featured?: boolean; }
@@ -37,63 +40,38 @@ const IconUser         = ({ style }: IconProps) => (<svg style={style} fill="non
 
 const displayFont = "var(--font-display), 'Bricolage Grotesque', sans-serif";
 
-// ─── GERİ SAYIM ──────────────────────────────────────────────────────────────
-interface TimeLeft { days: number; hours: number; minutes: number; seconds: number; done: boolean; }
-
-function calcTimeLeft(target: Date): TimeLeft {
-  const diff = target.getTime() - new Date().getTime();
-  if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, done: true };
-  return {
-    days:    Math.floor(diff / (1000 * 60 * 60 * 24)),
-    hours:   Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-    minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-    seconds: Math.floor((diff % (1000 * 60)) / 1000),
-    done: false,
-  };
+// ─── SCROLL REVEAL ────────────────────────────────────────────────────────────
+function useReveal(threshold = 0.1) {
+  const ref = useRef<HTMLElement>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { threshold }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [threshold]);
+  return { ref, visible };
 }
 
-function CountdownSection() {
-  const exams = [
-    { name: "LGS", date: new Date("2026-06-14T09:00:00"), tarih: "14 Haziran 2026", color: "#1e3a8a", bg: "#eff6ff", border: "#bfdbfe", tag: "8. Sınıf" },
-    { name: "YKS", date: new Date("2026-06-20T10:00:00"), tarih: "20–21 Haziran 2026", color: "#c2410c", bg: "#fff7ed", border: "#fed7aa", tag: "12. Sınıf" },
-  ];
-  const [times, setTimes] = useState<TimeLeft[]>(exams.map(e => calcTimeLeft(e.date)));
-  useEffect(() => {
-    const t = setInterval(() => setTimes(exams.map(e => calcTimeLeft(e.date))), 1000);
-    return () => clearInterval(t);
-  }, []);
-
+function Reveal({ children, delay = 0, style }: {
+  children: ReactNode; delay?: number; style?: CSSProperties;
+}) {
+  const { ref, visible } = useReveal();
   return (
-    <section style={{ padding: "44px 16px", background: "linear-gradient(135deg, #f8faff, #eff6ff)" }}>
-      <div style={{ maxWidth: 980, margin: "0 auto" }}>
-        <p style={{ textAlign: "center", fontSize: "0.75rem", fontWeight: 700, color: "#6b7280", letterSpacing: "0.12em", marginBottom: 24 }}>SINAVA NE KADAR KALDI?</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }} className="grid-cols-2">
-          {exams.map((exam, i) => {
-            const t = times[i];
-            return (
-              <div key={i} style={{ background: exam.bg, borderRadius: 18, padding: "24px 20px", border: `2px solid ${exam.border}`, boxShadow: "0 4px 16px rgba(0,0,0,0.05)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-                  <span style={{ fontSize: "1.4rem", fontWeight: 800, color: exam.color, fontFamily: displayFont }}>{exam.name}</span>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 700, background: exam.border, color: exam.color, padding: "3px 10px", borderRadius: 9999 }}>{exam.tag}</span>
-                  <span style={{ marginLeft: "auto", fontSize: "0.78rem", color: "#6b7280", fontWeight: 500 }}>{exam.tarih}</span>
-                </div>
-                {t.done ? (
-                  <div style={{ textAlign: "center", fontSize: "1.3rem", fontWeight: 800, color: exam.color }}>🎉 Sınav günü!</div>
-                ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
-                    {[{ d: t.days, l: "Gün" }, { d: t.hours, l: "Saat" }, { d: t.minutes, l: "Dakika" }, { d: t.seconds, l: "Saniye" }].map(b => (
-                      <div key={b.l} style={{ background: "white", borderRadius: 10, padding: "12px 6px", textAlign: "center", border: `1.5px solid ${exam.border}` }}>
-                        <div style={{ fontSize: "clamp(1.4rem, 3vw, 2rem)", fontWeight: 800, color: exam.color, lineHeight: 1, fontFamily: displayFont, fontVariantNumeric: "tabular-nums" }}>{String(b.d).padStart(2, "0")}</div>
-                        <div style={{ fontSize: "0.62rem", fontWeight: 700, color: exam.color, opacity: 0.6, marginTop: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>{b.l}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+    <section
+      ref={ref}
+      style={{
+        ...style,
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(32px)",
+        transition: `opacity 0.65s ease ${delay}ms, transform 0.65s ease ${delay}ms`,
+      }}
+    >
+      {children}
     </section>
   );
 }
@@ -442,7 +420,7 @@ export default function HomeClient() {
         <CountdownSection />
 
         {/* ══════ 3 — SORUNLAR (kompakt) ══════ */}
-        <section style={{ padding: "72px 16px", background: "white" }}>
+        <Reveal style={{ padding: "72px 16px", background: "white" }} delay={0}>
           <div style={{ maxWidth: 1060, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 44 }}>
               <h2 style={{ fontFamily: displayFont, fontSize: "clamp(1.7rem,4vw,2.5rem)", fontWeight: 800, color: "#0f1f4f", marginBottom: 12 }}>Tanıdık Geliyor mu?</h2>
@@ -466,10 +444,10 @@ export default function HomeClient() {
               </p>
             </div>
           </div>
-        </section>
+        </Reveal>
 
         {/* ══════ 4 — HAKKIMIZDA MİNİ ══════ */}
-        <section style={{ padding: "72px 16px", background: "linear-gradient(135deg,#f8faff,#eff6ff)" }}>
+        <Reveal style={{ padding: "72px 16px", background: "linear-gradient(135deg,#f8faff,#eff6ff)" }} delay={50}>
           <div style={{ maxWidth: 1060, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 44 }}>
               <div style={{ display: "inline-block", marginBottom: 12, padding: "6px 16px", background: "#dbeafe", borderRadius: 9999 }}>
@@ -505,11 +483,11 @@ export default function HomeClient() {
               </a>
             </div>
           </div>
-        </section>
+        </Reveal>
 
         {/* ══════ 5 — SİSTEM (tab layout) ══════ */}
-        <section id="sistemimiz" style={{ padding: "72px 16px", background: "white" }}>
-          <div style={{ maxWidth: 1060, margin: "0 auto" }}>
+        <Reveal style={{ padding: "72px 16px", background: "white" }} delay={0}>
+          <div id="sistemimiz" style={{ maxWidth: 1060, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 44 }}>
               <div style={{ display: "inline-block", marginBottom: 12, padding: "6px 16px", background: "#dbeafe", borderRadius: 9999 }}>
                 <span style={{ color: "#1e40af", fontWeight: 700, fontSize: "0.72rem", letterSpacing: "0.06em" }}>SİSTEMİMİZ</span>
@@ -600,10 +578,10 @@ export default function HomeClient() {
               </div>
             </div>
           </div>
-        </section>
+        </Reveal>
 
         {/* ══════ MİNİ CTA BANNER ══════ */}
-        <section style={{ padding: "0 16px 0" }}>
+        <Reveal style={{ padding: "0 16px 0" }} delay={0}>
           <div style={{ maxWidth: 1060, margin: "0 auto" }}>
             <div style={{ background: "linear-gradient(135deg,#fff7ed,#ffedd5)", border: "1.5px solid #fed7aa", borderRadius: 16, padding: "24px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -620,10 +598,11 @@ export default function HomeClient() {
               </button>
             </div>
           </div>
-        </section>
+        </Reveal>
 
         {/* ══════ 6 — PAKETLER ══════ */}
-        <section id="paketler" style={{ padding: "72px 16px" }}>
+        <Reveal delay={0}>
+          <div id="paketler" style={{ padding: "72px 16px" }}>
           <div style={{ maxWidth: 1060, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 48 }}>
               <div style={{ display: "inline-block", marginBottom: 12, padding: "6px 16px", background: "#ffedd5", borderRadius: 9999 }}>
@@ -642,10 +621,11 @@ export default function HomeClient() {
               <p style={{ fontSize: "0.9rem", color: "#374151", margin: 0 }}><strong style={{ color: "#1e3a8a" }}>Sınırlı kontenjan:</strong> Kaliteyi korumak için en fazla <strong style={{ color: "#c2410c" }}>30 öğrenci</strong> ile çalışıyoruz.</p>
             </div>
           </div>
-        </section>
+          </div>
+        </Reveal>
 
         {/* ══════ 7 — GÜVEN ŞERİDİ ══════ */}
-        <section style={{ padding: "64px 16px", background: "linear-gradient(135deg,#f8faff,#eff6ff)" }}>
+        <Reveal style={{ padding: "64px 16px", background: "linear-gradient(135deg,#f8faff,#eff6ff)" }} delay={0}>
           <div style={{ maxWidth: 1060, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
               <h2 style={{ fontFamily: displayFont, fontSize: "clamp(1.5rem,3.5vw,2.2rem)", fontWeight: 800, color: "#0f1f4f", marginBottom: 12 }}>
@@ -679,14 +659,14 @@ export default function HomeClient() {
               </a>
             </div> */}
           </div>
-        </section>
+        </Reveal>
 
         {/* ══════ 8 — İLETİŞİM CTA ══════ */}
-        <section id="İletişim" style={{ padding: "88px 16px", background: "linear-gradient(135deg,#1e3a8a,#1e40af,#1e3a8a)", position: "relative", overflow: "hidden" }}>
+        <Reveal style={{ padding: "88px 16px", background: "linear-gradient(135deg,#1e3a8a,#1e40af,#1e3a8a)", position: "relative", overflow: "hidden" }} delay={0}>
           <div style={{ position: "absolute", top: 0, right: 0, width: 320, height: 320, background: "rgba(249,115,22,0.18)", borderRadius: "50%", filter: "blur(56px)" }} aria-hidden="true" />
           <div style={{ position: "absolute", bottom: 0, left: 0, width: 320, height: 320, background: "rgba(30,64,175,0.28)", borderRadius: "50%", filter: "blur(56px)" }} aria-hidden="true" />
           <div className="dot-bg" style={{ position: "absolute", inset: 0, opacity: 0.09 }} aria-hidden="true" />
-          <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center", position: "relative" }}>
+          <div id="İletişim" style={{ maxWidth: 800, margin: "0 auto", textAlign: "center", position: "relative" }}>
             <h2 style={{ fontFamily: displayFont, fontSize: "clamp(1.8rem,4vw,2.8rem)", fontWeight: 800, color: "white", lineHeight: 1.3, marginBottom: 18 }}>
               Sıradan bir koçluk değil,<br />
               <span style={{ color: "#fdba74" }}>yapılandırılmış bir performans modeli</span><br />
@@ -705,7 +685,7 @@ export default function HomeClient() {
               ))}
             </div>
           </div>
-        </section>
+        </Reveal>
 
         {/* ══════ FOOTER ══════ */}
         <footer style={{ background: "linear-gradient(135deg,#0f1f4f,#1e3a8a)", color: "white" }}>

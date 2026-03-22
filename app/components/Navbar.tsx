@@ -7,42 +7,59 @@ import { usePathname } from "next/navigation";
 const sections = ["sistemimiz", "paketler", "İletişim"];
 
 const ARACLAR = [
-  { label: "📝 Blog", href: "/blog" },
-  { label: "🍅 Pomodoro Timer", href: "/pomodoro" },
-  { label: "🎯 Net Hesaplama", href: "/net-hesaplama" },
-  { label: "⚡ Hız Analizörü", href: "/hiz-analizoru" },
-  { label: "🎨 Duygu Atölyesi", href: "/duygu-atolyesi" },
+  { label: "📝 Blog",            href: "/blog" },
+  { label: "🍅 Pomodoro Timer",  href: "/pomodoro" },
+  { label: "🎯 Net Hesaplama",   href: "/net-hesaplama" },
+  { label: "⚡ Hız Analizörü",   href: "/hiz-analizoru" },
+  { label: "🎨 Duygu Atölyesi",  href: "/duygu-atolyesi" },
 ];
 
 export default function Navbar() {
-  const [active, setActive]             = useState("");
-  const [menuOpen, setMenuOpen]         = useState(false);
-  const [scrolled, setScrolled]         = useState(false);
-  const [araclarOpen, setAraclarOpen]   = useState(false);
+  const [active,       setActive]       = useState("");
+  const [menuOpen,     setMenuOpen]     = useState(false);
+  const [scrolled,     setScrolled]     = useState(false);
+  const [araclarOpen,  setAraclarOpen]  = useState(false);
   const [araclarMobil, setAraclarMobil] = useState(false);
-  const [mounted, setMounted]           = useState(false);
+  const [mounted,      setMounted]      = useState(false);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname    = usePathname();
 
+  // mounted olmadan pathname/scroll/active karşılaştırması
+  // server ile client arasında hydration uyumsuzluğuna yol açar.
   const safePath        = mounted ? pathname : "/";
   const isHomePage      = safePath === "/";
   const isAraclarActive = mounted ? ARACLAR.some(a => safePath === a.href) : false;
+  const safeActive      = mounted ? active : "";
+  const safeScrolled    = mounted ? scrolled : false;
 
   useEffect(() => { setMounted(true); }, []);
 
   const handleScroll = useCallback(() => {
     setScrolled(window.scrollY > 12);
-    if (!isHomePage) return;
-    const scrollPosition = window.scrollY + 120;
-    let found = "";
-    sections.forEach((section) => {
-      const el = document.getElementById(section);
-      if (el && scrollPosition >= el.offsetTop && scrollPosition < el.offsetTop + el.offsetHeight) {
-        found = section;
-      }
+  }, []);
+
+  // Bölümler görünür olduğunda aktifi güncelle
+  useEffect(() => {
+    if (!isHomePage || !mounted) return;
+    const observers: IntersectionObserver[] = [];
+    sections.forEach((s) => {
+      const el = document.getElementById(s);
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([entry]) => { if (entry.isIntersecting) setActive(s); },
+        { threshold: 0.3, rootMargin: "-80px 0px 0px 0px" }
+      );
+      obs.observe(el);
+      observers.push(obs);
     });
-    setActive(found);
-  }, [isHomePage]);
+    return () => observers.forEach(o => o.disconnect());
+  }, [isHomePage, mounted]);
+
+  const handleSectionClick = (s: string) => {
+    setActive(s);
+    setMenuOpen(false);
+  };
 
   useEffect(() => {
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -57,23 +74,20 @@ export default function Navbar() {
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
         setAraclarOpen(false);
-      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const handleLogoClick = () => {
+    setActive("");
     if (isHomePage) window.scrollTo({ top: 0, behavior: "smooth" });
     setMenuOpen(false);
   };
 
-  const closeMenu = () => {
-    setMenuOpen(false);
-    setAraclarMobil(false);
-  };
+  const closeMenu = () => { setMenuOpen(false); setAraclarMobil(false); };
 
   return (
     <>
@@ -82,39 +96,43 @@ export default function Navbar() {
         style={{
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
-          background: scrolled ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.72)",
-          borderBottom: scrolled ? "1px solid rgba(226,232,240,0.8)" : "1px solid rgba(226,232,240,0.4)",
-          boxShadow: scrolled ? "0 2px 20px rgba(0,0,0,0.06)" : "none",
+          background:   safeScrolled ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.72)",
+          borderBottom: safeScrolled ? "1px solid rgba(226,232,240,0.8)" : "1px solid rgba(226,232,240,0.4)",
+          boxShadow:    safeScrolled ? "0 2px 20px rgba(0,0,0,0.06)" : "none",
         }}
       >
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
 
+          {/* Logo */}
           <Link
             href="/"
             onClick={handleLogoClick}
             className="flex items-center gap-2 text-lg font-semibold tracking-tight cursor-pointer no-underline text-slate-900 hover:opacity-80 transition-opacity duration-200"
           >
-            <img src="/logo.png" alt="Öğrenci Koçu Adana Logo" className="h-8 w-auto" />
+            <img src="/logo.png" alt="Ogrenci Kocu Adana" className="h-8 w-auto" />
             <span>Öğrenci Koçu Adana</span>
           </Link>
 
+          {/* Masaüstü nav */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
             {sections.map((s) => (
               <a
                 key={s}
                 href={isHomePage ? `#${s}` : `/#${s}`}
+                onClick={() => handleSectionClick(s)}
                 className={`relative py-1 transition-colors duration-200 ${
-                  active === s ? "text-slate-900" : "text-slate-500 hover:text-slate-900"
+                  safeActive === s ? "text-slate-900" : "text-slate-500 hover:text-slate-900"
                 }`}
               >
                 {s.charAt(0).toUpperCase() + s.slice(1)}
                 <span
                   className="absolute left-0 -bottom-1 h-[2px] bg-slate-900 rounded-full transition-all duration-300"
-                  style={{ width: active === s ? "100%" : "0%" }}
+                  style={{ width: safeActive === s ? "100%" : "0%" }}
                 />
               </a>
             ))}
 
+            {/* Araçlar dropdown */}
             <div ref={dropdownRef} className="relative">
               <button
                 onClick={() => setAraclarOpen(o => !o)}
@@ -123,8 +141,7 @@ export default function Navbar() {
                 }`}
               >
                 Araçlar
-                <svg
-                  width="12" height="12" viewBox="0 0 12 12" fill="none"
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
                   style={{ transition: "transform 0.2s", transform: araclarOpen ? "rotate(180deg)" : "rotate(0deg)" }}
                 >
                   <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -160,42 +177,28 @@ export default function Navbar() {
             </div>
           </nav>
 
-          {/* Hakkımızda + Randevu Al — glow butonlar */}
+          {/* Hakkımızda + Randevu Al */}
           <div className="hidden md:flex items-center gap-2">
             <style>{`
               .btn-hakkimizda {
-                position: relative;
-                padding: 8px 18px;
-                border-radius: 8px;
-                font-size: 0.875rem;
-                font-weight: 600;
-                text-decoration: none;
-                color: #c2410c;
-                background: rgba(245,166,35,0.1);
-                border: 1.5px solid rgba(245,166,35,0.5);
+                padding: 8px 18px; border-radius: 8px; font-size: 0.875rem;
+                font-weight: 600; text-decoration: none; color: #c2410c;
+                background: rgba(245,166,35,0.1); border: 1.5px solid rgba(245,166,35,0.5);
                 transition: all 0.25s ease;
               }
               .btn-hakkimizda:hover {
-                background: rgba(245,166,35,0.18);
-                border-color: rgba(245,166,35,0.8);
+                background: rgba(245,166,35,0.18); border-color: rgba(245,166,35,0.8);
                 box-shadow: 0 0 14px rgba(245,166,35,0.22), 0 0 4px rgba(245,166,35,0.12);
                 color: #9a3412;
               }
               .btn-randevu {
-                position: relative;
-                padding: 8px 18px;
-                border-radius: 8px;
-                font-size: 0.875rem;
-                font-weight: 600;
-                text-decoration: none;
-                color: #1a2e4a;
-                background: rgba(26,46,74,0.08);
-                border: 1.5px solid rgba(26,46,74,0.3);
+                padding: 8px 18px; border-radius: 8px; font-size: 0.875rem;
+                font-weight: 600; text-decoration: none; color: #1a2e4a;
+                background: rgba(26,46,74,0.08); border: 1.5px solid rgba(26,46,74,0.3);
                 transition: all 0.25s ease;
               }
               .btn-randevu:hover {
-                background: rgba(26,46,74,0.14);
-                border-color: rgba(26,46,74,0.6);
+                background: rgba(26,46,74,0.14); border-color: rgba(26,46,74,0.6);
                 box-shadow: 0 0 14px rgba(26,46,74,0.18), 0 0 4px rgba(26,46,74,0.1);
                 color: #0f1f4f;
               }
@@ -203,14 +206,12 @@ export default function Navbar() {
             <Link href="/hakkimizda" className="btn-hakkimizda">
               Hakkımızda
             </Link>
-            <a
-              href={isHomePage ? "#İletişim" : "/#İletişim"}
-              className="btn-randevu"
-            >
+            <a href={isHomePage ? "#İletişim" : "/#İletişim"} className="btn-randevu">
               Randevu Al
             </a>
           </div>
 
+          {/* Hamburger */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="md:hidden flex flex-col justify-center items-center w-10 h-10 gap-1.5 rounded-lg hover:bg-slate-100 transition-colors duration-200"
@@ -225,6 +226,7 @@ export default function Navbar() {
         </div>
       </header>
 
+      {/* Mobil menü */}
       <div
         className={`fixed inset-0 z-40 bg-white flex flex-col pt-24 px-8 pb-8 transition-all duration-300 ${
           menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
@@ -236,16 +238,15 @@ export default function Navbar() {
             <a
               key={s}
               href={isHomePage ? `#${s}` : `/#${s}`}
-              onClick={closeMenu}
+              onClick={() => handleSectionClick(s)}
               className={`flex items-center justify-between py-4 border-b border-slate-100 text-lg font-medium transition-colors duration-150 ${
-                active === s ? "text-slate-900 font-semibold" : "text-slate-600 hover:text-slate-900"
+                safeActive === s ? "text-slate-900 font-semibold" : "text-slate-600 hover:text-slate-900"
               }`}
             >
               {s.charAt(0).toUpperCase() + s.slice(1)}
-              {active === s && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
+              {safeActive === s && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
             </a>
           ))}
-
 
           <Link
             href="/hakkimizda"
@@ -258,6 +259,7 @@ export default function Navbar() {
             {safePath.startsWith("/hakkimizda") && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
           </Link>
 
+          {/* Araçlar accordion */}
           <div className="border-b border-slate-100">
             <button
               onClick={() => setAraclarMobil(o => !o)}
@@ -266,14 +268,12 @@ export default function Navbar() {
               }`}
             >
               <span>Araçlar</span>
-              <svg
-                width="16" height="16" viewBox="0 0 12 12" fill="none"
+              <svg width="16" height="16" viewBox="0 0 12 12" fill="none"
                 style={{ transition: "transform 0.25s", transform: araclarMobil ? "rotate(180deg)" : "rotate(0deg)" }}
               >
                 <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
-
             <div style={{
               maxHeight: araclarMobil ? `${ARACLAR.length * 56}px` : "0px",
               overflow: "hidden",
@@ -285,9 +285,7 @@ export default function Navbar() {
                   href={a.href}
                   onClick={closeMenu}
                   className={`flex items-center justify-between pl-5 pr-2 py-3.5 text-base font-medium transition-colors duration-150 ${
-                    safePath === a.href
-                      ? "text-slate-900 font-semibold"
-                      : "text-slate-500 hover:text-slate-900"
+                    safePath === a.href ? "text-slate-900 font-semibold" : "text-slate-500 hover:text-slate-900"
                   }`}
                 >
                   {a.label}
