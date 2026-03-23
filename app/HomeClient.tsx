@@ -322,28 +322,32 @@ export default function HomeClient() {
       <style>{`
         * { box-sizing: border-box; }
         body { margin: 0; font-family: var(--font-body), 'Plus Jakarta Sans', sans-serif; }
+        html, body { overflow-x: hidden; max-width: 100%; }
+        .hero-badge-br { display: none; }
         .dot-bg { background-image: radial-gradient(#1e3a8a 1px, transparent 1px); background-size: 28px 28px; }
         .btn-main:hover { filter: brightness(1.08); transform: translateY(-1px); }
         .btn-outline:hover { background: #eff6ff !important; border-color: #93c5fd !important; }
         @keyframes ping { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }
         .ping { animation: ping 1.5s ease-in-out infinite; }
         @media (max-width: 768px) {
-          .grid-cols-3  { grid-template-columns: 1fr !important; }
-          .grid-cols-2  { grid-template-columns: 1fr !important; }
-          .pricing-grid { grid-template-columns: 1fr !important; }
-          .stats-grid   { grid-template-columns: repeat(2,1fr) !important; }
-          .hero-h1      { font-size: 2.1rem !important; }
-          .cta-grid     { grid-template-columns: 1fr !important; }
-          .footer-grid  { grid-template-columns: 1fr !important; }
+          .grid-cols-3    { grid-template-columns: 1fr !important; }
+          .grid-cols-2    { grid-template-columns: 1fr !important; }
+          .pricing-grid   { grid-template-columns: 1fr !important; }
+          .stats-grid     { grid-template-columns: repeat(2,1fr) !important; }
+          .hero-h1        { font-size: 1.55rem !important; line-height: 1.25 !important; }
+          .cta-grid       { grid-template-columns: 1fr !important; }
+          .footer-grid    { grid-template-columns: 1fr !important; }
           .sistem-kartlar { grid-template-columns: 1fr !important; }
           .sistem-cizgi-y { display: none !important; }
-          .nasil-isliyor  { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+          .nasil-desktop  { display: none !important; }
+          .nasil-mobil    { display: flex !important; }
+          .hero-badge-br  { display: block !important; }
         }
       `}</style>
 
       {showModal && <AppointmentModal onClose={closeModal} />}
 
-      <div style={{ minHeight: "100vh", background: "white" }}>
+      <div style={{ minHeight: "100vh", background: "white", overflowX: "hidden", maxWidth: "100vw" }}>
 
         {/* ══════ 1 — HERO ══════ */}
         <section aria-labelledby="hero-heading" style={{ background: "linear-gradient(150deg,#ffffff 0%,#eef4ff 45%,#fff8f3 100%)", padding: "130px 16px 100px", position: "relative", overflow: "hidden" }}>
@@ -351,14 +355,15 @@ export default function HomeClient() {
           <div style={{ position: "absolute", top: -120, right: -80, width: 500, height: 500, background: "radial-gradient(circle,rgba(30,58,138,0.07) 0%,transparent 70%)", pointerEvents: "none" }} aria-hidden="true" />
           <div style={{ position: "absolute", bottom: -80, left: -60, width: 400, height: 400, background: "radial-gradient(circle,rgba(194,65,12,0.05) 0%,transparent 70%)", pointerEvents: "none" }} aria-hidden="true" />
           <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center", position: "relative" }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 32, padding: "8px 18px", background: "white", borderRadius: 9999, border: "1.5px solid #e5e7eb", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", display: "inline-block", boxShadow: "0 0 0 3px rgba(34,197,94,0.2)" }} />
-              <span style={{ color: "#374151", fontWeight: 600, fontSize: "0.82rem" }}>LGS &amp; YKS Öğrencileri İçin Online &amp; Yüz Yüze Özel Koçluk</span>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 32, padding: "8px 18px", background: "white", borderRadius: 9999, border: "1.5px solid #e5e7eb", boxShadow: "0 2px 12px rgba(0,0,0,0.05)", maxWidth: "calc(100vw - 48px)" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", display: "inline-block", flexShrink: 0, boxShadow: "0 0 0 3px rgba(34,197,94,0.2)" }} />
+              <span style={{ color: "#374151", fontWeight: 600, fontSize: "0.82rem", textAlign: "center" }}>LGS &amp; YKS Öğrencileri İçin<br className="hero-badge-br" />Online &amp; Yüz Yüze Özel Koçluk</span>
             </div>
-            <h1 id="hero-heading" className="hero-h1" style={{ fontFamily: displayFont, fontSize: "clamp(2.2rem,5vw,3.8rem)", fontWeight: 800, color: "#0f1f4f", lineHeight: 1.18, margin: "0 auto 24px", maxWidth: 820 }}>
-              Adana&apos;nın LGS ve YKS Koçu —{" "}
-              <span style={{ color: "#1d4ed8" }}>Sınav Başarısı</span> Tesadüf Değil,{" "}
-              <span style={{ background: "linear-gradient(90deg,#1e3a8a,#2563eb)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Sistemin Sonucudur</span>
+            <h1 id="hero-heading" className="hero-h1" style={{ fontFamily: displayFont, fontSize: "clamp(1.9rem,5vw,3.8rem)", fontWeight: 800, color: "#0f1f4f", lineHeight: 1.25, margin: "0 auto 24px", maxWidth: 820 }}>
+              Adana&apos;nın LGS ve YKS Koçu —<br />
+              <span style={{ color: "#1d4ed8" }}>Sınav Başarısı</span><br />
+              Tesadüf Değil,{" "}
+              <span style={{ background: "linear-gradient(90deg,#1e3a8a,#2563eb)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", display: "inline" }}>Sistemin Sonucudur</span>
             </h1>
             <p style={{ fontSize: "1.1rem", color: "#4b5563", lineHeight: 1.75, maxWidth: 580, margin: "0 auto 40px" }}>
               İki uzman psikolojik danışman olarak LGS ve YKS öğrencilerine{" "}
@@ -516,6 +521,7 @@ export default function HomeClient() {
 
               {/* Kart 2 — Psikolojik Destek */}
               <div style={{ background: "white", border: "2px solid #FAC775", borderRadius: 16, padding: "20px", display: "flex", flexDirection: "column", gap: 10, position: "relative", zIndex: 1 }}>
+                <div style={{ position: "absolute", top: -11, left: 14, fontSize: "0.65rem", fontWeight: 700, color: "white", background: "#BA7517", padding: "2px 10px", borderRadius: 9999 }}>02</div>
                 <div style={{ display: "inline-block", fontSize: "0.68rem", fontWeight: 600, color: "#BA7517", background: "#FAEEDA", padding: "2px 10px", borderRadius: 9999, marginTop: 4 }}>Psikolojik destek</div>
                 <h3 style={{ fontFamily: displayFont, fontSize: "1rem", fontWeight: 700, color: "#1a2e4a", lineHeight: 1.35, margin: 0 }}>Sınav stresini birlikte yönetiyoruz</h3>
                 <p style={{ fontSize: "0.82rem", color: "#4b5563", lineHeight: 1.6, margin: 0 }}>Kaygı ve motivasyon sorunları çocuğunuzun başarısının önündeki en büyük engeldir.</p>
@@ -541,6 +547,7 @@ export default function HomeClient() {
 
               {/* Kart 3 — Takip */}
               <div style={{ background: "white", border: "2px solid #9FE1CB", borderRadius: 16, padding: "20px", display: "flex", flexDirection: "column", gap: 10, position: "relative", zIndex: 1 }}>
+                <div style={{ position: "absolute", top: -11, left: 14, fontSize: "0.65rem", fontWeight: 700, color: "white", background: "#0F6E56", padding: "2px 10px", borderRadius: 9999 }}>03</div>
                 <div style={{ display: "inline-block", fontSize: "0.68rem", fontWeight: 600, color: "#0F6E56", background: "#E1F5EE", padding: "2px 10px", borderRadius: 9999, marginTop: 4 }}>Takip & raporlama</div>
                 <h3 style={{ fontFamily: displayFont, fontSize: "1rem", fontWeight: 700, color: "#1a2e4a", lineHeight: 1.35, margin: 0 }}>Sistemli akademik takip</h3>
                 <p style={{ fontSize: "0.82rem", color: "#4b5563", lineHeight: 1.6, margin: 0 }}>İlerlemeyi sezgiyle değil veriyle ölçüyoruz. Her ay size şeffaf bir rapor sunuyoruz.</p>
@@ -568,7 +575,9 @@ export default function HomeClient() {
             {/* Akış şeridi — Nasıl işliyor? */}
             <div style={{ background: "#f8faff", border: "1.5px solid #e2e8f0", borderRadius: 16, padding: "20px 24px" }}>
               <p style={{ fontSize: "0.7rem", fontWeight: 700, color: "#6b7280", letterSpacing: "0.1em", marginBottom: 16 }}>NASIL İŞLİYOR?</p>
-              <div className="nasil-isliyor" style={{ display: "flex", alignItems: "center", gap: 0 }}>
+
+              {/* Masaüstü: yatay akış */}
+              <div className="nasil-desktop" style={{ display: "flex", alignItems: "center", gap: 0 }}>
                 {[
                   { ikon: <IconCalendar style={{ width: 13, height: 13, color: "white" }} />, baslik: "Ücretsiz ön görüşme", alt: "30 dakika" },
                   { ikon: <IconFileText style={{ width: 13, height: 13, color: "white" }} />, baslik: "Sistem kurulumu", alt: "1. hafta" },
@@ -576,26 +585,56 @@ export default function HomeClient() {
                   { ikon: <IconBarChart style={{ width: 13, height: 13, color: "white" }} />, baslik: "Aylık rapor", alt: "Veliye sunulur" },
                   { ikon: <IconTarget style={{ width: 13, height: 13, color: "white" }} />, baslik: "Strateji güncelleme", alt: "Sürekli iyileşme" },
                 ].map((s, i, arr) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", flex: i < arr.length - 1 ? 1 : "none" }}>
+                  <div key={i} style={{ display: "flex", alignItems: "center", flex: i < arr.length - 1 ? 1 : "none", minWidth: 0 }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0 }}>
                       <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1a2e4a", display: "flex", alignItems: "center", justifyContent: "center" }}>{s.ikon}</div>
-                      <div style={{ textAlign: "center" }}>
-                        <div style={{ fontSize: "0.72rem", fontWeight: 600, color: "#1a2e4a", lineHeight: 1.3 }}>{s.baslik}</div>
-                        <div style={{ fontSize: "0.65rem", color: "#6b7280" }}>{s.alt}</div>
+                      <div style={{ textAlign: "center", maxWidth: 80 }}>
+                        <div style={{ fontSize: "0.68rem", fontWeight: 600, color: "#1a2e4a", lineHeight: 1.3 }}>{s.baslik}</div>
+                        <div style={{ fontSize: "0.62rem", color: "#6b7280" }}>{s.alt}</div>
                       </div>
                     </div>
                     {i < arr.length - 1 && (
-                      <div style={{ flex: 1, height: 2, background: "linear-gradient(to right, #bfdbfe, #378ADD)", margin: "0 6px", marginBottom: 22, borderRadius: 2 }} />
+                      <div style={{ flex: 1, minWidth: 8, height: 2, background: "linear-gradient(to right, #bfdbfe, #378ADD)", margin: "0 4px", marginBottom: 28, borderRadius: 2 }} />
                     )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Mobil: dikey liste */}
+              <div className="nasil-mobil" style={{ display: "none", flexDirection: "column", gap: 0 }}>
+                {[
+                  { num: "01", ikon: <IconCalendar style={{ width: 14, height: 14, color: "white" }} />, baslik: "Ücretsiz ön görüşme", alt: "30 dakika — öğrencinin durumu değerlendirilir" },
+                  { num: "02", ikon: <IconFileText style={{ width: 14, height: 14, color: "white" }} />, baslik: "Sistem kurulumu", alt: "1. hafta — kişisel plan oluşturulur" },
+                  { num: "03", ikon: <IconUsers style={{ width: 14, height: 14, color: "white" }} />, baslik: "Haftalık koçluk", alt: "Süregelen — her hafta bire-bir görüşme" },
+                  { num: "04", ikon: <IconBarChart style={{ width: 14, height: 14, color: "white" }} />, baslik: "Aylık rapor", alt: "Her ay — veliye şeffaf performans raporu" },
+                  { num: "05", ikon: <IconTarget style={{ width: 14, height: 14, color: "white" }} />, baslik: "Strateji güncelleme", alt: "Sürekli iyileşme — sistem güncellenir" },
+                ].map((s, i, arr) => (
+                  <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                    {/* Sol: ikon + dikey çizgi */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#1a2e4a", display: "flex", alignItems: "center", justifyContent: "center" }}>{s.ikon}</div>
+                      {i < arr.length - 1 && (
+                        <div style={{ width: 2, flex: 1, minHeight: 20, background: "linear-gradient(to bottom, #378ADD, #bfdbfe)", borderRadius: 2, margin: "4px 0" }} />
+                      )}
+                    </div>
+                    {/* Sağ: içerik */}
+                    <div style={{ paddingBottom: i < arr.length - 1 ? 16 : 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                        <span style={{ fontSize: "0.6rem", fontWeight: 700, color: "white", background: "#378ADD", padding: "1px 6px", borderRadius: 9999 }}>{s.num}</span>
+                        <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#1a2e4a" }}>{s.baslik}</span>
+                      </div>
+                      <div style={{ fontSize: "0.75rem", color: "#6b7280", lineHeight: 1.5 }}>{s.alt}</div>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Alt not */}
-            <div style={{ textAlign: "center", marginTop: 20 }}>
-              <p style={{ fontSize: "0.82rem", color: "#6b7280" }}>
-                <strong style={{ color: "#1a2e4a" }}>Akademik + Psikolojik + Takip</strong> — üçü birlikte çalışır, biri eksik kalırsa sistem tamamlanmaz
+            <div style={{ textAlign: "center", marginTop: 20, padding: "0 8px" }}>
+              <p style={{ fontSize: "0.82rem", color: "#6b7280", lineHeight: 1.6 }}>
+                <strong style={{ color: "#1a2e4a" }}>Akademik + Psikolojik + Takip</strong><br />
+                üçü birlikte çalışır, biri eksik kalırsa sistem tamamlanmaz
               </p>
             </div>
 
