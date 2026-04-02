@@ -191,6 +191,17 @@ export default function Navbar() {
                 box-shadow: 0 0 14px rgba(245,166,35,0.22), 0 0 4px rgba(245,166,35,0.12);
                 color: #9a3412;
               }
+              .btn-hizliokuma {
+                padding: 8px 18px; border-radius: 8px; font-size: 0.875rem;
+                font-weight: 600; text-decoration: none; color: #1a2e4a;
+                background: rgba(26,46,74,0.06); border: 1.5px solid rgba(26,46,74,0.2);
+                transition: all 0.25s ease;
+              }
+              .btn-hizliokuma:hover {
+                background: rgba(26,46,74,0.12); border-color: rgba(26,46,74,0.5);
+                box-shadow: 0 0 14px rgba(26,46,74,0.14), 0 0 4px rgba(26,46,74,0.08);
+                color: #0f1f4f;
+              }
               .btn-randevu {
                 padding: 8px 18px; border-radius: 8px; font-size: 0.875rem;
                 font-weight: 600; text-decoration: none; color: #1a2e4a;
@@ -205,6 +216,9 @@ export default function Navbar() {
             `}</style>
             <Link href="/hakkimizda" className="btn-hakkimizda">
               Hakkımızda
+            </Link>
+            <Link href="/hizli-okuma" className="btn-hizliokuma">
+              Hızlı Okuma
             </Link>
             <a href={isHomePage ? "#İletişim" : "/#İletişim"} className="btn-randevu">
               Randevu Al
@@ -257,6 +271,17 @@ export default function Navbar() {
           >
             Hakkımızda
             {safePath.startsWith("/hakkimizda") && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
+          </Link>
+
+          <Link
+            href="/hizli-okuma"
+            onClick={closeMenu}
+            className={`flex items-center justify-between py-4 border-b border-slate-100 text-lg font-medium transition-colors duration-150 ${
+              safePath.startsWith("/hizli-okuma") ? "text-slate-900 font-semibold" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Hızlı Okuma
+            {safePath.startsWith("/hizli-okuma") && <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
           </Link>
 
           {/* Araçlar accordion */}
