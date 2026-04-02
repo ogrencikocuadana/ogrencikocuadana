@@ -8,23 +8,23 @@ const WHATSAPP_URL = "https://wa.me/905473803801?text=Merhaba%2C%20H%C4%B1zl%C4%
 const benefits = [
   {
     icon: "⚡",
-    title: "Daha Hızlı, Daha Fazla",
-    desc: "Ortalama okuma hızını 2-3 katına çıkararak sınavda daha fazla soruya yetişirsin.",
+    title: "Daha Az Sürede Daha Fazla Soru",
+    desc: "Çocuğunuzun okuma hızı ortalama 2-3 katına çıkar — sınavda aynı sürede çok daha fazla soruya yetişir.",
   },
   {
     icon: "🎯",
-    title: "Odak & Kavrama",
-    desc: "Sadece hız değil — okuduğunu anlama ve akılda tutma becerisi de birlikte güçlenir.",
+    title: "Hız Değil, Anlayarak Hız",
+    desc: "Bu program sadece hızı artırmaz. Okuduğunu anlama ve akılda tutma becerisi de eş zamanlı güçlenir.",
   },
   {
     icon: "🧠",
-    title: "Kişiye Özel Strateji",
-    desc: "Her öğrencinin dikkat ve algı profili farklıdır. Programa başlamadan önce sana özel plan hazırlanır.",
+    title: "Çocuğunuza Özel Plan",
+    desc: "Her öğrencinin dikkat ve algı profili farklıdır. Programa başlamadan önce öğrenciye özel bir çalışma planı hazırlanır.",
   },
   {
     icon: "📈",
-    title: "Ölçülebilir İlerleme",
-    desc: "Her hafta hız ve doğruluk testleriyle gelişimini somut rakamlarla görürsün.",
+    title: "Gelişim Rakamlarla Görünür",
+    desc: "Her hafta yapılan hız ve doğruluk testleriyle ilerleme somut olarak ölçülür. Sizi de bilgilendiririz.",
   },
 ];
 
@@ -32,38 +32,42 @@ const programItems = [
   {
     label: "4 Haftalık Program",
     detail:
-      "Haftada 2 seans, toplamda 8 oturum. Her seans bir öncekinin üzerine inşa edilir.",
+      "Haftada 2 seans, toplamda 8 oturum. Her seans bir öncekinin üzerine inşa edilir; beceri adım adım pekişir.",
   },
   {
     label: "21 Günlük Ödev Sistemi",
     detail:
-      "Günlük 10-15 dakikalık alıştırmalarla beceri kalıcı hale gelir. Rutini bozunca hatırlatıyoruz.",
+      "Günlük yalnızca 10-15 dakikalık alıştırmalarla beceri kalıcı hale gelir. Çocuğunuzun rutini aksadığında hatırlatıyoruz.",
   },
   {
     label: "Başlangıç Değerlendirmesi",
     detail:
-      "Program başında öğrencinin okuma hızı ve kavrama düzeyi ölçülür; buna göre kişisel plan hazırlanır.",
+      "Program başında öğrencinin okuma hızı ve kavrama düzeyi ölçülür; buna göre kişiye özel bir plan hazırlanır.",
   },
   {
     label: "Veli Raporu",
     detail:
-      "Program sonunda veliye yazılı ilerleme raporu sunulur. Ne değişti, ne güçlendi — net olarak.",
+      "Program sonunda size yazılı ilerleme raporu sunulur. Hangi beceri ne kadar güçlendi, rakamlarla görürsünüz.",
   },
   {
     label: "365 Gün Yazılım Desteği",
     detail:
-      "Program bitince de yalnız kalmıyorsun. Bir yıl boyunca dijital pratik materyallerine erişim açık.",
+      "Program bittikten sonra da çocuğunuz yalnız kalmaz. Bir yıl boyunca dijital pratik materyallerine erişim açık kalır.",
   },
 ];
 
 const steps = [
-  { num: "01", title: "Başvur", desc: "WhatsApp'tan bize ulaş, uygun zamanı birlikte belirleyelim." },
-  { num: "02", title: "Değerlendirme", desc: "Okuma hızı ve kavrama düzeyi ölçülür, programa özel plan hazırlanır." },
-  { num: "03", title: "8 Seans", desc: "4 hafta boyunca sistematik hızlı okuma eğitimi alırsın." },
-  { num: "04", title: "Rapor & Destek", desc: "Veli raporu teslim edilir, 365 gün destek başlar." },
+  { num: "01", title: "Bize Ulaşın", desc: "WhatsApp veya telefonla iletişime geçin, uygun zamanı birlikte belirleyelim." },
+  { num: "02", title: "Değerlendirme", desc: "Öğrencinin okuma hızı ve kavrama düzeyi ölçülür, programa özel plan hazırlanır." },
+  { num: "03", title: "8 Seans", desc: "4 hafta boyunca sistematik hızlı okuma eğitimi alır. Sizi her aşamada bilgilendiririz." },
+  { num: "04", title: "Rapor & Destek", desc: "Size yazılı veli raporu teslim edilir, 365 gün dijital destek başlar." },
 ];
 
 const faqs = [
+  {
+    q: "Hızlı okuma anlayarak okumayı engellemez mi?",
+    a: "Bu en sık duyduğumuz endişe — ve anlıyoruz. Ancak programımız salt hız değil, anlama ve hız'ı birlikte geliştirmeye odaklanır. Öğrenciler hem daha hızlı okur hem de okuduklarını daha iyi kavrar. Aksine yavaş ama dağınık okuyan bir öğrenci, metni parça parça işlediği için anlama güçlüğü çekebilir. Doğru teknikle kazanılan hız, kavramayı destekler.",
+  },
   {
     q: "Kaç yaşındaki öğrenciler katılabilir?",
     a: "Program 5. sınıftan 12. sınıfa kadar tüm öğrencilere uygundur. İlkokul son sınıfından üniversite sınavına hazırlanan öğrenciye kadar geniş bir yaş aralığında çalışıyoruz.",
@@ -73,20 +77,20 @@ const faqs = [
     a: "Adana içindeyseniz yüz yüze görüşmeyi tercih ediyoruz. Uzak ilçeler veya farklı şehirler için online seçenek de mevcut.",
   },
   {
-    q: "Hızlı okuma gerçekten sınav başarısını etkiler mi?",
-    a: "Türkçe ve sosyal bilimler başta olmak üzere metin ağırlıklı derslerde doğrudan etkisi görülüyor. Okuma hızı arttıkça soruya harcanan süre azalır, doğru sayısı yükselir.",
+    q: "Sınav başarısına etkisi gerçekten oluyor mu?",
+    a: "Türkçe ve sosyal bilimler başta olmak üzere metin ağırlıklı derslerde doğrudan etkisi gözlemliyoruz. Okuma hızı arttıkça soruya harcanan süre azalır, aynı sürede daha fazla soruyu doğru yanıtlama imkânı doğar.",
+  },
+  {
+    q: "Ödevler çok vakit alır mı? Yoğun sınav temposuna uyar mı?",
+    a: "Her gün yalnızca 10-15 dakika. Program zaten yoğun sınav temposunu göz önünde tutarak tasarlandı. Günlük kısa ve odaklı alıştırmalar, uzun çalışma seanslarından çok daha etkili sonuç veriyor.",
+  },
+  {
+    q: "Veli olarak ben bu süreçte ne görürüm?",
+    a: "Program başında sizi bilgilendiririz. Süreç boyunca gelişimi takip edebilirsiniz; isterseniz ara görüşme talep edebilirsiniz. Program sonunda ise çocuğunuzun ne kadar ilerlediğini gösteren yazılı raporu size teslim ederiz.",
   },
   {
     q: "Program kaç haftada tamamlanıyor?",
-    a: "Temel program 4 haftadır. Öğrencinin hızına ve ihtiyacına göre bireysel ek seanslar planlanabilir.",
-  },
-  {
-    q: "Ödevler çok vakit alır mı?",
-    a: "Her gün yalnızca 10-15 dakika. Yoğun sınav temposuyla çakışmayacak şekilde tasarlandı.",
-  },
-  {
-    q: "Veliler sürece dahil oluyor mu?",
-    a: "Evet. Program başında bilgilendirme yapılır, sonunda yazılı rapor verilir. Veli dilerse ara görüşme de talep edebilir.",
+    a: "Temel program 4 haftadır, toplamda 8 seans. Öğrencinin hızına ve ihtiyacına göre bireysel ek seanslar da planlanabilir.",
   },
 ];
 
@@ -165,7 +169,7 @@ export default function HizliOkuma() {
               }}
             >
               Sınavda Her Dakika Değerli<br />
-              <span style={{ color: "#f5a623" }}>Okuma Hızın Fark Yaratır</span>
+              <span style={{ color: "#f5a623" }}>Çocuğunuzun Okuma Hızı Fark Yaratır</span>
             </h1>
 
             <p
@@ -177,8 +181,8 @@ export default function HizliOkuma() {
                 margin: "0 auto 36px",
               }}
             >
-              Bilimsel yöntemlerle geliştirilen 4 haftalık programla okuma hızını ve kavrama gücünü artır.
-              Kişiye özel plan, veli raporu ve 365 gün yazılım desteği dahil.
+              Bilimsel yöntemlerle geliştirilen 4 haftalık programla çocuğunuzun okuma hızı ve kavrama gücü artar.
+              Kişiye özel plan, size özel veli raporu ve 365 gün yazılım desteği dahil.
             </p>
 
             <p style={{ fontSize: "13px", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.06em", marginBottom: "14px" }}>
@@ -250,6 +254,53 @@ export default function HizliOkuma() {
             </div>
 
             </div>
+        </section>
+
+        {/* ── GÜVEN ŞERİDİ ── */}
+        <section style={{ background: "#f0f7ff", borderBottom: "1px solid #dceeff", padding: "22px 24px" }}>
+          <div style={{
+            maxWidth: "860px",
+            margin: "0 auto",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px 32px",
+          }}>
+            {[
+              { icon: "🎓", text: "Psikolojik Danışman & Öğrenci Koçu" },
+              { icon: "📍", text: "Adana merkezli online eğitim" },
+              { icon: "📋", text: "Her öğrenci için yazılı veli raporu" },
+            ].map((item) => (
+              <div key={item.text} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "16px" }}>{item.icon}</span>
+                <span style={{ fontSize: "13px", fontWeight: 600, color: "#2a4a6a" }}>{item.text}</span>
+              </div>
+            ))}
+            <a
+              href="/hakkimizda"
+              style={{
+                fontSize: "13px",
+                fontWeight: 700,
+                color: "#1a2e4a",
+                textDecoration: "none",
+                border: "1.5px solid #1a2e4a",
+                borderRadius: "8px",
+                padding: "6px 14px",
+                transition: "background 0.15s, color 0.15s",
+              }}
+              onMouseOver={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.background = "#1a2e4a";
+                (e.currentTarget as HTMLAnchorElement).style.color = "#fff";
+              }}
+              onMouseOut={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
+                (e.currentTarget as HTMLAnchorElement).style.color = "#1a2e4a";
+              }}
+            >
+              Biz Kimiz? →
+            </a>
+          </div>
         </section>
 
         {/* ── FAYDALAR ── */}
@@ -345,9 +396,9 @@ export default function HizliOkuma() {
                   color: "#1a2e4a",
                   title: "İlkokul & Ortaokul",
                   items: [
-                    "Türkçe dersinde metinleri yavaş okuyanlar",
-                    "LGS hazırlığında okuma yükünü hafifletmek isteyenler",
-                    "Okuma alışkanlığı kazanmak isteyen öğrenciler",
+                    "Türkçe dersinde metinleri yavaş okuyan çocuğunuz varsa",
+                    "LGS hazırlığında okuma yükü bunaltıcı geliyorsa",
+                    "Okuma alışkanlığı kazandırmak istiyorsanız",
                   ],
                 },
                 {
@@ -355,9 +406,9 @@ export default function HizliOkuma() {
                   color: "#f5a623",
                   title: "Lise & YKS",
                   items: [
-                    "TYT Türkçe ve sosyal bilimlerde hız sorunu yaşayanlar",
-                    "AYT'de paragraf ve edebiyat sorularında zorlananlar",
-                    "Deneme sınavlarında süreyi yetiştiremeyenler",
+                    "TYT Türkçe ve sosyal bilimlerde süre yetmiyorsa",
+                    "AYT paragraf sorularında kayıplar yaşanıyorsa",
+                    "Denemelerde süreyi yetiştiremiyorsa",
                   ],
                 },
               ].map((card) => (
@@ -682,7 +733,7 @@ export default function HizliOkuma() {
                 lineHeight: 1.2,
               }}
             >
-              Bir adımla başla<br />ücretsiz ön görüşme al
+              Bir adımla başla<br />ücretsiz ön görüşme alın
             </h2>
             <p style={{ fontSize: "13px", fontWeight: 700, color: "rgba(26,46,74,0.6)", letterSpacing: "0.06em", marginBottom: "14px" }}>
               BİZE ULAŞIN
