@@ -8,8 +8,8 @@ import { useState, useEffect } from "react";
 const D = "var(--font-display), 'Bricolage Grotesque', sans-serif";
 
 const exams = [
-  { name: "LGS", date: new Date("2026-06-14T09:00:00"), tarih: "14 Haziran 2026", color: "#1e3a8a", bg: "#eff6ff", border: "#bfdbfe", tag: "8. Sınıf" },
-  { name: "YKS", date: new Date("2026-06-20T10:00:00"), tarih: "20–21 Haziran 2026", color: "#c2410c", bg: "#fff7ed", border: "#fed7aa", tag: "12. Sınıf" },
+  { name: "LGS", date: new Date("2026-06-13T09:30:00"), tarih: "13 Haziran 2026", color: "#1e3a8a", bg: "#eff6ff", border: "#bfdbfe", tag: "8. Sınıf" },
+  { name: "YKS", date: new Date("2026-06-20T10:15:00"), tarih: "20–21 Haziran 2026", color: "#c2410c", bg: "#fff7ed", border: "#fed7aa", tag: "12. Sınıf" },
 ];
 
 function getLeft(target: Date) {
