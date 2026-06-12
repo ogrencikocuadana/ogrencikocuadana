@@ -244,6 +244,69 @@ Sınav kaygısı, zaman yönetiminin görünmez düşmanıdır. Bir soruya takı
 
 Zaman yönetimini sınavda ilk kez denemek risklidir. Her haftalık denemede gerçek sınav koşullarını taklit edin: telefon kapalı, süre sabit, aynı bölüm sırasıyla. Birkaç deneme sonra hangi bölümde fazla zaman harcadığınızı göreceksiniz — ve buna göre planı güncelleyebilirsiniz.`,
   },
+  {
+    slug: "yks-tercih-doneminde-veli-ne-yapmali",
+    title: "YKS Tercih Döneminde Veli Ne Yapmalı? (ve Ne Yapmamalı)",
+    description:
+      "Sonuçlar açıklandı, sıra tercihte. Bu dönemde velinin tutumu çocuğun geleceğini sınav kadar etkiler. En sık yapılan hatalar, sağlıklı iletişim ve sağlam bir tercih listesinin nasıl kurulacağı.",
+    date: "2026-06-12",
+    readTime: "7 dk",
+    category: "YKS Hazırlık",
+    content: `Sonuçlar açıklandı. Ev bir tuhaf bu günlerde. Belki bir sevinç var, belki bir hayal kırıklığı, belki ikisi bir arada. Ama ortak bir şey var: artık herkesin gözü tercihte ve kimse tam olarak ne yapacağını bilmiyor.
+
+Tercih, çoğu ailede sınavın kendisinden daha sessiz ama daha gerilimli bir süreçtir. Çünkü sınavda yapılacak iş bellidir: çalış. Tercihte ise belirsizlik vardır, geri dönüşü zordur ve herkes "yanlış yaparsam?" korkusuyla yaşar. Bu yazı tam da o korkuyu yönetmek için. Önce hangi tuzaklara düşülüyor, sonra evdeki dili nasıl yumuşatırsınız, en sonunda da sağlam bir tercih listesini nasıl kurarsınız — sırayla bakalım.
+
+## En Sık Yapılan 3 Tercih Hatası
+
+Yıllar içinde aynı hataların tekrar ettiğini görüyorum. İyi niyetli velilerin yaptığı, ama sonucu çocuğa pahalıya patlayan hatalar bunlar.
+
+**1. Kendi hayalini çocuğa giydirmek.** "Ben doktor olamadım, sen ol." "Bizim soyumuzda mühendis çok, sen de devam et." Bu cümleler sevgiden çıkar ama çocuğa ait olmayan bir hayatı dayatır. Dört yıl okunacak bölüm, ardından kırk yıl yapılacak meslek sizin değil, onun.
+
+**2. Sadece puana ve sıralamaya bakmak.** "Bu puanla şuraya girersin, yazıver" yaklaşımı en yaygın tuzak. Puan sadece bir kapıdır; arkasında çocuğun ilgisi, değerleri ve yetenekleri yoksa o kapıdan girmek mutluluk getirmez. Yüksek puanlı ama yanlış bölüm, düşük puanlı doğru bölümden daha çok pişmanlık üretir.
+
+**3. Paniğe ve baskıya teslim olmak.** Tercih döneminin kısalığı insanı acele ettirir. "Süre doluyor, kapat şunu" baskısı altında verilen kararlar genelde en çok pişman olunan kararlardır. Acele bir düşman, panik ise kötü bir danışmandır.
+
+## Tercih Döneminde Doğru İletişim
+
+Bu dönemde velinin asıl rolü "karar veren" değil, **güvenli liman** olmaktır. Çocuğun aklındaki karmaşayı boşaltabileceği, yargılanmadan düşünebileceği bir alan.
+
+Bunun anahtarı basit ama uygulaması zor: **dinlemek, yönlendirmekten önce gelir.**
+
+Aradaki farkı birkaç cümlede görebilirsiniz:
+
+- "Bence şunu yaz" yerine → "Sen hangisine daha yakın hissediyorsun?"
+- "O bölümden ekmek yenmez" yerine → "O bölümü seçersen nasıl bir hayat hayal ediyorsun?"
+- "Geç kaldık, hemen karar ver" yerine → "Acele etmene gerek yok, birlikte bakalım."
+
+Fark ettiyseniz, ilk cümleler kapıyı kapatıyor, ikinciler açıyor. Çocuk kendini dinlenmiş hissettiğinde savunmaya geçmez, sizinle birlikte düşünür. Tercih kavgası çıkan evlerin çoğunda sorun bölüm değil, dilin ta kendisidir.
+
+## Sağlam Bir Tercih Listesi Nasıl Kurulur?
+
+Duygusal zemin sağlamsa, sıra pratiğe gelir. İyi bir tercih listesi rastgele değil, üç bölgeli bir mantıkla kurulur:
+
+| Bölge | Mantık | Liste payı |
+|-------|--------|------------|
+| İddialı | Puanın biraz zorlar ama hayalindeki tercihler | Üst sıralar |
+| Dengeli | Puanına en çok oturan, gerçekçi tercihler | Orta — en kalabalık bölge |
+| Güvenli | Düşük ihtimalde bile elde kalacak tercihler | Alt sıralar |
+
+Bu üç bölgeyi dengelersiniz; ne tamamen hayale ne tamamen korkuya teslim olursunuz.
+
+Bölgeleri doldururken tek ölçüt puan olmasın. Şu dört şeyi birlikte tartın:
+
+- **İlgi:** Çocuk bu alanı gerçekten merak ediyor mu?
+- **Puan:** Gerçekçi mi, yoksa hayal mi?
+- **Şehir:** Evden uzaklık, yaşam koşulları, bütçe.
+- **Gelecek:** O bölümün mezunu nasıl bir hayata uyanıyor?
+
+Bu arada, hangi puanla nereye girilebileceğini sağlıklı görmek için tahmine değil veriye bakın. Bunun için sitemizdeki [Net Hesaplama Aracı](/net-hesaplama) ile puan ve sıralama tahmininizi netleştirebilirsiniz — listeyi bu zemin üzerine kurmak çok daha sağlıklı olur.
+
+## Son Söz
+
+Bir psikolojik danışman olarak yıllardır gördüğüm şu: tercih, tek başına bir form doldurma işi değil, bir ailenin birlikte aldığı en önemli kararlardan biridir. Yalnız ve panikle verildiğinde pişmanlık, birlikte ve sakin verildiğinde huzur üretir.
+
+Doğru tercih yalnız verilmez; doğru rehberlikle netleşir. Eğer bu süreçte çocuğunuza ve size eşlik edecek, kararı birlikte sağlam bir zemine oturtacak bir yol arkadaşı arıyorsanız, **ücretsiz bir tanışma görüşmesi** için bize ulaşabilirsiniz. Konuşalım, sürecinize nereden katkı sunabileceğimize birlikte bakalım.`,
+  },
 
   // ─────────────────────────────────────────
   // VERİMLİ ÇALIŞMA
